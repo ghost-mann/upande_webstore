@@ -1,0 +1,39 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ _("My Account") }}{% endblock %}
+{% block page_content %}
+<h1>{{ _("Welcome") }}, {{ customer }}</h1>
+<div class="row my-4">
+	<div class="col-md-4"><div class="card"><div class="card-body">
+		<h6 class="text-muted">{{ _("Outstanding balance") }}</h6>
+		<p class="h4">{{ frappe.utils.fmt_money(balance, currency=currency) }}</p>
+		<a href="/portal/statement">{{ _("View statement") }}</a>
+	</div></div></div>
+	<div class="col-md-4"><div class="card"><div class="card-body">
+		<h6 class="text-muted">{{ _("Open quotations") }}</h6>
+		<p class="h4">{{ open_quotations }}</p>
+		<a href="/portal/quotations">{{ _("View quotations") }}</a>
+	</div></div></div>
+	<div class="col-md-4"><div class="card"><div class="card-body">
+		<h6 class="text-muted">{{ _("Quick links") }}</h6>
+		<a href="/store">{{ _("Store") }}</a> · <a href="/wishlist">{{ _("Wishlist") }}</a> ·
+		<a href="/portal/orders">{{ _("Orders") }}</a> · <a href="/portal/invoices">{{ _("Invoices") }}</a> ·
+		<a href="/portal/support">{{ _("Support") }}</a> · <a href="/portal/account">{{ _("Account") }}</a>
+	</div></div></div>
+</div>
+<h4>{{ _("Recent orders") }}</h4>
+{% if not recent_orders %}<p class="text-muted">{{ _("No orders yet.") }}</p>{% else %}
+<table class="table">
+	<thead><tr><th>{{ _("Order") }}</th><th>{{ _("Date") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th></tr></thead>
+	<tbody>
+	{% for order in recent_orders %}
+	<tr>
+		<td><a href="/portal/order?name={{ order.name | urlencode }}">{{ order.name }}</a></td>
+		<td>{{ frappe.utils.formatdate(order.transaction_date) }}</td>
+		<td>{{ order.status }}</td>
+		<td class="text-right">{{ frappe.utils.fmt_money(order.grand_total, currency=order.currency) }}</td>
+	</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+{% endblock %}
