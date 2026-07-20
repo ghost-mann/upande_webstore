@@ -1,15 +1,22 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ doc.name }}{% endblock %}
-{% block page_content %}
-{% set portal_active = "invoices" %}
-{% include "templates/includes/webstore_portal_nav.html" %}
 
-<a href="/portal/invoices">← {{ _("All invoices") }}</a>
-<h1>{{ doc.name }}
-	<a class="btn btn-sm btn-outline-secondary" href="/api/method/upande_webstore.api.portal.download_invoice_pdf?name={{ doc.name | urlencode }}">{{ _("Download PDF") }}</a>
-</h1>
-<p>{{ _("Status") }}: <strong>{{ doc.status }}</strong> ·
-	{{ _("Outstanding") }}: {{ frappe.utils.fmt_money(doc.outstanding_amount, currency=doc.currency) }}</p>
+{% block hero %}
+{% set portal_active = "invoices" %}
+{% set portal_title = doc.name %}
+{% set portal_eyebrow = _("Invoice") %}
+{% set portal_back_url = "/portal/invoices" %}
+{% set portal_back_label = _("All invoices") %}
+{% include "templates/includes/webstore_portal_hero.html" %}
+{% endblock %}
+
+{% block page_content %}
+{% from "templates/includes/webstore_macros.html" import status_badge %}
+<p>
+	{{ status_badge(doc.status) }} ·
+	{{ _("Outstanding") }}: <span class="ws-price">{{ frappe.utils.fmt_money(doc.outstanding_amount, currency=doc.currency) }}</span>
+	· <a class="btn btn-sm btn-outline-secondary" href="/api/method/upande_webstore.api.portal.download_invoice_pdf?name={{ doc.name | urlencode }}">{{ _("Download PDF") }}</a>
+</p>
 <table class="table">
 	<thead><tr><th>{{ _("Item") }}</th><th class="text-right">{{ _("Qty") }}</th><th class="text-right">{{ _("Rate") }}</th><th class="text-right">{{ _("Amount") }}</th></tr></thead>
 	<tbody>

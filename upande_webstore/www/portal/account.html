@@ -1,41 +1,49 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Account") }}{% endblock %}
-{% block page_content %}
-{% set portal_active = "account" %}
-{% include "templates/includes/webstore_portal_nav.html" %}
 
-<h1>{{ _("Account") }}</h1>
-<p class="text-muted">{{ _("Customer") }}: {{ customer }} · <a href="/update-password">{{ _("Change password") }}</a></p>
+{% block hero %}
+{% set portal_active = "account" %}
+{% set portal_title = _("Account") %}
+{% set portal_eyebrow = customer %}
+{% include "templates/includes/webstore_portal_hero.html" %}
+{% endblock %}
+
+{% block page_content %}
+<p class="text-muted">{{ _("Customer") }}: <span class="ws-sku">{{ customer }}</span> · <a href="/update-password">{{ _("Change password") }}</a></p>
 <div class="row">
-	<div class="col-md-6">
-		<h4>{{ _("Profile") }}</h4>
-		<form onsubmit="return false;">
-			<div class="form-group"><label>{{ _("Full name") }}</label>
-				<input class="form-control" id="profile-name" value="{{ user_doc.first_name }}"></div>
-			<div class="form-group"><label>{{ _("Phone") }}</label>
-				<input class="form-control" id="profile-phone" value="{{ user_doc.mobile_no or '' }}"></div>
-			<button class="btn btn-primary" id="profile-save">{{ _("Save") }}</button>
-		</form>
+	<div class="col-md-6 mb-4">
+		<div class="card"><div class="card-body">
+			<p class="ws-section-title">{{ _("Profile") }}</p>
+			<form onsubmit="return false;">
+				<div class="form-group"><label>{{ _("Full name") }}</label>
+					<input class="form-control" id="profile-name" value="{{ user_doc.first_name }}"></div>
+				<div class="form-group"><label>{{ _("Phone") }}</label>
+					<input class="form-control" id="profile-phone" value="{{ user_doc.mobile_no or '' }}"></div>
+				<button class="btn btn-primary" id="profile-save">{{ _("Save changes") }}</button>
+			</form>
+		</div></div>
 	</div>
-	<div class="col-md-6">
-		<h4>{{ _("Addresses") }}</h4>
-		<ul class="list-group mb-3">
-			{% for a in addresses %}
-			<li class="list-group-item">{{ a.address_title }} — {{ a.address_line1 }}, {{ a.city }}, {{ a.country }}</li>
-			{% else %}
-			<li class="list-group-item text-muted">{{ _("No addresses yet.") }}</li>
-			{% endfor %}
-		</ul>
-		<h6>{{ _("Add address") }}</h6>
-		<form onsubmit="return false;">
-			<div class="form-group"><input class="form-control" id="addr-title" placeholder="{{ _('Label (e.g. Head Office)') }}"></div>
-			<div class="form-group"><input class="form-control" id="addr-line1" placeholder="{{ _('Street / building') }}"></div>
-			<div class="form-row">
-				<div class="col form-group"><input class="form-control" id="addr-city" placeholder="{{ _('City') }}"></div>
-				<div class="col form-group"><input class="form-control" id="addr-country" placeholder="{{ _('Country') }}" value="Kenya"></div>
-			</div>
-			<button class="btn btn-secondary" id="addr-add">{{ _("Add") }}</button>
-		</form>
+	<div class="col-md-6 mb-4">
+		<div class="card"><div class="card-body">
+			<p class="ws-section-title">{{ _("Addresses") }}</p>
+			<ul class="list-group mb-3">
+				{% for a in addresses %}
+				<li class="list-group-item">{{ a.address_title }} — {{ a.address_line1 }}, {{ a.city }}, {{ a.country }}</li>
+				{% else %}
+				<li class="list-group-item text-muted">{{ _("No addresses yet.") }}</li>
+				{% endfor %}
+			</ul>
+			<p class="ws-section-title">{{ _("Add address") }}</p>
+			<form onsubmit="return false;">
+				<div class="form-group"><input class="form-control" id="addr-title" placeholder="{{ _('Label (e.g. Farm Gate, Head Office)') }}"></div>
+				<div class="form-group"><input class="form-control" id="addr-line1" placeholder="{{ _('Street / building') }}"></div>
+				<div class="form-row">
+					<div class="col form-group"><input class="form-control" id="addr-city" placeholder="{{ _('City') }}"></div>
+					<div class="col form-group"><input class="form-control" id="addr-country" placeholder="{{ _('Country') }}" value="Kenya"></div>
+				</div>
+				<button class="btn btn-secondary" id="addr-add">{{ _("Add address") }}</button>
+			</form>
+		</div></div>
 	</div>
 </div>
 <script>

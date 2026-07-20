@@ -1,11 +1,17 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("My Quotations") }}{% endblock %}
-{% block page_content %}
-{% set portal_active = "quotations" %}
-{% include "templates/includes/webstore_portal_nav.html" %}
 
-<h1>{{ _("My Quotations") }}</h1>
-{% if not quotations %}<p class="text-muted">{{ _("No quotations yet.") }}</p>{% else %}
+{% block hero %}
+{% set portal_active = "quotations" %}
+{% set portal_title = _("My Quotations") %}
+{% include "templates/includes/webstore_portal_hero.html" %}
+{% endblock %}
+
+{% block page_content %}
+{% from "templates/includes/webstore_macros.html" import status_badge %}
+{% if not quotations %}
+<div class="ws-empty"><span class="ws-empty-mark">🌼</span>{{ _("No quotations yet — add products to your cart and request one.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+{% else %}
 <table class="table">
 	<thead><tr><th>{{ _("Quotation") }}</th><th>{{ _("Date") }}</th><th>{{ _("Valid till") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th></tr></thead>
 	<tbody>
@@ -14,7 +20,7 @@
 		<td><a href="/portal/quotation?name={{ q.name | urlencode }}">{{ q.name }}</a></td>
 		<td>{{ frappe.utils.formatdate(q.transaction_date) }}</td>
 		<td>{{ frappe.utils.formatdate(q.valid_till) if q.valid_till else "" }}</td>
-		<td>{{ q.webstore_portal_status or q.status }}</td>
+		<td>{{ status_badge(q.webstore_portal_status or q.status) }}</td>
 		<td class="text-right">{{ frappe.utils.fmt_money(q.grand_total, currency=q.currency) }}</td>
 	</tr>
 	{% endfor %}

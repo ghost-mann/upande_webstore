@@ -1,0 +1,12 @@
+{% macro status_badge(status) -%}
+{%- set s = (status or "") -%}
+{%- if s in ("Paid", "Accepted", "Completed", "Delivered", "Closed", "Ordered", "Resolved") -%}
+<span class="badge badge-success">{{ _(s) }}</span>
+{%- elif s in ("Overdue", "Declined", "Lost", "Cancelled", "Expired") -%}
+<span class="badge badge-danger">{{ _(s) }}</span>
+{%- elif s in ("Unpaid", "Partly Paid", "To Deliver and Bill", "To Bill", "To Deliver", "Open", "Pending", "Hold", "Replied") -%}
+<span class="badge badge-warning">{{ _(s) }}</span>
+{%- else -%}
+<span class="badge badge-secondary">{{ _(s) }}</span>
+{%- endif -%}
+{%- endmacro %}

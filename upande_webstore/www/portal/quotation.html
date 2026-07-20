@@ -1,15 +1,21 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ doc.name }}{% endblock %}
-{% block page_content %}
-{% set portal_active = "quotations" %}
-{% include "templates/includes/webstore_portal_nav.html" %}
 
-<a href="/portal/quotations">← {{ _("All quotations") }}</a>
-<h1>{{ doc.name }}</h1>
+{% block hero %}
+{% set portal_active = "quotations" %}
+{% set portal_title = doc.name %}
+{% set portal_eyebrow = _("Quotation") %}
+{% set portal_back_url = "/portal/quotations" %}
+{% set portal_back_label = _("All quotations") %}
+{% include "templates/includes/webstore_portal_hero.html" %}
+{% endblock %}
+
+{% block page_content %}
+{% from "templates/includes/webstore_macros.html" import status_badge %}
 <p>
-	{{ _("Status") }}: <strong>{{ doc.webstore_portal_status or doc.status }}</strong>
+	{{ status_badge(doc.webstore_portal_status or doc.status) }}
 	{% if doc.valid_till %} · {{ _("Valid till") }} {{ frappe.utils.formatdate(doc.valid_till) }}{% endif %}
-	{% if doc.customer_po_reference %} · {{ _("PO Ref") }}: {{ doc.customer_po_reference }}{% endif %}
+	{% if doc.customer_po_reference %} · {{ _("PO Ref") }}: <span class="ws-sku">{{ doc.customer_po_reference }}</span>{% endif %}
 </p>
 {% if doc.webstore_notes %}<p class="text-muted">{{ _("Notes") }}: {{ doc.webstore_notes }}</p>{% endif %}
 <table class="table">

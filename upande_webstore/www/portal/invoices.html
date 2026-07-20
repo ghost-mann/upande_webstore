@@ -1,11 +1,17 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("My Invoices") }}{% endblock %}
-{% block page_content %}
-{% set portal_active = "invoices" %}
-{% include "templates/includes/webstore_portal_nav.html" %}
 
-<h1>{{ _("My Invoices") }}</h1>
-{% if not invoices %}<p class="text-muted">{{ _("No invoices yet.") }}</p>{% else %}
+{% block hero %}
+{% set portal_active = "invoices" %}
+{% set portal_title = _("My Invoices") %}
+{% include "templates/includes/webstore_portal_hero.html" %}
+{% endblock %}
+
+{% block page_content %}
+{% from "templates/includes/webstore_macros.html" import status_badge %}
+{% if not invoices %}
+<div class="ws-empty"><span class="ws-empty-mark">☕</span>{{ _("No invoices yet.") }}</div>
+{% else %}
 <table class="table">
 	<thead><tr><th>{{ _("Invoice") }}</th><th>{{ _("Date") }}</th><th>{{ _("Due") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th><th class="text-right">{{ _("Outstanding") }}</th><th></th></tr></thead>
 	<tbody>
@@ -14,7 +20,7 @@
 		<td><a href="/portal/invoice?name={{ inv.name | urlencode }}">{{ inv.name }}</a></td>
 		<td>{{ frappe.utils.formatdate(inv.posting_date) }}</td>
 		<td>{{ frappe.utils.formatdate(inv.due_date) if inv.due_date else "" }}</td>
-		<td><span class="badge badge-{{ 'success' if inv.status == 'Paid' else ('danger' if inv.status == 'Overdue' else 'warning') }}">{{ inv.status }}</span></td>
+		<td>{{ status_badge(inv.status) }}</td>
 		<td class="text-right">{{ frappe.utils.fmt_money(inv.grand_total, currency=inv.currency) }}</td>
 		<td class="text-right">{{ frappe.utils.fmt_money(inv.outstanding_amount, currency=inv.currency) }}</td>
 		<td><a class="btn btn-sm btn-outline-secondary" href="/api/method/upande_webstore.api.portal.download_invoice_pdf?name={{ inv.name | urlencode }}">{{ _("PDF") }}</a></td>

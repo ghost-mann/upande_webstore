@@ -472,3 +472,116 @@ footer.web-footer { display: none; }
 	.ws-card { transition: none; }
 	.ws-card:hover { transform: none; }
 }
+
+/* ---------- agriculture theme additions ---------- */
+:root {
+	--ws-leaf: #4a8f3c;
+	--ws-coffee: #6f4e37;
+	--ws-leaf-wash: #edf5e9;
+}
+
+/* portal hero band — same visual weight as the store hero */
+.ws-portal-hero {
+	background: linear-gradient(115deg, var(--ws-ink) 55%, #1f4d43 100%);
+	color: #fff;
+	padding: 2rem 0 1.5rem;
+	margin-bottom: 2.2rem;
+	position: relative;
+	overflow: hidden;
+}
+.ws-portal-hero::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(circle at 90% 140%, transparent 58px, rgba(255, 255, 255, 0.05) 59px, transparent 61px),
+		radial-gradient(circle at 90% 140%, transparent 98px, rgba(255, 255, 255, 0.05) 99px, transparent 101px),
+		radial-gradient(circle at 90% 140%, transparent 138px, rgba(255, 255, 255, 0.04) 139px, transparent 141px);
+	pointer-events: none;
+}
+.ws-portal-hero h1 { color: #fff; margin: 0.15rem 0 0; font-size: 1.7rem; }
+.ws-portal-hero .ws-hero-eyebrow { margin-bottom: 0.15rem; }
+.ws-portal-back {
+	font-family: var(--ws-mono);
+	font-size: 0.76rem;
+	color: rgba(255, 255, 255, 0.7) !important;
+	text-decoration: none !important;
+	display: inline-block;
+	margin-bottom: 0.35rem;
+}
+.ws-portal-back:hover { color: #fff !important; }
+.ws-portal-hero .ws-portal-nav { margin: 1.1rem 0 0; position: relative; z-index: 1; }
+.ws-portal-hero .ws-portal-nav a {
+	background: transparent;
+	border-color: rgba(255, 255, 255, 0.28);
+	color: rgba(255, 255, 255, 0.8);
+}
+.ws-portal-hero .ws-portal-nav a:hover { border-color: #fff; color: #fff; }
+.ws-portal-hero .ws-portal-nav a.active {
+	background: var(--ws-amber);
+	border-color: var(--ws-amber);
+	color: var(--ws-ink);
+	font-weight: 600;
+}
+
+/* dashboard stat tiles */
+.ws-tile {
+	background: var(--ws-surface);
+	border: 1px solid var(--ws-line);
+	border-radius: var(--ws-radius);
+	padding: 1.1rem 1.2rem;
+	height: 100%;
+	position: relative;
+	overflow: hidden;
+}
+.ws-tile::before {
+	content: "";
+	position: absolute;
+	top: 0; left: 0; right: 0;
+	height: 4px;
+	background: var(--ws-teal);
+}
+.ws-tile.amber::before { background: var(--ws-amber); }
+.ws-tile.leaf::before { background: var(--ws-leaf); }
+.ws-tile h6 {
+	font-family: var(--ws-mono);
+	font-size: 0.68rem;
+	letter-spacing: 0.13em;
+	text-transform: uppercase;
+	color: var(--ws-ink-soft);
+	margin-bottom: 0.45rem;
+}
+.ws-tile .ws-tile-value { font-family: var(--ws-mono); font-weight: 600; font-size: 1.45rem; color: var(--ws-ink); }
+.ws-tile .ws-tile-links { margin-top: 0.4rem; font-size: 0.88rem; }
+.ws-tile .ws-tile-links a { display: inline-block; margin: 0.15rem 0.9rem 0 0; font-weight: 500; }
+
+/* botanical empty states */
+.ws-empty {
+	text-align: center;
+	padding: 2.6rem 1rem;
+	border: 1.5px dashed var(--ws-line);
+	border-radius: var(--ws-radius);
+	background: var(--ws-surface);
+	color: var(--ws-ink-soft);
+}
+.ws-empty .ws-empty-mark { font-size: 1.8rem; display: block; margin-bottom: 0.4rem; }
+
+/* section headings inside portal content */
+.ws-section-title {
+	font-family: var(--ws-mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--ws-ink-soft);
+	margin: 0 0 0.8rem;
+}
+
+/* member login button */
+.ws-member-btn {
+	background: var(--ws-amber);
+	color: var(--ws-ink) !important;
+	padding: 0.38rem 0.85rem;
+	border-radius: 8px;
+	font-weight: 600 !important;
+}
+.ws-member-btn:hover { background: #ffc35c; }

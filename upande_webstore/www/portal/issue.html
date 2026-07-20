@@ -1,14 +1,23 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ doc.subject }}{% endblock %}
-{% block page_content %}
-{% set portal_active = "support" %}
-{% include "templates/includes/webstore_portal_nav.html" %}
 
-<a href="/portal/support">← {{ _("All issues") }}</a>
-<h1>{{ doc.subject }} <span class="badge badge-info">{{ doc.status }}</span></h1>
+{% block hero %}
+{% set portal_active = "support" %}
+{% set portal_title = doc.subject %}
+{% set portal_eyebrow = _("Support issue") %}
+{% set portal_back_url = "/portal/support" %}
+{% set portal_back_label = _("All issues") %}
+{% include "templates/includes/webstore_portal_hero.html" %}
+{% endblock %}
+
+{% block page_content %}
+{% from "templates/includes/webstore_macros.html" import status_badge %}
+<p>{{ status_badge(doc.status) }}</p>
 <div class="card mb-3"><div class="card-body">{{ doc.description or "" }}</div></div>
-<h4>{{ _("Replies") }}</h4>
-{% if not replies %}<p class="text-muted">{{ _("No replies yet.") }}</p>{% endif %}
+<p class="ws-section-title">{{ _("Replies") }}</p>
+{% if not replies %}
+<div class="ws-empty"><span class="ws-empty-mark">💬</span>{{ _("No replies yet — our team will respond soon.") }}</div>
+{% endif %}
 {% for reply in replies %}
 <div class="card mb-2"><div class="card-body">
 	<p class="small text-muted mb-1">{{ reply.sender }} — {{ frappe.utils.format_datetime(reply.communication_date) }}</p>
