@@ -1,0 +1,26 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Settings",
+ "module": "Upande Webstore",
+ "issingle": 1,
+ "engine": "InnoDB",
+ "creation": "2026-07-20 00:00:01.000000",
+ "modified": "2026-07-20 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": ["company", "guest_price_list", "default_customer_group", "default_territory", "quotation_validity_days", "stock_display", "notification_emails", "warehouses"],
+ "fields": [
+  {"fieldname": "company", "fieldtype": "Link", "label": "Company", "options": "Company", "reqd": 1},
+  {"fieldname": "guest_price_list", "fieldtype": "Link", "label": "Guest Price List", "options": "Price List", "reqd": 1},
+  {"fieldname": "default_customer_group", "fieldtype": "Link", "label": "Default Customer Group (Signups)", "options": "Customer Group"},
+  {"fieldname": "default_territory", "fieldtype": "Link", "label": "Default Territory (Signups)", "options": "Territory"},
+  {"fieldname": "quotation_validity_days", "fieldtype": "Int", "label": "Quotation Validity (Days)", "default": "14"},
+  {"fieldname": "stock_display", "fieldtype": "Select", "label": "Stock Display", "options": "In/Out Badge\nExact Quantity", "default": "In/Out Badge"},
+  {"fieldname": "notification_emails", "fieldtype": "Small Text", "label": "Sales Notification Emails (comma-separated)"},
+  {"fieldname": "warehouses", "fieldtype": "Table", "label": "Stock Warehouses", "options": "Webstore Warehouse"}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
