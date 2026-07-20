@@ -1,0 +1,20 @@
+/* Tailwind v4 — utilities + theme only (no preflight: coexists with frappe/bootstrap) */
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
+
+@theme {
+	--color-forest: #17352b;
+	--color-forest-deep: #122a22;
+	--color-forest-2: #24493c;
+	--color-cream: #f7f5ec;
+	--color-market: #3f9142;
+	--color-market-dark: #2f7233;
+	--color-rose: #e5484d;
+	--color-amber: #ffb236;
+	--color-coffee: #6f4e37;
+	--color-line: #e3e0d2;
+	--color-ink-soft: #5f6b5d;
+	--font-display: "Fraunces", Georgia, serif;
+	--font-sans: "IBM Plex Sans", sans-serif;
+	--font-mono: "IBM Plex Mono", monospace;
+}

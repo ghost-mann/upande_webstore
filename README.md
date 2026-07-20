@@ -15,8 +15,11 @@ cd your-bench
 bench get-app /home/austin/vscodeProjects/upande_webstore   # or your git remote for this repo
 bench --site <site> install-app upande_webstore
 bench --site <site> migrate
+cd apps/upande_webstore && npm install && npx @tailwindcss/cli -i upande_webstore/public/tailwind/input.css -o upande_webstore/public/css/tailwind.css --minify && cd ../..
 bench build --app upande_webstore
 ```
+
+After changing any template or the Tailwind theme, re-run the `@tailwindcss/cli` command above (add `--watch` during development). The storefront runtime is TypeScript (`public/js/webstore.bundle.ts`), compiled by `bench build`.
 
 ## Configure
 
@@ -52,7 +55,7 @@ bench --site <site> run-tests --app upande_webstore
 
 - All prices and stock checks are resolved **server-side**; client values are never trusted.
 - Every portal query is scoped to the session user's Customer (`upande_webstore/services/portal.py`) with isolation tests in `upande_webstore/tests/`.
-- Frontend is server-rendered Jinja plus one vanilla-JS bundle (`webstore.bundle.js`) — no SPA.
+- Frontend is server-rendered Jinja + Tailwind CSS v4 utilities + a bespoke component layer (`public/scss/webstore.bundle.scss`), with one TypeScript runtime bundle (`public/js/webstore.bundle.ts`) — no SPA.
 
 ## Contributing
 

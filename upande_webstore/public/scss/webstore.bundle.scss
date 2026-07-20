@@ -3,6 +3,32 @@
    site teal #228883, blue #037ec4, amber #FFB236, coral #ff5062. */
 
 @font-face {
+	font-family: "Fraunces";
+	src: url("/assets/upande_webstore/fonts/fraunces-latin-500.woff2") format("woff2");
+	font-weight: 500;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Fraunces";
+	src: url("/assets/upande_webstore/fonts/fraunces-latin-600.woff2") format("woff2");
+	font-weight: 600;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Fraunces";
+	src: url("/assets/upande_webstore/fonts/fraunces-latin-600-italic.woff2") format("woff2");
+	font-weight: 600;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Fraunces";
+	src: url("/assets/upande_webstore/fonts/fraunces-latin-700.woff2") format("woff2");
+	font-weight: 700;
+	font-display: swap;
+}
+
+@font-face {
 	font-family: "Space Grotesk";
 	src: url("/assets/upande_webstore/fonts/space-grotesk-latin-500.woff2") format("woff2");
 	font-weight: 500;
@@ -46,21 +72,21 @@
 }
 
 :root {
-	--ws-ink: #44433f;
-	--ws-ink-soft: #6b6963;
-	--ws-paper: #fafaf8;
+	--ws-ink: #17352b;
+	--ws-ink-soft: #5f6b5d;
+	--ws-paper: #f7f5ec;
 	--ws-surface: #ffffff;
-	--ws-line: #e5e3de;
-	--ws-teal: #228883;
-	--ws-teal-dark: #19665f;
-	--ws-teal-wash: #eaf4f3;
+	--ws-line: #e3e0d2;
+	--ws-teal: #3f9142;
+	--ws-teal-dark: #2f7233;
+	--ws-teal-wash: #eaf3e6;
 	--ws-blue: #037ec4;
 	--ws-amber: #ffb236;
-	--ws-coral: #e2374b;
-	--ws-display: "Space Grotesk", "IBM Plex Sans", sans-serif;
+	--ws-coral: #e5484d;
+	--ws-display: "Fraunces", Georgia, serif;
 	--ws-body: "IBM Plex Sans", -apple-system, sans-serif;
 	--ws-mono: "IBM Plex Mono", ui-monospace, monospace;
-	--ws-radius: 10px;
+	--ws-radius: 14px;
 	--ws-shadow: 0 1px 2px rgba(68, 67, 63, 0.06), 0 8px 24px -12px rgba(68, 67, 63, 0.18);
 }
 
@@ -76,7 +102,7 @@ h1, h2, h3, h4, .h1, .h2, .h3, .h4 {
 	font-family: var(--ws-display);
 	font-weight: 700;
 	color: var(--ws-ink);
-	letter-spacing: -0.015em;
+	letter-spacing: -0.01em;
 }
 h1, .h1 { font-size: 1.9rem; }
 h4, .h4 { font-size: 1.15rem; }
@@ -89,7 +115,13 @@ a:hover { color: var(--ws-teal-dark); }
 
 /* ---------- navbar ---------- */
 .ws-navbar {
-	background: var(--ws-ink);
+	position: sticky;
+	top: 0;
+	z-index: 1030;
+	background: rgba(18, 42, 34, 0.88);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	padding: 0.65rem 0;
 }
 .ws-navbar .container {
@@ -482,7 +514,7 @@ footer.web-footer { display: none; }
 
 /* portal hero band — same visual weight as the store hero */
 .ws-portal-hero {
-	background: linear-gradient(115deg, var(--ws-ink) 55%, #1f4d43 100%);
+	background: linear-gradient(125deg, #122a22 0%, #17352b 46%, #2f7233 100%);
 	color: #fff;
 	padding: 2rem 0 1.5rem;
 	margin-bottom: 2.2rem;
@@ -600,12 +632,12 @@ body > .page-content-wrapper { flex: 1 0 auto; width: 100%; }
 /* leaf-textured paper */
 body {
 	background-color: var(--ws-paper);
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M30 90c0-22 14-36 36-36-2 20-16 34-36 36zM90 30c0 16-10 26-26 26 1-14 11-24 26-26z' fill='%23228883' fill-opacity='0.045'/%3E%3C/svg%3E");
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M30 90c0-22 14-36 36-36-2 20-16 34-36 36zM90 30c0 16-10 26-26 26 1-14 11-24 26-26z' fill='%233f9142' fill-opacity='0.045'/%3E%3C/svg%3E");
 }
 
 /* vivid hero */
 .ws-hero, .ws-portal-hero {
-	background: linear-gradient(118deg, #17332d 0%, #1d6a60 48%, #3f8a37 100%);
+	background: linear-gradient(125deg, #122a22 0%, #17352b 46%, #2f7233 100%);
 	overflow: hidden;
 }
 .ws-hero { padding: 3.4rem 0 4.2rem; margin-bottom: 0; }
@@ -700,13 +732,13 @@ body {
 
 /* gradient buttons */
 .btn-primary, .btn-success {
-	background: linear-gradient(112deg, var(--ws-teal), #3f8a37);
+	background: linear-gradient(112deg, var(--ws-market, #3f9142), #57a83b);
 	border: none;
 	box-shadow: 0 3px 10px -3px rgba(34, 136, 131, 0.55);
 	transition: transform 130ms ease, box-shadow 130ms ease;
 }
 .btn-primary:hover, .btn-success:hover {
-	background: linear-gradient(112deg, var(--ws-teal-dark), #35762e) !important;
+	background: linear-gradient(112deg, #2f7233, #458c2f) !important;
 	transform: translateY(-1px);
 	box-shadow: 0 6px 16px -4px rgba(34, 136, 131, 0.6);
 }
