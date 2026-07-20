@@ -154,3 +154,28 @@ def set_stock(item_code, qty, warehouse=None):
 	entry.flags.ignore_permissions = True
 	entry.insert()
 	entry.submit()
+
+
+def make_variant_template(template_code):
+	if not frappe.db.exists("Item Attribute", "WS Size"):
+		frappe.get_doc({
+			"doctype": "Item Attribute",
+			"attribute_name": "WS Size",
+			"item_attribute_values": [
+				{"attribute_value": "S", "abbr": "S"},
+				{"attribute_value": "M", "abbr": "M"},
+				{"attribute_value": "L", "abbr": "L"},
+			],
+		}).insert(ignore_permissions=True)
+	template = make_test_item(
+		template_code, has_variants=1, attributes=[{"attribute": "WS Size"}]
+	)
+	from erpnext.controllers.item_variant import create_variant
+
+	for size in ("S", "M"):
+		variant_code = f"{template_code}-{size}"
+		if not frappe.db.exists("Item", variant_code):
+			variant = create_variant(template_code, {"WS Size": size})
+			variant.item_code = variant_code
+			variant.insert(ignore_permissions=True)
+	return template
