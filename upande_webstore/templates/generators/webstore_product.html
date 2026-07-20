@@ -1,4 +1,48 @@
 {% extends "templates/web.html" %}
+{% block title %}{{ web_title }}{% endblock %}
 {% block page_content %}
-<h1>{{ web_title }} price</h1>
+<div class="row" id="webstore-product" data-product="{{ name }}" data-item="{{ item }}" data-is-template="{{ 1 if is_template else 0 }}">
+	<div class="col-md-5">
+		{% if image %}<img src="{{ image }}" class="img-fluid" alt="{{ web_title }}">{% endif %}
+	</div>
+	<div class="col-md-7">
+		<h1>{{ web_title }}
+			<button class="btn btn-sm btn-outline-danger" data-webstore-wishlist-toggle="{{ name }}" title="{{ _('Save to wishlist') }}">♥</button>
+		</h1>
+		<p class="text-muted">{{ short_description or "" }}</p>
+
+		{% if is_template %}
+		{% for attr in attributes %}
+		<div class="form-group">
+			<label>{{ attr.attribute }}</label>
+			<select class="form-control webstore-attribute" data-attribute="{{ attr.attribute }}">
+				<option value="">{{ _("Select") }} {{ attr.attribute }}</option>
+				{% for value in attr["values"] %}<option value="{{ value }}">{{ value }}</option>{% endfor %}
+			</select>
+		</div>
+		{% endfor %}
+		<p id="webstore-variant-price" class="h4"></p>
+		<p id="webstore-variant-stock"></p>
+		<button class="btn btn-primary" id="webstore-variant-add" disabled>{{ _("Add to cart") }}</button>
+		{% else %}
+		<p class="h4">
+			{{ frappe.utils.fmt_money(price.rate, currency=price.currency) }}
+			{% if price.is_customer_price %}<span class="badge badge-info">{{ _("Your price") }}</span>{% endif %}
+		</p>
+		{% if stock.in_stock %}
+		<p><span class="badge badge-success">{{ _("In stock") }}{% if stock.show_qty %}: {{ stock.qty }}{% endif %}</span></p>
+		<div class="form-inline mb-3">
+			<input type="number" min="1" value="1" class="form-control mr-2" id="webstore-qty" style="width:90px">
+			<button class="btn btn-primary" data-webstore-add-to-cart="{{ item }}">{{ _("Add to cart") }}</button>
+		</div>
+		{% else %}
+		<p><span class="badge badge-secondary">{{ _("Out of stock") }}</span></p>
+		<button class="btn btn-primary" disabled>{{ _("Out of stock") }}</button>
+		{% endif %}
+		{% endif %}
+
+		<hr>
+		<div>{{ long_description or "" }}</div>
+	</div>
+</div>
 {% endblock %}

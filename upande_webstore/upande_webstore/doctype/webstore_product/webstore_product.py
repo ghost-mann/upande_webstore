@@ -18,6 +18,20 @@ class WebstoreProduct(WebsiteGenerator):
 			self.image = frappe.db.get_value("Item", self.item, "image")
 
 	def get_context(self, context):
+		from upande_webstore.api.variants import get_attributes
+		from upande_webstore.services.pricing import get_item_price
+		from upande_webstore.services.stock import get_stock_info
+
 		context.no_cache = 1
-		context.item_doc = frappe.get_doc("Item", self.item)
+		item_doc = frappe.get_cached_doc("Item", self.item)
+		context.item_doc = item_doc
+		context.is_template = bool(item_doc.has_variants)
+		if context.is_template:
+			context.attributes = get_attributes(self.item)
+			context.price = None
+			context.stock = None
+		else:
+			context.attributes = []
+			context.price = get_item_price(self.item)
+			context.stock = get_stock_info(self.item)
 		return context
