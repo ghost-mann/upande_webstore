@@ -43,3 +43,12 @@
 	--color-ring: #166534;
 	--radius: 0.625rem;
 }
+
+/* basecoat/shadcn raw variable overrides (it reads --primary etc. directly) */
+:root {
+	--primary: #166534;
+	--primary-foreground: #ffffff;
+	--ring: #16653459;
+	--accent: #f4f4f5;
+	--destructive: #dc2626;
+}

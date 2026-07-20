@@ -93,11 +93,6 @@
 		</ul>
 	</div>
 	<div class="col-md-9">
-		{% if featured %}
-		<div class="ws-section-head"><h4>{{ _("Featured") }}</h4></div>
-		<div class="row">{% for p in featured %}{{ product_card(p) }}{% endfor %}</div>
-		<hr>
-		{% endif %}
 		<div class="ws-section-head"><h4>{{ _("All products") }}{% if search %} — {{ _("results for") }} “{{ search }}”{% endif %}</h4><span>{{ total }} {{ _("items") }}</span></div>
 		{% if not products %}<p class="text-muted">{{ _("No products found.") }} {% if search or category %}<a href="/store">{{ _("Clear filters") }}</a>{% endif %}</p>{% endif %}
 		<div class="row">{% for p in products %}{{ product_card(p) }}{% endfor %}</div>
