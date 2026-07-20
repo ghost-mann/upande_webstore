@@ -1,6 +1,7 @@
 /* Tailwind v4 — utilities + theme only (no preflight: coexists with frappe/bootstrap) */
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
+@import "basecoat-css";
 
 @theme {
 	--color-forest: #17352b;
@@ -17,4 +18,28 @@
 	--font-display: "Fraunces", Georgia, serif;
 	--font-sans: "IBM Plex Sans", sans-serif;
 	--font-mono: "IBM Plex Mono", monospace;
+}
+
+/* brand basecoat (shadcn vars) with the market-luxe palette */
+:root {
+	--color-background: #f7f5ec;
+	--color-foreground: #17352b;
+	--color-card: #ffffff;
+	--color-card-foreground: #17352b;
+	--color-popover: #ffffff;
+	--color-popover-foreground: #17352b;
+	--color-primary: #3f9142;
+	--color-primary-foreground: #ffffff;
+	--color-secondary: #eaf3e6;
+	--color-secondary-foreground: #17352b;
+	--color-muted: #eceadf;
+	--color-muted-foreground: #5f6b5d;
+	--color-accent: #eaf3e6;
+	--color-accent-foreground: #17352b;
+	--color-destructive: #e5484d;
+	--color-destructive-foreground: #ffffff;
+	--color-border: #e3e0d2;
+	--color-input: #e3e0d2;
+	--color-ring: #3f9142;
+	--radius: 0.75rem;
 }

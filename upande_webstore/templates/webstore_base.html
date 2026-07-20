@@ -8,12 +8,15 @@
 			<span>upande<b>store</b></span>
 		</a>
 		<div class="ws-nav">
+			<button type="button" class="ws-search-trigger" data-ws-palette aria-label="{{ _('Search products') }}">
+				<span>🔍 {{ _("Search") }}</span><kbd>⌘K</kbd>
+			</button>
 			<a href="/store" class="{{ 'active' if pathname and pathname.startswith('store') else '' }}">{{ _("Store") }}</a>
 			{% if frappe.session.user != "Guest" %}
 			<a href="/wishlist">{{ _("Wishlist") }}</a>
 			<a href="/portal/account">{{ _("Account") }}</a>
 			<a href="#" data-webstore-logout>{{ _("Log out") }}</a>
-			<a href="/cart" class="ws-cart-link">{{ _("Cart") }}<span id="webstore-cart-badge"></span></a>
+			<a href="/cart" class="ws-cart-link" data-ws-cart-drawer>{{ _("Basket") }}<span id="webstore-cart-badge"></span></a>
 			{% if path and path.startswith("portal") %}
 			<a href="/store" class="ws-member-btn">{{ _("Store") }}</a>
 			{% else %}
@@ -29,6 +32,29 @@
 {% endblock %}
 
 {% block footer %}
+<dialog id="ws-cart-drawer" class="ws-drawer" aria-label="{{ _('Shopping basket') }}">
+	<div class="ws-drawer-panel">
+		<div class="ws-drawer-head">
+			<span class="font-display">{{ _("Your basket") }} 🧺</span>
+			<button type="button" data-ws-close aria-label="{{ _('Close') }}">✕</button>
+		</div>
+		<div id="ws-drawer-body" class="ws-drawer-scroll"></div>
+		<div id="ws-drawer-foot"></div>
+	</div>
+</dialog>
+
+<dialog id="ws-palette" class="ws-palette" aria-label="{{ _('Product search') }}">
+	<div class="ws-palette-panel">
+		<div class="ws-palette-head">
+			<input id="ws-palette-input" type="text" placeholder="{{ _('Search roses, coffee, avocado…') }}" autocomplete="off" spellcheck="false">
+			<button type="button" data-ws-close aria-label="{{ _('Close') }}"><kbd>esc</kbd></button>
+		</div>
+		<div id="ws-palette-results" class="ws-palette-scroll">
+			<div class="ws-palette-empty">{{ _("Type at least two letters — or press ↑↓ to browse, Enter to open.") }}</div>
+		</div>
+	</div>
+</dialog>
+
 <footer class="ws-footer">
 	<div class="container">
 		<div>
