@@ -56,3 +56,73 @@ def make_test_product(item_code, **kwargs):
 	})
 	product.insert(ignore_permissions=True)
 	return product
+
+
+def make_portal_user(email, customer_name=None, price_list=None):
+	customer_name = customer_name or email.split("@")[0].replace(".", " ").title()
+	if not frappe.db.exists("User", email):
+		user = frappe.get_doc({
+			"doctype": "User",
+			"email": email,
+			"first_name": customer_name,
+			"send_welcome_email": 0,
+			"user_type": "Website User",
+		})
+		user.flags.ignore_permissions = True
+		user.insert()
+		user.add_roles("Customer")
+	if not frappe.db.exists("Customer", customer_name):
+		customer = frappe.get_doc({
+			"doctype": "Customer",
+			"customer_name": customer_name,
+			"customer_type": "Individual",
+			"customer_group": "Individual",
+			"territory": "All Territories",
+			"default_price_list": price_list,
+		})
+		customer.insert(ignore_permissions=True)
+	elif price_list:
+		frappe.db.set_value("Customer", customer_name, "default_price_list", price_list)
+	contact_name = frappe.db.get_value("Contact", {"user": email})
+	if not contact_name:
+		contact = frappe.get_doc({
+			"doctype": "Contact",
+			"first_name": customer_name,
+			"user": email,
+			"email_ids": [{"email_id": email, "is_primary": 1}],
+			"links": [{"link_doctype": "Customer", "link_name": customer_name}],
+		})
+		contact.insert(ignore_permissions=True)
+	elif not frappe.db.exists(
+		"Dynamic Link",
+		{"parenttype": "Contact", "parent": contact_name, "link_doctype": "Customer", "link_name": customer_name},
+	):
+		# frappe auto-creates a bare Contact for new users; attach the Customer link
+		contact = frappe.get_doc("Contact", contact_name)
+		contact.append("links", {"link_doctype": "Customer", "link_name": customer_name})
+		contact.save(ignore_permissions=True)
+	return email, customer_name
+
+
+def make_item_price(item_code, price_list, rate):
+	existing = frappe.db.get_value("Item Price", {"item_code": item_code, "price_list": price_list})
+	if existing:
+		frappe.db.set_value("Item Price", existing, "price_list_rate", rate)
+		return
+	frappe.get_doc({
+		"doctype": "Item Price",
+		"item_code": item_code,
+		"price_list": price_list,
+		"price_list_rate": rate,
+	}).insert(ignore_permissions=True)
+
+
+def make_price_list(name):
+	if not frappe.db.exists("Price List", name):
+		frappe.get_doc({
+			"doctype": "Price List",
+			"price_list_name": name,
+			"selling": 1,
+			"currency": frappe.get_cached_value("Company", frappe.defaults.get_global_default("company"), "default_currency"),
+		}).insert(ignore_permissions=True)
+	return name
