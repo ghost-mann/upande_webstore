@@ -62,7 +62,16 @@
 		}
 	}
 
-	document.addEventListener("click", (event) => {
+	document.addEventListener("click", async (event) => {
+		const logout = event.target.closest("[data-webstore-logout]");
+		if (logout) {
+			event.preventDefault();
+			try {
+				await call("logout");
+			} catch {}
+			window.location.href = "/store";
+			return;
+		}
 		const add = event.target.closest("[data-webstore-add-to-cart]");
 		if (add) {
 			const qty = parseFloat(document.getElementById("webstore-qty")?.value || "1");

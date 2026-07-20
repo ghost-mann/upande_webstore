@@ -12,7 +12,7 @@
 			{% if frappe.session.user != "Guest" %}
 			<a href="/wishlist">{{ _("Wishlist") }}</a>
 			<a href="/portal/account">{{ _("Account") }}</a>
-			<a href="/?cmd=web_logout">{{ _("Log out") }}</a>
+			<a href="#" data-webstore-logout>{{ _("Log out") }}</a>
 			<a href="/cart" class="ws-cart-link">{{ _("Cart") }}<span id="webstore-cart-badge"></span></a>
 			{% if path and path.startswith("portal") %}
 			<a href="/store" class="ws-member-btn">{{ _("Store") }}</a>
