@@ -10,19 +10,19 @@
 {% block page_content %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
 <div class="row mb-4">
-	<div class="col-md-4 mb-3"><div class="ws-tile">
+	<div class="col-md-4 mb-3"><div class="ws-tile" data-mark="💰">
 		<h6>{{ _("Outstanding balance") }}</h6>
 		<div class="ws-tile-value">{{ frappe.utils.fmt_money(balance, currency=currency) }}</div>
 		<div class="ws-tile-links"><a href="/portal/statement">{{ _("View statement") }}</a> <a href="/portal/invoices">{{ _("Invoices") }}</a></div>
 	</div></div>
-	<div class="col-md-4 mb-3"><div class="ws-tile amber">
+	<div class="col-md-4 mb-3"><div class="ws-tile amber" data-mark="📋">
 		<h6>{{ _("Open quotations") }}</h6>
 		<div class="ws-tile-value">{{ open_quotations }}</div>
 		<div class="ws-tile-links"><a href="/portal/quotations">{{ _("Review & accept") }}</a></div>
 	</div></div>
-	<div class="col-md-4 mb-3"><div class="ws-tile leaf">
+	<div class="col-md-4 mb-3"><div class="ws-tile leaf" data-mark="🌿">
 		<h6>{{ _("Keep shopping") }}</h6>
-		<div class="ws-tile-value">🌿</div>
+		<div class="ws-tile-value">{{ _("Fresh today") }}</div>
 		<div class="ws-tile-links"><a href="/store">{{ _("Browse the store") }}</a> <a href="/wishlist">{{ _("Wishlist") }}</a> <a href="/cart">{{ _("Cart") }}</a></div>
 	</div></div>
 </div>

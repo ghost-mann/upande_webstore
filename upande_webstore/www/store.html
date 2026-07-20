@@ -1,6 +1,8 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Store") }}{% endblock %}
 
+{% set cat_emoji = {"Flowers": "🌸", "Coffee": "☕", "Fresh Produce": "🥬"} %}
+
 {% macro product_card(p) %}
 <div class="col-md-4 mb-4">
 	<div class="ws-card">
@@ -8,6 +10,7 @@
 		<div class="ws-card-media">
 			{% if p.image %}<img src="{{ p.image }}" alt="{{ p.web_title }}" loading="lazy">
 			{% else %}<span class="ws-noimg">{{ p.item }}</span>{% endif %}
+			{% if p.category %}<span class="ws-cat-chip">{{ cat_emoji.get(p.category, "🌿") }} {{ p.category }}</span>{% endif %}
 		</div>
 		<div class="ws-card-body">
 			<span class="ws-sku">{{ p.item }}</span>
@@ -34,10 +37,26 @@
 
 {% block hero %}
 <div class="ws-hero">
+	<span class="ws-float" style="top:12%;right:8%;">🌹</span>
+	<span class="ws-float f2" style="top:55%;right:22%;">☕</span>
+	<span class="ws-float f3" style="top:20%;right:33%;">🥑</span>
+	<span class="ws-float f4" style="top:65%;right:4%;">🍅</span>
 	<div class="container">
 		<span class="ws-hero-eyebrow">{{ _("Flowers · Coffee · Avocado · Vegetables") }}</span>
-		<h1>{{ _("Upande Store") }}</h1>
-		<p>{{ _("Farm-fresh produce from Kenyan growers — request a quotation online and our team confirms pricing, availability and delivery.") }}</p>
+		<h1>{{ _("Fresh from Kenyan farms") }}</h1>
+		<p>{{ _("Roses at dawn, coffee by the bag, avocados by the carton — request a quotation online and our team confirms pricing, availability and delivery.") }}</p>
+	</div>
+	<div class="ws-wave"><svg viewBox="0 0 1440 42" preserveAspectRatio="none"><path d="M0,26 C240,50 420,-6 720,16 C1020,38 1240,6 1440,22 L1440,42 L0,42 Z" fill="#fafaf8"/></svg></div>
+</div>
+<div class="ws-ticker" aria-hidden="true">
+	<div class="ws-ticker-track">
+		{% for i in range(2) %}
+		<span>🌹 {{ _("Red Naomi roses, cut this morning") }}</span>
+		<span>☕ {{ _("Kenya AA — specialty grade") }}</span>
+		<span>🥑 {{ _("Hass avocado, export cartons") }}</span>
+		<span>🥬 {{ _("Sukuma wiki, harvested to order") }}</span>
+		<span>🚚 {{ _("Quotation-first ordering — no surprises") }}</span>
+		{% endfor %}
 	</div>
 </div>
 {% endblock %}
@@ -52,7 +71,7 @@
 		<ul>
 			<li><a href="/store" class="{{ 'active' if not category else '' }}">{{ _("All products") }}</a></li>
 			{% for c in categories %}
-			<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}">{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
+			<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}"><span class="ws-cat-ico">{{ cat_emoji.get(c.name, "🌿") }}</span>{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
 			{% endfor %}
 		</ul>
 	</div>

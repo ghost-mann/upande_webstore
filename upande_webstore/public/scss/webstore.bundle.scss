@@ -594,3 +594,144 @@ body {
 }
 body > .page-content-wrapper { flex: 1 0 auto; width: 100%; }
 .ws-footer { margin-top: auto; }
+
+/* ================= market-morning bold pass ================= */
+
+/* leaf-textured paper */
+body {
+	background-color: var(--ws-paper);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M30 90c0-22 14-36 36-36-2 20-16 34-36 36zM90 30c0 16-10 26-26 26 1-14 11-24 26-26z' fill='%23228883' fill-opacity='0.045'/%3E%3C/svg%3E");
+}
+
+/* vivid hero */
+.ws-hero, .ws-portal-hero {
+	background: linear-gradient(118deg, #17332d 0%, #1d6a60 48%, #3f8a37 100%);
+	overflow: hidden;
+}
+.ws-hero { padding: 3.4rem 0 4.2rem; margin-bottom: 0; }
+.ws-hero h1 {
+	font-size: clamp(2.4rem, 5vw, 3.4rem);
+	line-height: 1.05;
+	display: inline-block;
+	position: relative;
+	z-index: 1;
+}
+.ws-hero h1::after {
+	content: "";
+	display: block;
+	height: 0.38rem;
+	width: 42%;
+	margin-top: 0.5rem;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--ws-amber), transparent);
+}
+.ws-hero p { font-size: 1.05rem; position: relative; z-index: 1; }
+.ws-portal-hero { padding: 2.4rem 0 3.2rem; }
+
+/* floating produce */
+.ws-float {
+	position: absolute;
+	font-size: 3.2rem;
+	opacity: 0.5;
+	filter: saturate(1.2) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.25));
+	animation: ws-float 9s ease-in-out infinite alternate;
+	pointer-events: none;
+	z-index: 0;
+}
+.ws-float.f2 { animation-duration: 12s; animation-delay: -3s; font-size: 2.5rem; }
+.ws-float.f3 { animation-duration: 10s; animation-delay: -6s; font-size: 4rem; opacity: 0.4; }
+.ws-float.f4 { animation-duration: 14s; animation-delay: -9s; font-size: 2.2rem; }
+@keyframes ws-float {
+	from { transform: translateY(-12px) rotate(-6deg); }
+	to { transform: translateY(14px) rotate(7deg); }
+}
+
+/* organic wave divider */
+.ws-wave {
+	position: absolute;
+	left: 0; right: 0; bottom: -1px;
+	height: 42px;
+	z-index: 1;
+	pointer-events: none;
+}
+.ws-wave svg { display: block; width: 100%; height: 100%; }
+
+/* fresh ticker */
+.ws-ticker {
+	background: var(--ws-amber);
+	color: var(--ws-ink);
+	font-family: var(--ws-mono);
+	font-size: 0.76rem;
+	font-weight: 600;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	overflow: hidden;
+	white-space: nowrap;
+	padding: 0.45rem 0;
+	margin-bottom: 2.4rem;
+	border-top: 1px solid rgba(68, 67, 63, 0.15);
+	border-bottom: 1px solid rgba(68, 67, 63, 0.15);
+}
+.ws-ticker-track { display: inline-block; animation: ws-ticker 36s linear infinite; }
+.ws-ticker-track span { margin-right: 3rem; }
+@keyframes ws-ticker {
+	from { transform: translateX(0); }
+	to { transform: translateX(-50%); }
+}
+
+/* juicier cards */
+.ws-card { border-radius: 16px; }
+.ws-card-media { position: relative; }
+.ws-card-media img { transition: transform 300ms ease; }
+.ws-card:hover .ws-card-media img { transform: scale(1.07); }
+.ws-card:hover { box-shadow: 0 4px 10px rgba(23, 51, 45, 0.08), 0 18px 40px -14px rgba(23, 51, 45, 0.3); transform: translateY(-4px); }
+.ws-cat-chip {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	background: rgba(255, 255, 255, 0.92);
+	border-radius: 999px;
+	padding: 3px 10px;
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: var(--ws-teal-dark);
+	box-shadow: 0 2px 8px rgba(23, 51, 45, 0.15);
+}
+
+/* gradient buttons */
+.btn-primary, .btn-success {
+	background: linear-gradient(112deg, var(--ws-teal), #3f8a37);
+	border: none;
+	box-shadow: 0 3px 10px -3px rgba(34, 136, 131, 0.55);
+	transition: transform 130ms ease, box-shadow 130ms ease;
+}
+.btn-primary:hover, .btn-success:hover {
+	background: linear-gradient(112deg, var(--ws-teal-dark), #35762e) !important;
+	transform: translateY(-1px);
+	box-shadow: 0 6px 16px -4px rgba(34, 136, 131, 0.6);
+}
+.btn-primary:disabled { background: #b9b6af; box-shadow: none; }
+
+/* sidebar category emoji */
+.ws-side li a .ws-cat-ico { margin-right: 0.35rem; }
+
+/* footer tri-stripe */
+.ws-footer { border-top: 4px solid; border-image: linear-gradient(90deg, var(--ws-amber), var(--ws-teal), var(--ws-leaf)) 1; padding: 2.4rem 0; }
+
+/* tiles get produce watermarks */
+.ws-tile { border-radius: 16px; }
+.ws-tile[data-mark]::after {
+	content: attr(data-mark);
+	position: absolute;
+	right: -6px;
+	bottom: -14px;
+	font-size: 4.6rem;
+	opacity: 0.1;
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ws-float, .ws-ticker-track { animation: none; }
+	.ws-card:hover .ws-card-media img { transform: none; }
+	.btn-primary:hover, .btn-success:hover { transform: none; }
+}

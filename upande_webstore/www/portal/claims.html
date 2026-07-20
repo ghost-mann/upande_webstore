@@ -1,0 +1,86 @@
+{% extends "templates/webstore_base.html" %}
+{% block title %}{{ _("Claims") }}{% endblock %}
+
+{% block hero %}
+{% set portal_active = "claims" %}
+{% set portal_title = _("Claims") %}
+{% set portal_eyebrow = _("Something arrived wrong? We'll make it right.") %}
+{% include "templates/includes/webstore_portal_hero.html" %}
+{% endblock %}
+
+{% block page_content %}
+{% from "templates/includes/webstore_macros.html" import status_badge %}
+<div class="card mb-4"><div class="card-body">
+	<p class="ws-section-title mb-2">{{ _("File a new claim") }}</p>
+	<form id="webstore-claim-form" onsubmit="return false;">
+		<div class="form-row">
+			<div class="col-md-5 form-group">
+				<label>{{ _("What is the claim about?") }}</label>
+				<select class="form-control" id="claim-type">
+					<option value="">{{ _("Select…") }}</option>
+					<option>{{ _("Damaged goods") }}</option>
+					<option>{{ _("Short delivery") }}</option>
+					<option>{{ _("Quality below grade") }}</option>
+					<option>{{ _("Billing error") }}</option>
+					<option>{{ _("Other") }}</option>
+				</select>
+			</div>
+			<div class="col-md-7 form-group">
+				<label>{{ _("Related order / invoice (optional)") }}</label>
+				<input class="form-control" id="claim-reference" list="claim-refs" placeholder="{{ _('e.g. SAL-ORD-2026-00001') }}">
+				<datalist id="claim-refs">
+					{% for ref in reference_docs %}<option value="{{ ref }}">{% endfor %}
+				</datalist>
+			</div>
+		</div>
+		<div class="form-group">
+			<label>{{ _("Describe what happened") }}</label>
+			<textarea class="form-control" id="claim-description" rows="3" placeholder="{{ _('Quantities affected, batch or AWB numbers, photos help too…') }}"></textarea>
+		</div>
+		<div class="form-group"><input type="file" id="claim-attachment"></div>
+		<button class="btn btn-primary" id="claim-submit">{{ _("Submit claim") }}</button>
+	</form>
+</div></div>
+
+<p class="ws-section-title">{{ _("Your claims") }}</p>
+{% if not claims %}
+<div class="ws-empty"><span class="ws-empty-mark">🤝</span>{{ _("No claims filed — everything arrived as it should.") }}</div>
+{% else %}
+<table class="table">
+	<thead><tr><th>{{ _("Claim") }}</th><th>{{ _("Status") }}</th><th>{{ _("Filed on") }}</th></tr></thead>
+	<tbody>
+	{% for claim in claims %}
+	<tr>
+		<td><a href="/portal/issue?name={{ claim.name | urlencode }}">{{ claim.subject }}</a></td>
+		<td>{{ status_badge(claim.status) }}</td>
+		<td>{{ frappe.utils.formatdate(claim.creation) }}</td>
+	</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+<script>
+document.getElementById("claim-submit").addEventListener("click", async () => {
+	try {
+		const result = await window.webstore.call("upande_webstore.api.support.create_claim", {
+			claim_type: document.getElementById("claim-type").value,
+			reference: document.getElementById("claim-reference").value,
+			description: document.getElementById("claim-description").value,
+		});
+		const file = document.getElementById("claim-attachment").files[0];
+		if (file) {
+			const form = new FormData();
+			form.append("file", file);
+			form.append("doctype", "Issue");
+			form.append("docname", result.name);
+			await fetch("/api/method/upload_file", {
+				method: "POST",
+				headers: { "X-Frappe-CSRF-Token": window.frappe?.csrf_token || "" },
+				body: form,
+			});
+		}
+		window.location.href = "/portal/issue?name=" + encodeURIComponent(result.name);
+	} catch (err) { window.webstore.toast(err.message, true); }
+});
+</script>
+{% endblock %}
