@@ -1,6 +1,9 @@
-{% extends "templates/web.html" %}
+{% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Account Statement") }}{% endblock %}
 {% block page_content %}
+{% set portal_active = "statement" %}
+{% include "templates/includes/webstore_portal_nav.html" %}
+
 <h1>{{ _("Account Statement") }}
 	<button class="btn btn-sm btn-outline-secondary" onclick="window.print()">{{ _("Print / PDF") }}</button>
 </h1>

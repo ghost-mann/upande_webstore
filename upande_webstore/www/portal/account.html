@@ -1,6 +1,9 @@
-{% extends "templates/web.html" %}
+{% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Account") }}{% endblock %}
 {% block page_content %}
+{% set portal_active = "account" %}
+{% include "templates/includes/webstore_portal_nav.html" %}
+
 <h1>{{ _("Account") }}</h1>
 <p class="text-muted">{{ _("Customer") }}: {{ customer }} · <a href="/update-password">{{ _("Change password") }}</a></p>
 <div class="row">

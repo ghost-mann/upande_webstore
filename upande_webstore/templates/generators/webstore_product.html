@@ -1,19 +1,24 @@
-{% extends "templates/web.html" %}
+{% extends "templates/webstore_base.html" %}
 {% block title %}{{ web_title }}{% endblock %}
 {% block page_content %}
+<p class="mt-3 mb-3"><a href="/store">← {{ _("All products") }}</a></p>
 <div class="row" id="webstore-product" data-product="{{ name }}" data-item="{{ item }}" data-is-template="{{ 1 if is_template else 0 }}">
-	<div class="col-md-5">
-		{% if image %}<img src="{{ image }}" class="img-fluid" alt="{{ web_title }}">{% endif %}
+	<div class="col-md-5 mb-4">
+		<div class="ws-card-media" style="border-radius: var(--ws-radius); border: 1px solid var(--ws-line);">
+			{% if image %}<img src="{{ image }}" alt="{{ web_title }}">
+			{% else %}<span class="ws-noimg">{{ item }}</span>{% endif %}
+		</div>
 	</div>
 	<div class="col-md-7">
-		<h1>{{ web_title }}
-			<button class="btn btn-sm btn-outline-danger" data-webstore-wishlist-toggle="{{ name }}" title="{{ _('Save to wishlist') }}">♥</button>
+		<span class="ws-sku">{{ item }}</span>
+		<h1 class="mb-1">{{ web_title }}
+			<button class="btn btn-sm btn-outline-danger" data-webstore-wishlist-toggle="{{ name }}" title="{{ _('Save to wishlist') }}" aria-label="{{ _('Save to wishlist') }}">♥</button>
 		</h1>
 		<p class="text-muted">{{ short_description or "" }}</p>
 
 		{% if is_template %}
 		{% for attr in attributes %}
-		<div class="form-group">
+		<div class="form-group" style="max-width: 340px;">
 			<label>{{ attr.attribute }}</label>
 			<select class="form-control webstore-attribute" data-attribute="{{ attr.attribute }}">
 				<option value="">{{ _("Select") }} {{ attr.attribute }}</option>
@@ -21,22 +26,22 @@
 			</select>
 		</div>
 		{% endfor %}
-		<p id="webstore-variant-price" class="h4"></p>
-		<p id="webstore-variant-stock"></p>
+		<p id="webstore-variant-price" class="ws-price h4"></p>
+		<p id="webstore-variant-stock" class="ws-stock"></p>
 		<button class="btn btn-primary" id="webstore-variant-add" disabled>{{ _("Add to cart") }}</button>
 		{% else %}
-		<p class="h4">
+		<p class="ws-price h3 mb-2">
 			{{ frappe.utils.fmt_money(price.rate, currency=price.currency) }}
 			{% if price.is_customer_price %}<span class="badge badge-info">{{ _("Your price") }}</span>{% endif %}
 		</p>
 		{% if stock.in_stock %}
-		<p><span class="badge badge-success">{{ _("In stock") }}{% if stock.show_qty %}: {{ stock.qty }}{% endif %}</span></p>
+		<p><span class="ws-stock in"><span class="ws-led"></span>{{ _("In stock") }}{% if stock.show_qty %} · {{ stock.qty | int }} {{ _("available") }}{% endif %}</span></p>
 		<div class="form-inline mb-3">
-			<input type="number" min="1" value="1" class="form-control mr-2" id="webstore-qty" style="width:90px">
+			<input type="number" min="1" value="1" class="form-control mr-2" id="webstore-qty" style="width:90px" aria-label="{{ _('Quantity') }}">
 			<button class="btn btn-primary" data-webstore-add-to-cart="{{ item }}">{{ _("Add to cart") }}</button>
 		</div>
 		{% else %}
-		<p><span class="badge badge-secondary">{{ _("Out of stock") }}</span></p>
+		<p><span class="ws-stock out"><span class="ws-led"></span>{{ _("Out of stock") }}</span></p>
 		<button class="btn btn-primary" disabled>{{ _("Out of stock") }}</button>
 		{% endif %}
 		{% endif %}

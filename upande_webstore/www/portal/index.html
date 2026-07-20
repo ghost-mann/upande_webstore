@@ -1,6 +1,9 @@
-{% extends "templates/web.html" %}
+{% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("My Account") }}{% endblock %}
 {% block page_content %}
+{% set portal_active = "dashboard" %}
+{% include "templates/includes/webstore_portal_nav.html" %}
+
 <h1>{{ _("Welcome") }}, {{ customer }}</h1>
 <div class="row my-4">
 	<div class="col-md-4"><div class="card"><div class="card-body">

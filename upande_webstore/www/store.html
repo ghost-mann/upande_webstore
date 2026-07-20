@@ -1,55 +1,69 @@
-{% extends "templates/web.html" %}
+{% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Store") }}{% endblock %}
 
 {% macro product_card(p) %}
 <div class="col-md-4 mb-4">
-	<div class="card h-100">
-		{% if p.image %}<img src="{{ p.image }}" class="card-img-top" alt="{{ p.web_title }}" style="object-fit:cover;height:180px;">{% endif %}
-		<div class="card-body">
-			<h5 class="card-title"><a href="/{{ p.route }}">{{ p.web_title }}</a></h5>
-			<p class="small text-muted">{{ p.short_description or "" }}</p>
-			{% if p.has_variants %}
-			<p class="mb-1">{{ _("Multiple options") }}</p>
-			{% elif p.price %}
-			<p class="mb-1 font-weight-bold">
-				{{ frappe.utils.fmt_money(p.price.rate, currency=p.price.currency) }}
-				{% if p.price.is_customer_price %}<span class="badge badge-info">{{ _("Your price") }}</span>{% endif %}
-			</p>
-			{% endif %}
-			{% if p.stock %}
-				{% if p.stock.in_stock %}
-				<span class="badge badge-success">{{ _("In stock") }}{% if p.stock.show_qty %}: {{ p.stock.qty }}{% endif %}</span>
-				{% else %}
-				<span class="badge badge-secondary">{{ _("Out of stock") }}</span>
+	<div class="ws-card">
+		{% if p.featured %}<span class="ws-featured-flag">{{ _("Featured") }}</span>{% endif %}
+		<div class="ws-card-media">
+			{% if p.image %}<img src="{{ p.image }}" alt="{{ p.web_title }}" loading="lazy">
+			{% else %}<span class="ws-noimg">{{ p.item }}</span>{% endif %}
+		</div>
+		<div class="ws-card-body">
+			<span class="ws-sku">{{ p.item }}</span>
+			<h5 class="ws-card-title"><a href="/{{ p.route }}">{{ p.web_title }}</a></h5>
+			<p class="ws-card-desc">{{ p.short_description or "" }}</p>
+			<div class="ws-card-foot">
+				{% if p.has_variants %}
+				<span class="ws-price-note">{{ _("Multiple options") }}</span>
+				{% elif p.price %}
+				<span class="ws-price">{{ frappe.utils.fmt_money(p.price.rate, currency=p.price.currency) }}
+					{% if p.price.is_customer_price %}<span class="badge badge-info">{{ _("Your price") }}</span>{% endif %}
+				</span>
 				{% endif %}
-			{% endif %}
+				{% if p.stock %}
+				<span class="ws-stock {{ 'in' if p.stock.in_stock else 'out' }}"><span class="ws-led"></span>
+					{% if p.stock.in_stock %}{{ _("In stock") }}{% if p.stock.show_qty %} · {{ p.stock.qty | int }}{% endif %}{% else %}{{ _("Out of stock") }}{% endif %}
+				</span>
+				{% endif %}
+			</div>
 		</div>
 	</div>
 </div>
 {% endmacro %}
 
+{% block hero %}
+<div class="ws-hero">
+	<div class="container">
+		<span class="ws-hero-eyebrow">{{ _("IoT hardware & smart solutions") }}</span>
+		<h1>{{ _("Upande Store") }}</h1>
+		<p>{{ _("Sensors, gateways and field equipment — request a quotation online, our team confirms pricing and delivery.") }}</p>
+	</div>
+</div>
+{% endblock %}
+
 {% block page_content %}
 <div class="row">
-	<div class="col-md-3">
-		<form method="get" action="/store" class="mb-3">
-			<input type="text" class="form-control" name="q" value="{{ search }}" placeholder="{{ _('Search products…') }}">
+	<div class="col-md-3 ws-side">
+		<form method="get" action="/store" class="ws-search mb-3">
+			<input type="text" name="q" value="{{ search }}" placeholder="{{ _('Search products…') }}" aria-label="{{ _('Search products') }}">
 		</form>
 		<h6>{{ _("Categories") }}</h6>
-		<ul class="list-unstyled">
-			<li><a href="/store" class="{{ 'font-weight-bold' if not category else '' }}">{{ _("All") }}</a></li>
+		<ul>
+			<li><a href="/store" class="{{ 'active' if not category else '' }}">{{ _("All products") }}</a></li>
 			{% for c in categories %}
-			<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'font-weight-bold' if category == c.name else '' }}">{{ c.name }} ({{ c.count }})</a></li>
+			<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}">{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
 			{% endfor %}
 		</ul>
 	</div>
 	<div class="col-md-9">
 		{% if featured %}
-		<h4>{{ _("Featured") }}</h4>
+		<h4 class="mb-3">{{ _("Featured") }}</h4>
 		<div class="row">{% for p in featured %}{{ product_card(p) }}{% endfor %}</div>
 		<hr>
 		{% endif %}
-		<h4>{{ _("All products") }}{% if search %} — {{ _("results for") }} “{{ search }}”{% endif %}</h4>
-		{% if not products %}<p class="text-muted">{{ _("No products found.") }}</p>{% endif %}
+		<h4 class="mb-3">{{ _("All products") }}{% if search %} — {{ _("results for") }} “{{ search }}”{% endif %}</h4>
+		{% if not products %}<p class="text-muted">{{ _("No products found.") }} {% if search or category %}<a href="/store">{{ _("Clear filters") }}</a>{% endif %}</p>{% endif %}
 		<div class="row">{% for p in products %}{{ product_card(p) }}{% endfor %}</div>
 		{% if total_pages > 1 %}
 		<nav><ul class="pagination">

@@ -1,6 +1,9 @@
-{% extends "templates/web.html" %}
+{% extends "templates/webstore_base.html" %}
 {% block title %}{{ doc.name }}{% endblock %}
 {% block page_content %}
+{% set portal_active = "orders" %}
+{% include "templates/includes/webstore_portal_nav.html" %}
+
 <a href="/portal/orders">← {{ _("All orders") }}</a>
 <h1>{{ doc.name }}</h1>
 <p>{{ _("Status") }}: <strong>{{ doc.status }}</strong> ·

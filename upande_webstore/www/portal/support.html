@@ -1,6 +1,9 @@
-{% extends "templates/web.html" %}
+{% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Support") }}{% endblock %}
 {% block page_content %}
+{% set portal_active = "support" %}
+{% include "templates/includes/webstore_portal_nav.html" %}
+
 <h1>{{ _("Support") }}</h1>
 <div class="card mb-4"><div class="card-body">
 	<h5>{{ _("Raise a new issue") }}</h5>

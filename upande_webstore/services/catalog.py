@@ -18,7 +18,7 @@ def get_products(search=None, category=None, featured_only=False, start=0, page_
 			["short_description", "like", like],
 			["item", "like", like],
 		]
-	fields = ["name", "web_title", "route", "image", "short_description", "item", "category"]
+	fields = ["name", "web_title", "route", "image", "short_description", "item", "category", "featured"]
 	products = frappe.get_all(
 		"Webstore Product",
 		filters=filters,
