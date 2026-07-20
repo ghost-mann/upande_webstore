@@ -585,3 +585,12 @@ footer.web-footer { display: none; }
 	font-weight: 600 !important;
 }
 .ws-member-btn:hover { background: #ffc35c; }
+
+/* sticky footer: content area grows, footer pinned to viewport bottom on short pages */
+body {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+body > .page-content-wrapper { flex: 1 0 auto; width: 100%; }
+.ws-footer { margin-top: auto; }
