@@ -1,0 +1,38 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ _("Create Account") }}{% endblock %}
+{% block page_content %}
+<div class="row justify-content-center"><div class="col-md-6">
+<h1>{{ _("Create Account") }}</h1>
+<form id="webstore-signup-form" onsubmit="return false;">
+	<div class="form-group"><label>{{ _("Full name") }}</label>
+		<input class="form-control" id="signup-name" required></div>
+	<div class="form-group"><label>{{ _("Email") }}</label>
+		<input type="email" class="form-control" id="signup-email" required></div>
+	<div class="form-group"><label>{{ _("Phone") }}</label>
+		<input class="form-control" id="signup-phone" required></div>
+	<div class="form-group"><label>{{ _("Company name (leave blank for personal account)") }}</label>
+		<input class="form-control" id="signup-company"></div>
+	<button class="btn btn-primary" id="signup-submit">{{ _("Sign up") }}</button>
+	<p class="mt-3">{{ _("Already have an account?") }} <a href="/login">{{ _("Log in") }}</a></p>
+	<div id="signup-result" class="alert d-none mt-3"></div>
+</form>
+<script>
+document.getElementById("signup-submit").addEventListener("click", async () => {
+	const result = document.getElementById("signup-result");
+	try {
+		const message = await window.webstore.call("upande_webstore.api.account.sign_up", {
+			full_name: document.getElementById("signup-name").value,
+			email: document.getElementById("signup-email").value,
+			phone: document.getElementById("signup-phone").value,
+			company_name: document.getElementById("signup-company").value || null,
+		});
+		result.className = "alert alert-success mt-3";
+		result.textContent = message.message;
+	} catch (err) {
+		result.className = "alert alert-danger mt-3";
+		result.textContent = err.message;
+	}
+});
+</script>
+</div></div>
+{% endblock %}
