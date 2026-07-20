@@ -45,3 +45,19 @@ def accept_quotation(name):
 @frappe.whitelist(methods=["POST"])
 def decline_quotation(name):
 	return _act_on_quotation(name, "Declined")
+
+
+@frappe.whitelist()
+def download_invoice_pdf(name):
+	invoice = assert_customer_doc("Sales Invoice", name, "customer")
+	# Ownership verified above; render under elevated context because
+	# printview re-checks desk permissions website users lack.
+	session_user = frappe.session.user
+	frappe.set_user("Administrator")
+	try:
+		pdf = frappe.get_print("Sales Invoice", name, doc=invoice, as_pdf=True)
+	finally:
+		frappe.set_user(session_user)
+	frappe.local.response.filename = f"{name}.pdf"
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "pdf"

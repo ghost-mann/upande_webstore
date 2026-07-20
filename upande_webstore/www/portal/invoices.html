@@ -1,0 +1,23 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ _("My Invoices") }}{% endblock %}
+{% block page_content %}
+<h1>{{ _("My Invoices") }}</h1>
+{% if not invoices %}<p class="text-muted">{{ _("No invoices yet.") }}</p>{% else %}
+<table class="table">
+	<thead><tr><th>{{ _("Invoice") }}</th><th>{{ _("Date") }}</th><th>{{ _("Due") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th><th class="text-right">{{ _("Outstanding") }}</th><th></th></tr></thead>
+	<tbody>
+	{% for inv in invoices %}
+	<tr>
+		<td><a href="/portal/invoice?name={{ inv.name | urlencode }}">{{ inv.name }}</a></td>
+		<td>{{ frappe.utils.formatdate(inv.posting_date) }}</td>
+		<td>{{ frappe.utils.formatdate(inv.due_date) if inv.due_date else "" }}</td>
+		<td><span class="badge badge-{{ 'success' if inv.status == 'Paid' else ('danger' if inv.status == 'Overdue' else 'warning') }}">{{ inv.status }}</span></td>
+		<td class="text-right">{{ frappe.utils.fmt_money(inv.grand_total, currency=inv.currency) }}</td>
+		<td class="text-right">{{ frappe.utils.fmt_money(inv.outstanding_amount, currency=inv.currency) }}</td>
+		<td><a class="btn btn-sm btn-outline-secondary" href="/api/method/upande_webstore.api.portal.download_invoice_pdf?name={{ inv.name | urlencode }}">{{ _("PDF") }}</a></td>
+	</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+{% endblock %}

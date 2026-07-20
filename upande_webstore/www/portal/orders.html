@@ -1,0 +1,22 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ _("My Orders") }}{% endblock %}
+{% block page_content %}
+<h1>{{ _("My Orders") }}</h1>
+{% if not orders %}<p class="text-muted">{{ _("No orders yet.") }}</p>{% else %}
+<table class="table">
+	<thead><tr><th>{{ _("Order") }}</th><th>{{ _("Date") }}</th><th>{{ _("Status") }}</th><th>{{ _("Delivered") }}</th><th>{{ _("Billed") }}</th><th class="text-right">{{ _("Total") }}</th></tr></thead>
+	<tbody>
+	{% for o in orders %}
+	<tr>
+		<td><a href="/portal/order?name={{ o.name | urlencode }}">{{ o.name }}</a></td>
+		<td>{{ frappe.utils.formatdate(o.transaction_date) }}</td>
+		<td>{{ o.status }}</td>
+		<td>{{ o.per_delivered | int }}%</td>
+		<td>{{ o.per_billed | int }}%</td>
+		<td class="text-right">{{ frappe.utils.fmt_money(o.grand_total, currency=o.currency) }}</td>
+	</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+{% endblock %}
