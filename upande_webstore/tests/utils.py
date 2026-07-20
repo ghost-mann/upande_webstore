@@ -126,3 +126,31 @@ def make_price_list(name):
 			"currency": frappe.get_cached_value("Company", frappe.defaults.get_global_default("company"), "default_currency"),
 		}).insert(ignore_permissions=True)
 	return name
+
+
+def set_stock(item_code, qty, warehouse=None):
+	"""Set absolute stock via Stock Entry receipts/issues (idempotent)."""
+	from erpnext.stock.utils import get_stock_balance
+
+	warehouse = warehouse or get_default_warehouse()
+	current = get_stock_balance(item_code, warehouse)
+	diff = qty - current
+	if diff == 0:
+		return
+	receiving = diff > 0
+	entry = frappe.get_doc({
+		"doctype": "Stock Entry",
+		"stock_entry_type": "Material Receipt" if receiving else "Material Issue",
+		"company": frappe.defaults.get_global_default("company"),
+		"items": [{
+			"item_code": item_code,
+			"qty": abs(diff),
+			"t_warehouse": warehouse if receiving else None,
+			"s_warehouse": None if receiving else warehouse,
+			"basic_rate": 10,
+			"allow_zero_valuation_rate": 1,
+		}],
+	})
+	entry.flags.ignore_permissions = True
+	entry.insert()
+	entry.submit()
