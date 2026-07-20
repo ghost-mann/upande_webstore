@@ -7,3 +7,6 @@ node_modules
 __pycache__
 venv
 *.ruff_cache
+
+# Local planning/SDD artifacts, not part of the shipped app
+.superpowers/
