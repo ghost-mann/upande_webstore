@@ -33,53 +33,65 @@
 {% endmacro %}
 
 {% block hero %}
-<div class="ws-hero">
+<div class="ws-hero2">
+	<div class="ws-hero2-bg"><img src="/assets/upande_webstore/images/site/hero.jpg" alt=""></div>
 	<div class="container">
-		<div class="row align-items-center">
-			<div class="col-lg-7">
-				<span class="ws-hero-badge">{{ _("B2B produce marketplace — quotation-first ordering") }}</span>
-				<h1>{{ _("Export-grade produce,") }} <em>{{ _("direct from Kenyan farms") }}</em></h1>
-				<p>{{ _("Flowers, coffee, avocado and fresh vegetables for wholesale buyers. Build your order online; our team confirms pricing, availability and cold-chain delivery on every quotation.") }}</p>
-				<div class="ws-hero-actions">
-					<a href="#catalog" class="btn btn-primary">{{ _("Browse catalog") }}</a>
-					{% if frappe.session.user == "Guest" %}
-					<a href="/signup" class="btn btn-outline-secondary">{{ _("Open a trade account") }}</a>
-					{% else %}
-					<a href="/portal" class="btn btn-outline-secondary">{{ _("Go to your portal") }}</a>
-					{% endif %}
-				</div>
-				<div class="ws-hero-stats">
-					<div class="ws-hero-stat"><b>40+</b><span>{{ _("partner growers") }}</span></div>
-					<div class="ws-hero-stat"><b>24h</b><span>{{ _("quotation turnaround") }}</span></div>
-					<div class="ws-hero-stat"><b>4°C</b><span>{{ _("cold chain, farm to door") }}</span></div>
-				</div>
+		<div class="ws-hero2-inner">
+			<span class="ws-eyebrow on-dark rv in">{{ _("Upande · Nairobi · Est. for growers") }}</span>
+			<h1 class="rv in">{{ _("The harvest,") }} <em>{{ _("straight from the farm gate") }}</em></h1>
+			<p class="rv rv-1 in">{{ _("Export-grade flowers, coffee and fresh produce from Kenyan growers — wholesale quantities, quotation-first ordering, cold chain to your door.") }}</p>
+			<div class="ws-hero2-actions rv rv-2 in">
+				<a href="#catalog" class="btn btn-primary">{{ _("Browse the catalog") }}</a>
+				{% if frappe.session.user == "Guest" %}
+				<a href="/signup" class="btn btn-hero-ghost">{{ _("Open a trade account") }}</a>
+				{% else %}
+				<a href="/portal" class="btn btn-hero-ghost">{{ _("Go to your portal") }}</a>
+				{% endif %}
 			</div>
-			<div class="col-lg-5 mt-4 mt-lg-0 ws-hero-side">
-				<div class="card">
-					<div class="ws-hero-side-head">
-						<span>{{ _("Available this week") }}</span>
-						<span class="badge badge-success">{{ _("Live") }}</span>
-					</div>
-					{% for p in featured[:4] if featured %}
-					<a class="ws-hero-side-row" href="/{{ p.route }}" style="text-decoration:none;color:inherit;">
-						<span>
-							<span class="d-block" style="font-weight:500;">{{ p.web_title }}</span>
-							<span class="ws-sku">{{ p.item }}</span>
-						</span>
-						{% if p.price %}<span class="ws-price">{{ frappe.utils.fmt_money(p.price.rate, currency=p.price.currency) }}</span>{% endif %}
-					</a>
-					{% else %}
-					<div class="ws-hero-side-row">{{ _("Publish products to feature them here.") }}</div>
-					{% endfor %}
-				</div>
+			<div class="ws-hero2-stats rv rv-3 in">
+				<div class="ws-hero2-stat"><b>40+</b><span>{{ _("partner growers") }}</span></div>
+				<div class="ws-hero2-stat"><b>24h</b><span>{{ _("quotation turnaround") }}</span></div>
+				<div class="ws-hero2-stat"><b>4°C</b><span>{{ _("cold chain, farm to door") }}</span></div>
 			</div>
 		</div>
 	</div>
 </div>
+
+<div class="ws-cats">
+	<div class="container">
+		<span class="ws-eyebrow rv">{{ _("What we grow") }}</span>
+		<div class="row mt-3">
+			<div class="col-md-4 mb-4 rv">
+				<a class="ws-catcard" href="/store?category=Flowers">
+					<img src="/assets/upande_webstore/images/site/cat-flowers.jpg" alt="{{ _('Flowers') }}" loading="lazy">
+					<span class="ws-catcard-arrow">↗</span>
+					<span class="ws-catcard-label"><span class="t">{{ _("Flowers") }}</span><span class="n">{{ _("Roses, lilies & fillers") }}</span></span>
+				</a>
+			</div>
+			<div class="col-md-4 mb-4 rv rv-1">
+				<a class="ws-catcard" href="/store?category=Coffee">
+					<img src="/assets/upande_webstore/images/site/cat-coffee.jpg" alt="{{ _('Coffee') }}" loading="lazy">
+					<span class="ws-catcard-arrow">↗</span>
+					<span class="ws-catcard-label"><span class="t">{{ _("Coffee") }}</span><span class="n">{{ _("AA & specialty grades") }}</span></span>
+				</a>
+			</div>
+			<div class="col-md-4 mb-4 rv rv-2">
+				<a class="ws-catcard" href="/store?category=Fresh%20Produce">
+					<img src="/assets/upande_webstore/images/site/cat-produce.jpg" alt="{{ _('Fresh Produce') }}" loading="lazy">
+					<span class="ws-catcard-arrow">↗</span>
+					<span class="ws-catcard-label"><span class="t">{{ _("Fresh Produce") }}</span><span class="n">{{ _("Avocado & vegetables") }}</span></span>
+				</a>
+			</div>
+		</div>
+	</div>
+</div>
+</div></div>
+
 {% endblock %}
 
 {% block page_content %}
-<div class="row" id="catalog">
+<div class="ws-catalog-band" id="catalog"><div class="container-fluid p-0">
+<div class="row">
 	<div class="col-md-3 ws-side">
 		<form method="get" action="/store" class="ws-search mb-3">
 			<input type="text" name="q" value="{{ search }}" placeholder="{{ _('Search products…') }}" aria-label="{{ _('Search products') }}">
@@ -105,6 +117,31 @@
 			{% endfor %}
 		</ul></nav>
 		{% endif %}
+	</div>
+</div>
+</div></div>
+
+<div class="ws-process rv" style="margin: 3.5rem -15px -4rem;">
+	<div class="container">
+		<span class="ws-eyebrow on-dark">{{ _("How ordering works") }}</span>
+		<h3>{{ _("From your basket to a") }} <em>{{ _("confirmed quotation") }}</em> {{ _("in one working day") }}</h3>
+		<div class="row">
+			<div class="col-md-4 mb-4"><div class="ws-step-card">
+				<span class="n">01</span>
+				<div class="t">{{ _("Build your basket") }}</div>
+				<p>{{ _("Browse live availability and wholesale pack sizes. Your prices appear automatically once your account is linked.") }}</p>
+			</div></div>
+			<div class="col-md-4 mb-4"><div class="ws-step-card">
+				<span class="n">02</span>
+				<div class="t">{{ _("Request a quotation") }}</div>
+				<p>{{ _("Send your basket with a PO reference. Our team confirms pricing, availability and freight within 24 hours.") }}</p>
+			</div></div>
+			<div class="col-md-4 mb-4"><div class="ws-step-card">
+				<span class="n">03</span>
+				<div class="t">{{ _("Accept & receive") }}</div>
+				<p>{{ _("Accept online from your portal. We pack to order and ship cold chain, with documents in your portal.") }}</p>
+			</div></div>
+		</div>
 	</div>
 </div>
 {% endblock %}

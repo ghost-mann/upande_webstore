@@ -57,13 +57,43 @@
 
 <footer class="ws-footer">
 	<div class="container">
-		<div>
-			<a href="/store">{{ _("Store") }}</a>
-			<a href="/portal/support">{{ _("Support") }}</a>
-			<a href="/app">{{ _("Desk") }}</a>
-			<a href="https://upande.com" target="_blank" rel="noopener">upande.com</a>
+		<div class="ws-footer-grid">
+			<div>
+				<div class="ws-footer-brand">upande<b>store</b></div>
+				<p class="ws-footer-tag">{{ _("Export-grade flowers, coffee and fresh produce from Kenyan growers — ordered online, confirmed by people who know the farms.") }}</p>
+			</div>
+			<div>
+				<h6>{{ _("Shop") }}</h6>
+				<ul>
+					<li><a href="/store">{{ _("All products") }}</a></li>
+					<li><a href="/store?category=Flowers">{{ _("Flowers") }}</a></li>
+					<li><a href="/store?category=Coffee">{{ _("Coffee") }}</a></li>
+					<li><a href="/store?category=Fresh%20Produce">{{ _("Fresh Produce") }}</a></li>
+				</ul>
+			</div>
+			<div>
+				<h6>{{ _("Account") }}</h6>
+				<ul>
+					<li><a href="/portal">{{ _("Customer portal") }}</a></li>
+					<li><a href="/portal/quotations">{{ _("Quotations") }}</a></li>
+					<li><a href="/portal/claims">{{ _("Claims") }}</a></li>
+					<li><a href="/app">{{ _("Team desk") }}</a></li>
+				</ul>
+			</div>
+			<div>
+				<h6>{{ _("Contact") }}</h6>
+				<ul>
+					<li><a href="mailto:sales@upande.com">sales@upande.com</a></li>
+					<li>{{ _("Mon–Sat, 07:00–17:00 EAT") }}</li>
+					<li>{{ _("Nairobi, Kenya") }}</li>
+					<li><a href="https://upande.com" target="_blank" rel="noopener">upande.com</a></li>
+				</ul>
+			</div>
 		</div>
-		<div class="ws-foot-mark">© Upande Ltd · Nairobi · Flowers, coffee & fresh produce</div>
+		<div class="ws-footer-bottom">
+			<span>© {{ frappe.utils.now_datetime().year }} Upande Ltd. {{ _("All rights reserved.") }}</span>
+			<span>{{ _("Quotation-first ordering · No payment taken online") }}</span>
+		</div>
 	</div>
 </footer>
 {% endblock %}

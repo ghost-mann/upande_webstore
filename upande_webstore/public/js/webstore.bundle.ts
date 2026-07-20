@@ -315,7 +315,36 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 		}
 	});
 
-	document.addEventListener("DOMContentLoaded", refreshCartBadge);
+	function initReveals(): void {
+		const nodes = [...document.querySelectorAll<HTMLElement>(".rv:not(.in)")];
+		if (!nodes.length || !("IntersectionObserver" in window)) {
+			nodes.forEach((n) => n.classList.add("in"));
+			return;
+		}
+		const io = new IntersectionObserver((entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) {
+					entry.target.classList.add("in");
+					io.unobserve(entry.target);
+				}
+			});
+		}, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+		nodes.forEach((n) => {
+			// reveal immediately when already in the first viewport (no observer race)
+			if (n.getBoundingClientRect().top < window.innerHeight * 0.96) {
+				n.classList.add("in");
+			} else {
+				io.observe(n);
+			}
+		});
+		// safety net: never leave content hidden (broken observer, prerender, print)
+		window.setTimeout(() => nodes.forEach((n) => n.classList.add("in")), 1600);
+	}
+
+	document.addEventListener("DOMContentLoaded", () => {
+		refreshCartBadge();
+		initReveals();
+	});
 	window.webstore = { addToCart, toggleWishlist, refreshCartBadge, openCart, openPalette, call, toast };
 })();
 

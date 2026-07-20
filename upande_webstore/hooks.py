@@ -31,7 +31,7 @@ app_license = "mit"
 # include js, css files in header of web template
 # web_include_css = "/assets/upande_webstore/css/upande_webstore.css"
 web_include_css = ["/assets/upande_webstore/css/tailwind.css", "webstore.bundle.css"]
-web_include_js = "webstore.bundle.js"
+web_include_js = "webstore.bundle.ts"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "upande_webstore/public/scss/website"
