@@ -87,6 +87,8 @@ app_license = "mit"
 
 # before_install = "upande_webstore.install.before_install"
 # after_install = "upande_webstore.install.after_install"
+after_install = "upande_webstore.setup.install.after_install"
+after_migrate = "upande_webstore.setup.install.after_migrate"
 
 # Uninstallation
 # ------------
