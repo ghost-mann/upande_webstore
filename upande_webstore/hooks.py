@@ -258,3 +258,16 @@ after_migrate = "upande_webstore.setup.install.after_migrate"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+
+standard_portal_menu_items = [
+	{"title": "Store", "route": "/store", "role": "Customer"},
+	{"title": "Cart", "route": "/cart", "role": "Customer"},
+	{"title": "Wishlist", "route": "/wishlist", "role": "Customer"},
+	{"title": "My Dashboard", "route": "/portal", "role": "Customer"},
+	{"title": "Quotations", "route": "/portal/quotations", "role": "Customer"},
+	{"title": "Orders", "route": "/portal/orders", "role": "Customer"},
+	{"title": "Invoices", "route": "/portal/invoices", "role": "Customer"},
+	{"title": "Statement", "route": "/portal/statement", "role": "Customer"},
+	{"title": "Support", "route": "/portal/support", "role": "Customer"},
+	{"title": "Account", "route": "/portal/account", "role": "Customer"},
+]

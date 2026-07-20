@@ -1,0 +1,60 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ _("Account") }}{% endblock %}
+{% block page_content %}
+<h1>{{ _("Account") }}</h1>
+<p class="text-muted">{{ _("Customer") }}: {{ customer }} · <a href="/update-password">{{ _("Change password") }}</a></p>
+<div class="row">
+	<div class="col-md-6">
+		<h4>{{ _("Profile") }}</h4>
+		<form onsubmit="return false;">
+			<div class="form-group"><label>{{ _("Full name") }}</label>
+				<input class="form-control" id="profile-name" value="{{ user_doc.first_name }}"></div>
+			<div class="form-group"><label>{{ _("Phone") }}</label>
+				<input class="form-control" id="profile-phone" value="{{ user_doc.mobile_no or '' }}"></div>
+			<button class="btn btn-primary" id="profile-save">{{ _("Save") }}</button>
+		</form>
+	</div>
+	<div class="col-md-6">
+		<h4>{{ _("Addresses") }}</h4>
+		<ul class="list-group mb-3">
+			{% for a in addresses %}
+			<li class="list-group-item">{{ a.address_title }} — {{ a.address_line1 }}, {{ a.city }}, {{ a.country }}</li>
+			{% else %}
+			<li class="list-group-item text-muted">{{ _("No addresses yet.") }}</li>
+			{% endfor %}
+		</ul>
+		<h6>{{ _("Add address") }}</h6>
+		<form onsubmit="return false;">
+			<div class="form-group"><input class="form-control" id="addr-title" placeholder="{{ _('Label (e.g. Head Office)') }}"></div>
+			<div class="form-group"><input class="form-control" id="addr-line1" placeholder="{{ _('Street / building') }}"></div>
+			<div class="form-row">
+				<div class="col form-group"><input class="form-control" id="addr-city" placeholder="{{ _('City') }}"></div>
+				<div class="col form-group"><input class="form-control" id="addr-country" placeholder="{{ _('Country') }}" value="Kenya"></div>
+			</div>
+			<button class="btn btn-secondary" id="addr-add">{{ _("Add") }}</button>
+		</form>
+	</div>
+</div>
+<script>
+document.getElementById("profile-save").addEventListener("click", async () => {
+	try {
+		const result = await window.webstore.call("upande_webstore.api.account.update_profile", {
+			full_name: document.getElementById("profile-name").value,
+			phone: document.getElementById("profile-phone").value,
+		});
+		window.webstore.toast(result.message);
+	} catch (err) { window.webstore.toast(err.message, true); }
+});
+document.getElementById("addr-add").addEventListener("click", async () => {
+	try {
+		await window.webstore.call("upande_webstore.api.account.add_address", {
+			address_title: document.getElementById("addr-title").value,
+			address_line1: document.getElementById("addr-line1").value,
+			city: document.getElementById("addr-city").value,
+			country: document.getElementById("addr-country").value,
+		});
+		window.location.reload();
+	} catch (err) { window.webstore.toast(err.message, true); }
+});
+</script>
+{% endblock %}

@@ -70,3 +70,46 @@ def sign_up(email, full_name, phone, company_name=None):
 		contact.insert()
 
 	return {"message": _("Account created. Check your email to set your password.")}
+
+
+@frappe.whitelist(methods=["POST"])
+def update_profile(full_name, phone):
+	from upande_webstore.api.cart import _require_login
+
+	_require_login()
+	full_name = (full_name or "").strip()
+	if not full_name:
+		frappe.throw(_("Name is required."), frappe.ValidationError)
+	user = frappe.get_doc("User", frappe.session.user)
+	user.first_name = full_name
+	user.mobile_no = phone
+	user.flags.ignore_permissions = True
+	user.save()
+	contact_name = frappe.db.get_value("Contact", {"user": frappe.session.user})
+	if contact_name:
+		frappe.db.set_value("Contact", contact_name, {"first_name": full_name})
+	return {"message": _("Profile updated.")}
+
+
+@frappe.whitelist(methods=["POST"])
+def add_address(address_title, address_line1, city, country, phone=None):
+	from upande_webstore.api.cart import _require_login
+	from upande_webstore.services.portal import get_current_customer
+
+	_require_login()
+	customer = get_current_customer()
+	if not (address_title and address_line1 and city and country):
+		frappe.throw(_("All address fields except phone are required."), frappe.ValidationError)
+	address = frappe.get_doc({
+		"doctype": "Address",
+		"address_title": address_title,
+		"address_type": "Shipping",
+		"address_line1": address_line1,
+		"city": city,
+		"country": country,
+		"phone": phone,
+		"links": [{"link_doctype": "Customer", "link_name": customer}],
+	})
+	address.flags.ignore_permissions = True
+	address.insert()
+	return {"name": address.name}
