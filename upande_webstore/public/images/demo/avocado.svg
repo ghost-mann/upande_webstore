@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
-<rect width="400" height="300" fill="#eef5e9"/>
-<circle cx="200" cy="150" r="86" fill="#4a8f3c" opacity="0.12"/>
-<text x="200" y="185" font-size="96" text-anchor="middle">🥑</text>
+<rect width="400" height="300" fill="#f0f7ec"/>
+<path d="M200 96c34 0 62 24 66 58-38 6-70-16-66-58z" fill="#3f6212" opacity="0.16"/>
+<path d="M200 96c-34 0-62 24-66 58 38 6 70-16 66-58z" fill="#3f6212" opacity="0.28"/>
+<text x="200" y="228" font-family="Inter, sans-serif" font-size="21" font-weight="600" text-anchor="middle" fill="#3f6212">Hass</text>
 </svg>

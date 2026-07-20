@@ -9,7 +9,7 @@
 		</a>
 		<div class="ws-nav">
 			<button type="button" class="ws-search-trigger" data-ws-palette aria-label="{{ _('Search products') }}">
-				<span>🔍 {{ _("Search") }}</span><kbd>⌘K</kbd>
+				<span>{{ _("Search products…") }}</span><kbd>⌘K</kbd>
 			</button>
 			<a href="/store" class="{{ 'active' if pathname and pathname.startswith('store') else '' }}">{{ _("Store") }}</a>
 			{% if frappe.session.user != "Guest" %}
@@ -35,7 +35,7 @@
 <dialog id="ws-cart-drawer" class="ws-drawer" aria-label="{{ _('Shopping basket') }}">
 	<div class="ws-drawer-panel">
 		<div class="ws-drawer-head">
-			<span class="font-display">{{ _("Your basket") }} 🧺</span>
+			<span class="font-display">{{ _("Your basket") }}</span>
 			<button type="button" data-ws-close aria-label="{{ _('Close') }}">✕</button>
 		</div>
 		<div id="ws-drawer-body" class="ws-drawer-scroll"></div>
@@ -63,7 +63,7 @@
 			<a href="/app">{{ _("Desk") }}</a>
 			<a href="https://upande.com" target="_blank" rel="noopener">upande.com</a>
 		</div>
-		<div class="ws-foot-mark">UPANDE · NAIROBI · FLOWERS · COFFEE · FRESH PRODUCE</div>
+		<div class="ws-foot-mark">© Upande Ltd · Nairobi · Flowers, coffee & fresh produce</div>
 	</div>
 </footer>
 {% endblock %}

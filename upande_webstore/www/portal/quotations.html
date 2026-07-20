@@ -10,7 +10,7 @@
 {% block page_content %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
 {% if not quotations %}
-<div class="ws-empty"><span class="ws-empty-mark">🌼</span>{{ _("No quotations yet — add products to your cart and request one.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+<div class="ws-empty">{{ _("No quotations yet — add products to your cart and request one.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
 {% else %}
 <table class="table">
 	<thead><tr><th>{{ _("Quotation") }}</th><th>{{ _("Date") }}</th><th>{{ _("Valid till") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th></tr></thead>

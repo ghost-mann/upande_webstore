@@ -1,11 +1,8 @@
 <div class="ws-portal-hero">
-	<span class="ws-float f2" style="top:16%;right:6%;">🌸</span>
-	<span class="ws-float f4" style="top:58%;right:16%;">🥬</span>
 	<div class="container">
 		{% if portal_back_url %}<a class="ws-portal-back" href="{{ portal_back_url }}">← {{ portal_back_label }}</a>{% endif %}
 		<span class="ws-hero-eyebrow">{{ portal_eyebrow or _("Customer portal") }}</span>
 		<h1>{{ portal_title }}</h1>
 		{% include "templates/includes/webstore_portal_nav.html" %}
 	</div>
-	<div class="ws-wave"><svg viewBox="0 0 1440 42" preserveAspectRatio="none"><path d="M0,26 C240,50 420,-6 720,16 C1020,38 1240,6 1440,22 L1440,42 L0,42 Z" fill="#f7f5ec"/></svg></div>
 </div>

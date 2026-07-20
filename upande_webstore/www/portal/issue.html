@@ -16,7 +16,7 @@
 <div class="card mb-3"><div class="card-body">{{ doc.description or "" }}</div></div>
 <p class="ws-section-title">{{ _("Replies") }}</p>
 {% if not replies %}
-<div class="ws-empty"><span class="ws-empty-mark">💬</span>{{ _("No replies yet — our team will respond soon.") }}</div>
+<div class="ws-empty">{{ _("No replies yet — our team will respond soon.") }}</div>
 {% endif %}
 {% for reply in replies %}
 <div class="card mb-2"><div class="card-body">

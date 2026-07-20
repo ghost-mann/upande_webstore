@@ -4,7 +4,7 @@
 @import "basecoat-css";
 
 @theme {
-	--color-forest: #17352b;
+	--color-forest: #09090b;
 	--color-forest-deep: #122a22;
 	--color-forest-2: #24493c;
 	--color-cream: #f7f5ec;
@@ -20,26 +20,26 @@
 	--font-mono: "IBM Plex Mono", monospace;
 }
 
-/* brand basecoat (shadcn vars) with the market-luxe palette */
+/* shadcn theme variables (zinc neutrals, green primary) */
 :root {
-	--color-background: #f7f5ec;
-	--color-foreground: #17352b;
+	--color-background: #ffffff;
+	--color-foreground: #09090b;
 	--color-card: #ffffff;
-	--color-card-foreground: #17352b;
+	--color-card-foreground: #09090b;
 	--color-popover: #ffffff;
-	--color-popover-foreground: #17352b;
-	--color-primary: #3f9142;
+	--color-popover-foreground: #09090b;
+	--color-primary: #166534;
 	--color-primary-foreground: #ffffff;
-	--color-secondary: #eaf3e6;
-	--color-secondary-foreground: #17352b;
-	--color-muted: #eceadf;
-	--color-muted-foreground: #5f6b5d;
-	--color-accent: #eaf3e6;
-	--color-accent-foreground: #17352b;
-	--color-destructive: #e5484d;
+	--color-secondary: #f4f4f5;
+	--color-secondary-foreground: #09090b;
+	--color-muted: #f4f4f5;
+	--color-muted-foreground: #71717a;
+	--color-accent: #f4f4f5;
+	--color-accent-foreground: #09090b;
+	--color-destructive: #dc2626;
 	--color-destructive-foreground: #ffffff;
-	--color-border: #e3e0d2;
-	--color-input: #e3e0d2;
-	--color-ring: #3f9142;
-	--radius: 0.75rem;
+	--color-border: #e4e4e7;
+	--color-input: #e4e4e7;
+	--color-ring: #166534;
+	--radius: 0.625rem;
 }

@@ -10,7 +10,7 @@
 {% block page_content %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
 {% if not invoices %}
-<div class="ws-empty"><span class="ws-empty-mark">☕</span>{{ _("No invoices yet.") }}</div>
+<div class="ws-empty">{{ _("No invoices yet.") }}</div>
 {% else %}
 <table class="table">
 	<thead><tr><th>{{ _("Invoice") }}</th><th>{{ _("Date") }}</th><th>{{ _("Due") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th><th class="text-right">{{ _("Outstanding") }}</th><th></th></tr></thead>

@@ -1,8 +1,6 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Store") }}{% endblock %}
 
-{% set cat_emoji = {"Flowers": "🌸", "Coffee": "☕", "Fresh Produce": "🥬"} %}
-
 {% macro product_card(p) %}
 <div class="col-md-4 mb-4">
 	<div class="ws-card">
@@ -10,7 +8,6 @@
 		<div class="ws-card-media">
 			{% if p.image %}<img src="{{ p.image }}" alt="{{ p.web_title }}" loading="lazy">
 			{% else %}<span class="ws-noimg">{{ p.item }}</span>{% endif %}
-			{% if p.category %}<span class="ws-cat-chip">{{ cat_emoji.get(p.category, "🌿") }} {{ p.category }}</span>{% endif %}
 		</div>
 		<div class="ws-card-body">
 			<span class="ws-sku">{{ p.item }}</span>
@@ -37,53 +34,52 @@
 
 {% block hero %}
 <div class="ws-hero">
-	<span class="ws-float f3" style="top:8%;left:44%;">🌿</span>
 	<div class="container">
-		<div class="grid gap-10 lg:grid-cols-5 items-center relative z-10">
-			<div class="lg:col-span-3">
-				<span class="ws-hero-eyebrow">{{ _("Flowers · Coffee · Avocado · Vegetables") }}</span>
-				<h1>{{ _("Fresh from") }} <em class="text-amber not-italic font-display italic">{{ _("Kenyan farms") }}</em>,<br>{{ _("priced for your business") }}</h1>
-				<p class="mt-3">{{ _("Roses at dawn, coffee by the bag, avocados by the carton — request a quotation online and our team confirms pricing, availability and delivery.") }}</p>
-				<div class="flex flex-wrap gap-2 mt-8 font-mono text-[0.72rem] tracking-[0.14em] uppercase text-white/60">
-					<span class="border border-white/20 rounded-full px-3 py-1">{{ _("40+ growers") }}</span>
-					<span class="border border-white/20 rounded-full px-3 py-1">{{ _("Cut & packed to order") }}</span>
-					<span class="border border-white/20 rounded-full px-3 py-1">{{ _("Cold chain to your door") }}</span>
+		<div class="row align-items-center">
+			<div class="col-lg-7">
+				<span class="ws-hero-badge">{{ _("B2B produce marketplace — quotation-first ordering") }}</span>
+				<h1>{{ _("Export-grade produce,") }} <em>{{ _("direct from Kenyan farms") }}</em></h1>
+				<p>{{ _("Flowers, coffee, avocado and fresh vegetables for wholesale buyers. Build your order online; our team confirms pricing, availability and cold-chain delivery on every quotation.") }}</p>
+				<div class="ws-hero-actions">
+					<a href="#catalog" class="btn btn-primary">{{ _("Browse catalog") }}</a>
+					{% if frappe.session.user == "Guest" %}
+					<a href="/signup" class="btn btn-outline-secondary">{{ _("Open a trade account") }}</a>
+					{% else %}
+					<a href="/portal" class="btn btn-outline-secondary">{{ _("Go to your portal") }}</a>
+					{% endif %}
+				</div>
+				<div class="ws-hero-stats">
+					<div class="ws-hero-stat"><b>40+</b><span>{{ _("partner growers") }}</span></div>
+					<div class="ws-hero-stat"><b>24h</b><span>{{ _("quotation turnaround") }}</span></div>
+					<div class="ws-hero-stat"><b>4°C</b><span>{{ _("cold chain, farm to door") }}</span></div>
 				</div>
 			</div>
-			<div class="lg:col-span-2 grid grid-cols-2 gap-3">
-				<a href="/store?category=Flowers" class="row-span-2 rounded-2xl p-5 flex flex-col justify-between no-underline min-h-56 bg-gradient-to-br from-rose to-[#a11f2e] text-white shadow-xl hover:-translate-y-1 transition-transform">
-					<span class="text-5xl">🌹</span>
-					<span><span class="font-display font-semibold text-xl block">{{ _("Flowers") }}</span>
-					<span class="text-white/75 text-sm">{{ _("Roses, lilies & fillers") }}</span></span>
-				</a>
-				<a href="/store?category=Coffee" class="rounded-2xl p-5 flex flex-col justify-between no-underline min-h-26 bg-gradient-to-br from-coffee to-[#43301f] text-white shadow-xl hover:-translate-y-1 transition-transform">
-					<span class="text-3xl">☕</span>
-					<span class="font-display font-semibold">{{ _("Coffee") }}</span>
-				</a>
-				<a href="/store?category=Fresh%20Produce" class="rounded-2xl p-5 flex flex-col justify-between no-underline min-h-26 bg-gradient-to-br from-market to-market-dark text-white shadow-xl hover:-translate-y-1 transition-transform">
-					<span class="text-3xl">🥑</span>
-					<span class="font-display font-semibold">{{ _("Fresh Produce") }}</span>
-				</a>
+			<div class="col-lg-5 mt-4 mt-lg-0 ws-hero-side">
+				<div class="card">
+					<div class="ws-hero-side-head">
+						<span>{{ _("Available this week") }}</span>
+						<span class="badge badge-success">{{ _("Live") }}</span>
+					</div>
+					{% for p in featured[:4] if featured %}
+					<a class="ws-hero-side-row" href="/{{ p.route }}" style="text-decoration:none;color:inherit;">
+						<span>
+							<span class="d-block" style="font-weight:500;">{{ p.web_title }}</span>
+							<span class="ws-sku">{{ p.item }}</span>
+						</span>
+						{% if p.price %}<span class="ws-price">{{ frappe.utils.fmt_money(p.price.rate, currency=p.price.currency) }}</span>{% endif %}
+					</a>
+					{% else %}
+					<div class="ws-hero-side-row">{{ _("Publish products to feature them here.") }}</div>
+					{% endfor %}
+				</div>
 			</div>
 		</div>
-	</div>
-	<div class="ws-wave"><svg viewBox="0 0 1440 42" preserveAspectRatio="none"><path d="M0,26 C240,50 420,-6 720,16 C1020,38 1240,6 1440,22 L1440,42 L0,42 Z" fill="#f7f5ec"/></svg></div>
-</div>
-<div class="ws-ticker" aria-hidden="true">
-	<div class="ws-ticker-track">
-		{% for i in range(2) %}
-		<span>🌹 {{ _("Red Naomi roses, cut this morning") }}</span>
-		<span>☕ {{ _("Kenya AA — specialty grade") }}</span>
-		<span>🥑 {{ _("Hass avocado, export cartons") }}</span>
-		<span>🥬 {{ _("Sukuma wiki, harvested to order") }}</span>
-		<span>🚚 {{ _("Quotation-first ordering — no surprises") }}</span>
-		{% endfor %}
 	</div>
 </div>
 {% endblock %}
 
 {% block page_content %}
-<div class="row">
+<div class="row" id="catalog">
 	<div class="col-md-3 ws-side">
 		<form method="get" action="/store" class="ws-search mb-3">
 			<input type="text" name="q" value="{{ search }}" placeholder="{{ _('Search products…') }}" aria-label="{{ _('Search products') }}">
@@ -92,17 +88,17 @@
 		<ul>
 			<li><a href="/store" class="{{ 'active' if not category else '' }}">{{ _("All products") }}</a></li>
 			{% for c in categories %}
-			<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}"><span class="ws-cat-ico">{{ cat_emoji.get(c.name, "🌿") }}</span>{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
+			<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}">{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
 			{% endfor %}
 		</ul>
 	</div>
 	<div class="col-md-9">
 		{% if featured %}
-		<h4 class="mb-3">{{ _("Featured") }}</h4>
+		<div class="ws-section-head"><h4>{{ _("Featured") }}</h4></div>
 		<div class="row">{% for p in featured %}{{ product_card(p) }}{% endfor %}</div>
 		<hr>
 		{% endif %}
-		<h4 class="mb-3">{{ _("All products") }}{% if search %} — {{ _("results for") }} “{{ search }}”{% endif %}</h4>
+		<div class="ws-section-head"><h4>{{ _("All products") }}{% if search %} — {{ _("results for") }} “{{ search }}”{% endif %}</h4><span>{{ total }} {{ _("items") }}</span></div>
 		{% if not products %}<p class="text-muted">{{ _("No products found.") }} {% if search or category %}<a href="/store">{{ _("Clear filters") }}</a>{% endif %}</p>{% endif %}
 		<div class="row">{% for p in products %}{{ product_card(p) }}{% endfor %}</div>
 		{% if total_pages > 1 %}
