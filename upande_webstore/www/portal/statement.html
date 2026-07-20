@@ -1,0 +1,32 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ _("Account Statement") }}{% endblock %}
+{% block page_content %}
+<h1>{{ _("Account Statement") }}
+	<button class="btn btn-sm btn-outline-secondary" onclick="window.print()">{{ _("Print / PDF") }}</button>
+</h1>
+<form method="get" action="/portal/statement" class="form-inline mb-3">
+	<label class="mr-2">{{ _("From") }}</label>
+	<input type="date" name="from" class="form-control mr-3" value="{{ from_date }}">
+	<label class="mr-2">{{ _("To") }}</label>
+	<input type="date" name="to" class="form-control mr-3" value="{{ to_date }}">
+	<button class="btn btn-secondary">{{ _("Apply") }}</button>
+</form>
+<table class="table table-sm">
+	<thead><tr><th>{{ _("Date") }}</th><th>{{ _("Document") }}</th><th class="text-right">{{ _("Debit") }}</th><th class="text-right">{{ _("Credit") }}</th><th class="text-right">{{ _("Balance") }}</th></tr></thead>
+	<tbody>
+	<tr><td colspan="4"><em>{{ _("Opening balance") }}</em></td>
+		<td class="text-right">{{ frappe.utils.fmt_money(statement.opening, currency=currency) }}</td></tr>
+	{% for row in statement.rows %}
+	<tr>
+		<td>{{ frappe.utils.formatdate(row.posting_date) }}</td>
+		<td>{{ row.voucher_type }} {{ row.voucher_no }}</td>
+		<td class="text-right">{{ frappe.utils.fmt_money(row.debit, currency=currency) }}</td>
+		<td class="text-right">{{ frappe.utils.fmt_money(row.credit, currency=currency) }}</td>
+		<td class="text-right">{{ frappe.utils.fmt_money(row.balance, currency=currency) }}</td>
+	</tr>
+	{% endfor %}
+	<tr><td colspan="4"><strong>{{ _("Closing balance") }}</strong></td>
+		<td class="text-right"><strong>{{ frappe.utils.fmt_money(statement.closing, currency=currency) }}</strong></td></tr>
+	</tbody>
+</table>
+{% endblock %}
