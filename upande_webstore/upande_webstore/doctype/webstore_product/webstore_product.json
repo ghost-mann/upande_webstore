@@ -3,7 +3,6 @@
  "name": "Webstore Product",
  "module": "Upande Webstore",
  "engine": "InnoDB",
- "autoname": "field:web_title",
  "creation": "2026-07-20 00:00:01.000000",
  "modified": "2026-07-20 00:00:01.000000",
  "owner": "Administrator",
