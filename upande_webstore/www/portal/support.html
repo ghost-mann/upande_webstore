@@ -1,0 +1,52 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ _("Support") }}{% endblock %}
+{% block page_content %}
+<h1>{{ _("Support") }}</h1>
+<div class="card mb-4"><div class="card-body">
+	<h5>{{ _("Raise a new issue") }}</h5>
+	<form id="webstore-issue-form" onsubmit="return false;">
+		<div class="form-group"><input class="form-control" id="issue-subject" placeholder="{{ _('Subject') }}"></div>
+		<div class="form-group"><textarea class="form-control" id="issue-description" rows="3" placeholder="{{ _('Describe the problem…') }}"></textarea></div>
+		<div class="form-group"><input type="file" id="issue-attachment"></div>
+		<button class="btn btn-primary" id="issue-submit">{{ _("Submit") }}</button>
+	</form>
+</div></div>
+<h4>{{ _("Your issues") }}</h4>
+{% if not issues %}<p class="text-muted">{{ _("No issues raised.") }}</p>{% else %}
+<table class="table">
+	<thead><tr><th>{{ _("Subject") }}</th><th>{{ _("Status") }}</th><th>{{ _("Raised on") }}</th></tr></thead>
+	<tbody>
+	{% for issue in issues %}
+	<tr>
+		<td><a href="/portal/issue?name={{ issue.name | urlencode }}">{{ issue.subject }}</a></td>
+		<td>{{ issue.status }}</td>
+		<td>{{ frappe.utils.formatdate(issue.creation) }}</td>
+	</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+<script>
+document.getElementById("issue-submit").addEventListener("click", async () => {
+	try {
+		const result = await window.webstore.call("upande_webstore.api.support.create_issue", {
+			subject: document.getElementById("issue-subject").value,
+			description: document.getElementById("issue-description").value,
+		});
+		const file = document.getElementById("issue-attachment").files[0];
+		if (file) {
+			const form = new FormData();
+			form.append("file", file);
+			form.append("doctype", "Issue");
+			form.append("docname", result.name);
+			await fetch("/api/method/upload_file", {
+				method: "POST",
+				headers: { "X-Frappe-CSRF-Token": window.frappe?.csrf_token || "" },
+				body: form,
+			});
+		}
+		window.location.href = "/portal/issue?name=" + encodeURIComponent(result.name);
+	} catch (err) { window.webstore.toast(err.message, true); }
+});
+</script>
+{% endblock %}
