@@ -8,7 +8,7 @@ There is no online payment at launch. Checkout is **quotation-first**: placing a
 
 - Frappe v16.x and ERPNext v16.x installed on the bench
 
-## Install
+## Instal
 
 ```bash
 cd your-bench
