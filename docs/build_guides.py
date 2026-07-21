@@ -155,7 +155,7 @@ bullet(doc, "bench at ~/frappe-v16-bench (frappe & erpnext v16.27.0); dev site w
 bullet(doc, "the bench has serve_default_site=kaitet.local on port 8002, so the webstore is served by a dedicated process: bench --site webstore.localhost serve --port 8003. Restart it after reboots; do not change the bench default.", bold_lead="Port 8003: ")
 bullet(doc, "canonical working copy is ~/frappe-v16-bench/apps/upande_webstore; git origin is /home/austin/vscodeProjects/upande_webstore (receive.denyCurrentBranch=updateInstead, so pushing updates that checkout).", bold_lead="Git: ")
 bullet(doc, "if working from a Flatpak-sandboxed editor, bench/DB commands must run on the host: flatpak-spawn --host bash -lc '<command>'. Also note bash -lc does not source nvm — source ~/.nvm/nvm.sh before bench build.", bold_lead="Sandbox: ")
-bullet(doc, "demo portal login demo@upande.com / Upande!Demo#2026; MariaDB root password on this dev machine is 'root'.", bold_lead="Dev credentials: ")
+bullet(doc, "demo portal login demo@upande.com / upande123; MariaDB root password on this dev machine is 'root'.", bold_lead="Dev credentials: ")
 
 h(doc, "4. Frontend stack and build", 1)
 bullet(doc, "shadcn/ui visual spec: white background, zinc neutrals (border #e4e4e7, muted #71717a), primary green #166534, Inter, radius 0.625rem, shadow-xs/sm. No emoji, no gradients.", bold_lead="Design system: ")
