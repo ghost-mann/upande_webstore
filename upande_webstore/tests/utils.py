@@ -10,6 +10,15 @@ def setup_webstore_settings():
 	settings.default_territory = "All Territories"
 	settings.quotation_validity_days = 14
 	settings.stock_display = "In/Out Badge"
+	for field in (
+		"brand_logo",
+		"hero_image",
+		"flowers_category_image",
+		"coffee_category_image",
+		"produce_category_image",
+		"primary_color",
+	):
+		settings.set(field, "")
 	settings.set("warehouses", [])
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
 	settings.save(ignore_permissions=True)
