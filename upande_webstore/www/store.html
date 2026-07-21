@@ -34,7 +34,7 @@
 
 {% block hero %}
 <div class="ws-hero2">
-	<div class="ws-hero2-bg"><img src="/assets/upande_webstore/images/site/hero.jpg" alt=""></div>
+	<div class="ws-hero2-bg"><img src="{{ webstore_appearance.hero_image or '/assets/upande_webstore/images/site/hero.jpg' }}" alt=""></div>
 	<div class="container">
 		<div class="ws-hero2-inner">
 			<span class="ws-eyebrow on-dark rv in">{{ _("Upande · Nairobi · Est. for growers") }}</span>
@@ -63,21 +63,21 @@
 		<div class="row mt-3">
 			<div class="col-md-4 mb-4 rv">
 				<a class="ws-catcard" href="/store?category=Flowers">
-					<img src="/assets/upande_webstore/images/site/cat-flowers.jpg" alt="{{ _('Flowers') }}" loading="lazy">
+					<img src="{{ webstore_appearance.flowers_category_image or '/assets/upande_webstore/images/site/cat-flowers.jpg' }}" alt="{{ _('Flowers') }}" loading="lazy">
 					<span class="ws-catcard-arrow">↗</span>
 					<span class="ws-catcard-label"><span class="t">{{ _("Flowers") }}</span><span class="n">{{ _("Roses, lilies & fillers") }}</span></span>
 				</a>
 			</div>
 			<div class="col-md-4 mb-4 rv rv-1">
 				<a class="ws-catcard" href="/store?category=Coffee">
-					<img src="/assets/upande_webstore/images/site/cat-coffee.jpg" alt="{{ _('Coffee') }}" loading="lazy">
+					<img src="{{ webstore_appearance.coffee_category_image or '/assets/upande_webstore/images/site/cat-coffee.jpg' }}" alt="{{ _('Coffee') }}" loading="lazy">
 					<span class="ws-catcard-arrow">↗</span>
 					<span class="ws-catcard-label"><span class="t">{{ _("Coffee") }}</span><span class="n">{{ _("AA & specialty grades") }}</span></span>
 				</a>
 			</div>
 			<div class="col-md-4 mb-4 rv rv-2">
 				<a class="ws-catcard" href="/store?category=Fresh%20Produce">
-					<img src="/assets/upande_webstore/images/site/cat-produce.jpg" alt="{{ _('Fresh Produce') }}" loading="lazy">
+					<img src="{{ webstore_appearance.produce_category_image or '/assets/upande_webstore/images/site/cat-produce.jpg' }}" alt="{{ _('Fresh Produce') }}" loading="lazy">
 					<span class="ws-catcard-arrow">↗</span>
 					<span class="ws-catcard-label"><span class="t">{{ _("Fresh Produce") }}</span><span class="n">{{ _("Avocado & vegetables") }}</span></span>
 				</a>

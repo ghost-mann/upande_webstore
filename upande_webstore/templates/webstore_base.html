@@ -1,10 +1,24 @@
 {% extends "templates/web.html" %}
 
+{% block style %}
+{{ super() }}
+{%- if webstore_appearance and webstore_appearance.colors %}
+<style>
+	:root {
+		--ws-primary: {{ webstore_appearance.colors.primary }};
+		--ws-primary-hover: {{ webstore_appearance.colors.primary_hover }};
+		--ws-primary-soft: {{ webstore_appearance.colors.primary_soft }};
+		--ws-ring: {{ webstore_appearance.colors.ring }};
+	}
+</style>
+{%- endif %}
+{% endblock %}
+
 {% block navbar %}
 <nav class="ws-navbar">
 	<div class="container">
 		<a class="ws-brand" href="/app" title="{{ _('Open desk') }}">
-			<img src="/assets/upande_webstore/images/upande-logo.png" alt="Upande">
+			<img src="{{ webstore_appearance.brand_logo or '/assets/upande_webstore/images/upande-logo.png' }}" alt="Upande">
 			<span>upande<b>store</b></span>
 		</a>
 		<div class="ws-nav">

@@ -33,6 +33,9 @@ app_license = "mit"
 web_include_css = ["/assets/upande_webstore/css/tailwind.css", "webstore.bundle.css"]
 web_include_js = "webstore.bundle.ts"
 
+# inject webstore appearance (images, brand colors) into every website page context
+update_website_context = ["upande_webstore.services.settings.update_website_context"]
+
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "upande_webstore/public/scss/website"
 
