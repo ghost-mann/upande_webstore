@@ -8,7 +8,7 @@ There is no online payment at launch. Checkout is **quotation-first**: placing a
 
 - Frappe v16.x and ERPNext v16.x installed on the bench
 
-## Instal
+## Install
 
 ```bash
 cd your-bench
@@ -32,6 +32,16 @@ Open **Webstore Settings** (single doctype) in the desk and set:
 - **Quotation Validity (Days)** — validity applied to web quotations
 - **Stock Display** — In/Out badge or exact quantity
 - **Sales Notification Emails** — comma-separated recipients notified of new web quotations and portal accept/decline actions
+
+### Appearance
+
+The site ships with the **Ink & Gold** design system: fixed cream/ink neutrals
+(canvas, cards, buttons, navigation) with one configurable **accent** color. On
+the *Appearance* tab of Webstore Settings you can set the navbar logo, hero
+image, the three category card images, and **Primary Color** — which drives the
+accent (default gold `#d9a514`) used for highlights, price chips, KPI trends,
+chart series, and the storefront hero italics. Hover, soft-tint, gradient and
+focus-ring variants are derived automatically; the ink neutrals never change.
 
 ## Publish products
 
