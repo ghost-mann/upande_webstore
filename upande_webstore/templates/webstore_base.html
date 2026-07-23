@@ -5,9 +5,11 @@
 {%- if webstore_appearance and webstore_appearance.colors %}
 <style>
 	:root {
-		--ws-primary: {{ webstore_appearance.colors.primary }};
-		--ws-primary-hover: {{ webstore_appearance.colors.primary_hover }};
-		--ws-primary-soft: {{ webstore_appearance.colors.primary_soft }};
+		--ws-accent: {{ webstore_appearance.colors.primary }};
+		--ws-accent-hover: {{ webstore_appearance.colors.primary_hover }};
+		--ws-accent-soft: {{ webstore_appearance.colors.primary_soft }};
+		--ws-accent-light: {{ webstore_appearance.colors.primary_light }};
+		--ws-accent-deep: {{ webstore_appearance.colors.primary_deep }};
 		--ws-ring: {{ webstore_appearance.colors.ring }};
 	}
 </style>
@@ -17,9 +19,9 @@
 {% block navbar %}
 <nav class="ws-navbar">
 	<div class="container">
-		<a class="ws-brand" href="/app" title="{{ _('Open desk') }}">
+		<a class="ws-brand" href="/store" title="{{ _('Upande Store') }}">
 			<img src="{{ webstore_appearance.brand_logo or '/assets/upande_webstore/images/upande-logo.png' }}" alt="Upande">
-			<span>upande<b>store</b></span>
+			<span data-sub="{{ _('Store & Customer Portal') }}">upande<b>store</b></span>
 		</a>
 		<div class="ws-nav">
 			<button type="button" class="ws-search-trigger" data-ws-palette aria-label="{{ _('Search products') }}">
@@ -27,8 +29,7 @@
 			</button>
 			<a href="/store" class="{{ 'active' if pathname and pathname.startswith('store') else '' }}">{{ _("Store") }}</a>
 			{% if frappe.session.user != "Guest" %}
-			<a href="/wishlist">{{ _("Wishlist") }}</a>
-			<a href="/portal/account">{{ _("Account") }}</a>
+			<a href="/wishlist" class="{{ 'active' if pathname and pathname.startswith('wishlist') else '' }}">{{ _("Wishlist") }}</a>
 			<a href="#" data-webstore-logout>{{ _("Log out") }}</a>
 			<a href="/cart" class="ws-cart-link" data-ws-cart-drawer>{{ _("Basket") }}<span id="webstore-cart-badge"></span></a>
 			{% if path and path.startswith("portal") %}
@@ -36,6 +37,7 @@
 			{% else %}
 			<a href="/portal" class="ws-member-btn">{{ _("My Portal") }}</a>
 			{% endif %}
+			<a href="/portal/account" class="ws-avatar" title="{{ _('Account') }}">{{ (frappe.session.user or "U")[0] | upper }}</a>
 			{% else %}
 			<a href="/signup">{{ _("Sign up") }}</a>
 			<a href="/login?redirect-to=/portal" class="ws-member-btn">{{ _("Member login") }}</a>

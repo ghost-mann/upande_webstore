@@ -40,6 +40,8 @@ def _to_hex(rgb):
 
 
 def derive_brand_colors(primary):
+	"""The configured color is the storefront *accent* (default gold);
+	ink neutrals are fixed. Light/deep endpoints feed the accent gradient."""
 	rgb = _parse_hex(primary)
 	if not rgb:
 		return {}
@@ -47,6 +49,8 @@ def derive_brand_colors(primary):
 		"primary": _to_hex(rgb),
 		"primary_hover": _to_hex(_mix(rgb, (0, 0, 0), 0.12)),
 		"primary_soft": _to_hex(_mix(rgb, (255, 255, 255), 0.92)),
+		"primary_light": _to_hex(_mix(rgb, (255, 255, 255), 0.25)),
+		"primary_deep": _to_hex(_mix(rgb, (0, 0, 0), 0.25)),
 		"ring": "rgba({}, {}, {}, 0.35)".format(*rgb),
 	}
 

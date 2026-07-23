@@ -23,6 +23,8 @@ class TestAppearance(IntegrationTestCase):
 		self.assertEqual(colors["primary"], "#166534")
 		self.assertEqual(colors["primary_hover"], "#13592e")
 		self.assertEqual(colors["primary_soft"], "#ecf3ef")
+		self.assertEqual(colors["primary_light"], "#508c67")
+		self.assertEqual(colors["primary_deep"], "#104c27")
 		self.assertEqual(colors["ring"], "rgba(22, 101, 52, 0.35)")
 
 	def test_derive_brand_colors_rejects_invalid(self):

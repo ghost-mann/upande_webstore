@@ -4,51 +4,55 @@
 @import "basecoat-css";
 
 @theme {
-	--color-forest: #09090b;
-	--color-forest-deep: #122a22;
-	--color-forest-2: #24493c;
-	--color-cream: #f7f5ec;
-	--color-market: #3f9142;
-	--color-market-dark: #2f7233;
-	--color-rose: #e5484d;
-	--color-amber: #ffb236;
-	--color-coffee: #6f4e37;
-	--color-line: #e3e0d2;
-	--color-ink-soft: #5f6b5d;
+	--color-ink: #0a0a0a;
+	--color-ink-1: #1a1a18;
+	--color-ink-2: #2a2a26;
+	--color-ink-3: #3a3a34;
+	--color-ink-4: #5a5a52;
+	--color-ink-mute: #8a8780;
+	--color-cream: #f4f3ef;
+	--color-surface: #fafaf6;
+	--color-gold: #d9a514;
+	--color-gold-light: #edc23c;
+	--color-gold-deep: #a87d0d;
+	--color-rose: #c4302b;
+	--color-leaf: #3f8f4f;
+	--color-teal: #228883;
+	--color-line: rgba(10, 10, 10, 0.06);
 	--font-display: "Fraunces", Georgia, serif;
-	--font-sans: "IBM Plex Sans", sans-serif;
+	--font-sans: "Poppins", sans-serif;
 	--font-mono: "IBM Plex Mono", monospace;
 }
 
-/* shadcn theme variables (zinc neutrals, green primary) */
+/* shadcn theme variables (ink neutrals, cream surfaces, gold accent) */
 :root {
-	--color-background: #ffffff;
-	--color-foreground: #09090b;
+	--color-background: #fafaf6;
+	--color-foreground: #1a1a18;
 	--color-card: #ffffff;
-	--color-card-foreground: #09090b;
-	--color-popover: #ffffff;
-	--color-popover-foreground: #09090b;
-	--color-primary: #166534;
-	--color-primary-foreground: #ffffff;
-	--color-secondary: #f4f4f5;
-	--color-secondary-foreground: #09090b;
-	--color-muted: #f4f4f5;
-	--color-muted-foreground: #71717a;
-	--color-accent: #f4f4f5;
-	--color-accent-foreground: #09090b;
-	--color-destructive: #dc2626;
+	--color-card-foreground: #1a1a18;
+	--color-popover: #fafaf6;
+	--color-popover-foreground: #1a1a18;
+	--color-primary: #0a0a0a;
+	--color-primary-foreground: #fafaf6;
+	--color-secondary: rgba(10, 10, 10, 0.04);
+	--color-secondary-foreground: #1a1a18;
+	--color-muted: rgba(10, 10, 10, 0.04);
+	--color-muted-foreground: #8a8780;
+	--color-accent: rgba(10, 10, 10, 0.04);
+	--color-accent-foreground: #1a1a18;
+	--color-destructive: #c4302b;
 	--color-destructive-foreground: #ffffff;
-	--color-border: #e4e4e7;
-	--color-input: #e4e4e7;
-	--color-ring: #166534;
-	--radius: 0.625rem;
+	--color-border: rgba(10, 10, 10, 0.06);
+	--color-input: rgba(10, 10, 10, 0.06);
+	--color-ring: #0a0a0a;
+	--radius: 1rem;
 }
 
 /* basecoat/shadcn raw variable overrides (it reads --primary etc. directly) */
 :root {
-	--primary: #166534;
-	--primary-foreground: #ffffff;
-	--ring: #16653459;
-	--accent: #f4f4f5;
-	--destructive: #dc2626;
+	--primary: #0a0a0a;
+	--primary-foreground: #fafaf6;
+	--ring: #0a0a0a26;
+	--accent: rgba(10, 10, 10, 0.04);
+	--destructive: #c4302b;
 }
