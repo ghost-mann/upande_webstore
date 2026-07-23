@@ -47,3 +47,22 @@ def portal_guard(route):
 		frappe.local.flags.redirect_location = f"/login?redirect-to={route}"
 		raise frappe.Redirect
 	return get_current_customer()
+
+
+def portal_page_context(context, route, active):
+	"""Shared context for every portal page: guard, sidebar badges,
+	at-a-glance stats and the customer identity card."""
+	from upande_webstore.services.portal_data import get_sidebar_counts
+
+	customer = portal_guard(route)
+	context.no_cache = 1
+	context.full_width = 1
+	context.customer = customer
+	context.portal_active = active
+	context.portal_counts = get_sidebar_counts()
+	context.portal_balance = get_outstanding_balance()
+	context.portal_currency = frappe.get_cached_value(
+		"Company", frappe.defaults.get_global_default("company"), "default_currency"
+	)
+	context.customer_since = frappe.db.get_value("Customer", customer, "creation")
+	return customer
