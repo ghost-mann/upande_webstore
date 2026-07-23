@@ -18,7 +18,7 @@
 				<span class="ws-price-note">{{ _("Multiple options") }}</span>
 				{% elif p.price %}
 				<span class="ws-price">{{ frappe.utils.fmt_money(p.price.rate, currency=p.price.currency) }}
-					{% if p.price.is_customer_price %}<span class="badge badge-info">{{ _("Your price") }}</span>{% endif %}
+					{% if p.price.is_customer_price %}<span class="badge badge-accent">{{ _("Your price") }}</span>{% endif %}
 				</span>
 				{% endif %}
 				{% if p.stock %}
@@ -33,9 +33,9 @@
 {% endmacro %}
 
 {% block hero %}
-<div class="ws-hero2">
-	<div class="ws-hero2-bg"><img src="{{ webstore_appearance.hero_image or '/assets/upande_webstore/images/site/hero.jpg' }}" alt=""></div>
-	<div class="container">
+<div class="container ws-storefront-band">
+	<div class="ws-hero2">
+		<div class="ws-hero2-bg"><img src="{{ webstore_appearance.hero_image or '/assets/upande_webstore/images/site/hero.jpg' }}" alt=""></div>
 		<div class="ws-hero2-inner">
 			<span class="ws-eyebrow on-dark rv in">{{ _("Upande · Nairobi · Est. for growers") }}</span>
 			<h1 class="rv in">{{ _("The harvest,") }} <em>{{ _("straight from the farm gate") }}</em></h1>
@@ -55,10 +55,8 @@
 			</div>
 		</div>
 	</div>
-</div>
 
-<div class="ws-cats">
-	<div class="container">
+	<div class="ws-cats">
 		<span class="ws-eyebrow rv">{{ _("What we grow") }}</span>
 		<div class="row mt-3">
 			<div class="col-md-4 mb-4 rv">
@@ -85,24 +83,24 @@
 		</div>
 	</div>
 </div>
-</div></div>
-
 {% endblock %}
 
 {% block page_content %}
-<div class="ws-catalog-band" id="catalog"><div class="container-fluid p-0">
+<div class="ws-catalog-band" id="catalog">
 <div class="row">
-	<div class="col-md-3 ws-side">
-		<form method="get" action="/store" class="ws-search mb-3">
-			<input type="text" name="q" value="{{ search }}" placeholder="{{ _('Search products…') }}" aria-label="{{ _('Search products') }}">
-		</form>
-		<h6>{{ _("Categories") }}</h6>
-		<ul>
-			<li><a href="/store" class="{{ 'active' if not category else '' }}">{{ _("All products") }}</a></li>
-			{% for c in categories %}
-			<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}">{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
-			{% endfor %}
-		</ul>
+	<div class="col-md-3 ws-side mb-4">
+		<div class="ws-side-card">
+			<form method="get" action="/store" class="ws-search">
+				<input type="text" name="q" value="{{ search }}" placeholder="{{ _('Search products…') }}" aria-label="{{ _('Search products') }}">
+			</form>
+			<h6>{{ _("Categories") }}</h6>
+			<ul>
+				<li><a href="/store" class="{{ 'active' if not category else '' }}">{{ _("All products") }}<span class="ws-count">{{ total }}</span></a></li>
+				{% for c in categories %}
+				<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}">{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
+				{% endfor %}
+			</ul>
+		</div>
 	</div>
 	<div class="col-md-9">
 		<div class="ws-section-head"><h4>{{ _("All products") }}{% if search %} — {{ _("results for") }} “{{ search }}”{% endif %}</h4><span>{{ total }} {{ _("items") }}</span></div>
@@ -119,10 +117,10 @@
 		{% endif %}
 	</div>
 </div>
-</div></div>
+</div>
 
-<div class="ws-process rv" style="margin: 3.5rem -15px -4rem;">
-	<div class="container">
+<div class="ws-process rv">
+	<div class="ws-process-inner">
 		<span class="ws-eyebrow on-dark">{{ _("How ordering works") }}</span>
 		<h3>{{ _("From your basket to a") }} <em>{{ _("confirmed quotation") }}</em> {{ _("in one working day") }}</h3>
 		<div class="row">

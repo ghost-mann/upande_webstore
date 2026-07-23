@@ -1,21 +1,26 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("Create Account") }}{% endblock %}
 {% block page_content %}
+<div class="ws-storefront-band">
 <div class="row justify-content-center"><div class="col-md-6">
-<h1>{{ _("Create Account") }}</h1>
-<form id="webstore-signup-form" onsubmit="return false;">
-	<div class="form-group"><label>{{ _("Full name") }}</label>
-		<input class="form-control" id="signup-name" required></div>
-	<div class="form-group"><label>{{ _("Email") }}</label>
-		<input type="email" class="form-control" id="signup-email" required></div>
-	<div class="form-group"><label>{{ _("Phone") }}</label>
-		<input class="form-control" id="signup-phone" required></div>
-	<div class="form-group"><label>{{ _("Company name (leave blank for personal account)") }}</label>
-		<input class="form-control" id="signup-company"></div>
-	<button class="btn btn-primary" id="signup-submit">{{ _("Sign up") }}</button>
-	<p class="mt-3">{{ _("Already have an account?") }} <a href="/login">{{ _("Log in") }}</a></p>
-	<div id="signup-result" class="alert d-none mt-3"></div>
-</form>
+<div class="ws-panel ws-panel--padded" style="padding:2.2rem 2.4rem">
+	<span class="ws-eyebrow">{{ _("Trade & personal accounts") }}</span>
+	<h1 class="ws-pagehead-title" style="font-size:2rem;margin:.5rem 0 .4rem">{{ _("Create account") }}</h1>
+	<p class="text-muted" style="margin-bottom:1.4rem">{{ _("Your prices appear automatically once our team links your account.") }}</p>
+	<form id="webstore-signup-form" onsubmit="return false;">
+		<div class="form-group"><label>{{ _("Full name") }}</label>
+			<input class="form-control" id="signup-name" required></div>
+		<div class="form-group"><label>{{ _("Email") }}</label>
+			<input type="email" class="form-control" id="signup-email" required></div>
+		<div class="form-group"><label>{{ _("Phone") }}</label>
+			<input class="form-control" id="signup-phone" required></div>
+		<div class="form-group"><label>{{ _("Company name (leave blank for personal account)") }}</label>
+			<input class="form-control" id="signup-company"></div>
+		<button class="btn btn-primary" id="signup-submit" style="width:100%">{{ _("Sign up") }}</button>
+		<p class="mt-3" style="text-align:center">{{ _("Already have an account?") }} <a href="/login"><b>{{ _("Log in") }}</b></a></p>
+		<div id="signup-result" class="alert d-none mt-3"></div>
+	</form>
+</div>
 <script>
 document.getElementById("signup-submit").addEventListener("click", async () => {
 	const result = document.getElementById("signup-result");
@@ -35,4 +40,5 @@ document.getElementById("signup-submit").addEventListener("click", async () => {
 });
 </script>
 </div></div>
+</div>
 {% endblock %}

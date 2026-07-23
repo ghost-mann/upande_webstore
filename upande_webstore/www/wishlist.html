@@ -1,37 +1,50 @@
 {% extends "templates/webstore_base.html" %}
 {% block title %}{{ _("My Wishlist") }}{% endblock %}
 {% block page_content %}
-<h1 class="mb-4">{{ _("My Wishlist") }}</h1>
+<div class="ws-storefront-band">
+<div class="ws-pagehead">
+	<div>
+		<span class="ws-eyebrow">{{ _("Saved for later") }}</span>
+		<h1 class="ws-pagehead-title">{{ _("Wishlist") }}</h1>
+	</div>
+	<div class="ws-pagehead-tools"><a href="/store" class="btn btn-outline-secondary btn-sm">{{ _("Keep browsing") }}</a></div>
+</div>
 {% if not wishlist["items"] %}
-<p class="text-muted">{{ _("Nothing saved yet.") }} <a href="/store">{{ _("Browse the store") }}</a></p>
+<div class="ws-empty">{{ _("Nothing saved yet.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
 {% else %}
 <div class="row" id="wishlist-grid">
 	{% for entry in wishlist["items"] %}
 	<div class="col-md-4 mb-4">
-		<div class="card h-100">
-			{% if entry.image %}<img src="{{ entry.image }}" class="card-img-top" alt="{{ entry.web_title }}">{% endif %}
-			<div class="card-body">
-				<h5 class="card-title"><a href="/{{ entry.route }}">{{ entry.web_title }}</a></h5>
-				{% if entry.price %}
-				<p class="mb-1 font-weight-bold">{{ frappe.utils.fmt_money(entry.price.rate, currency=entry.price.currency) }}</p>
-				{% endif %}
-				{% if entry.stock and not entry.stock.in_stock %}
-				<span class="badge badge-secondary">{{ _("Out of stock") }}</span>
-				{% endif %}
+		<div class="ws-card">
+			<div class="ws-card-media">
+				{% if entry.image %}<img src="{{ entry.image }}" alt="{{ entry.web_title }}">
+				{% else %}<span class="ws-noimg">{{ entry.item_code }}</span>{% endif %}
 			</div>
-			<div class="card-footer d-flex justify-content-between">
-				{% if entry.has_variants %}
-				<a class="btn btn-sm btn-primary" href="/{{ entry.route }}">{{ _("Choose options") }}</a>
-				{% elif entry.stock and entry.stock.in_stock %}
-				<button class="btn btn-sm btn-primary" data-webstore-add-to-cart="{{ entry.item_code }}">{{ _("Add to cart") }}</button>
-				{% else %}
-				<button class="btn btn-sm btn-primary" disabled>{{ _("Out of stock") }}</button>
-				{% endif %}
-				<button class="btn btn-sm btn-outline-danger" data-webstore-wishlist-toggle="{{ entry.product }}">{{ _("Remove") }}</button>
+			<div class="ws-card-body">
+				<h5 class="ws-card-title" style="position:static"><a href="/{{ entry.route }}" style="position:static">{{ entry.web_title }}</a></h5>
+				<div class="ws-card-foot">
+					{% if entry.price %}
+					<span class="ws-price">{{ frappe.utils.fmt_money(entry.price.rate, currency=entry.price.currency) }}</span>
+					{% endif %}
+					{% if entry.stock and not entry.stock.in_stock %}
+					<span class="ws-stock out"><span class="ws-led"></span>{{ _("Out of stock") }}</span>
+					{% endif %}
+				</div>
+				<div class="d-flex justify-content-between" style="gap:.5rem;margin-top:.8rem">
+					{% if entry.has_variants %}
+					<a class="btn btn-sm btn-primary" href="/{{ entry.route }}">{{ _("Choose options") }}</a>
+					{% elif entry.stock and entry.stock.in_stock %}
+					<button class="btn btn-sm btn-primary" data-webstore-add-to-cart="{{ entry.item_code }}">{{ _("Add to cart") }}</button>
+					{% else %}
+					<button class="btn btn-sm btn-primary" disabled>{{ _("Out of stock") }}</button>
+					{% endif %}
+					<button class="btn btn-sm btn-outline-danger" data-webstore-wishlist-toggle="{{ entry.product }}">{{ _("Remove") }}</button>
+				</div>
 			</div>
 		</div>
 	</div>
 	{% endfor %}
 </div>
 {% endif %}
+</div>
 {% endblock %}
