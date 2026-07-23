@@ -1,8 +1,0 @@
-<div class="ws-portal-hero">
-	<div class="container">
-		{% if portal_back_url %}<a class="ws-portal-back" href="{{ portal_back_url }}">← {{ portal_back_label }}</a>{% endif %}
-		<span class="ws-hero-eyebrow">{{ portal_eyebrow or _("Customer portal") }}</span>
-		<h1>{{ portal_title }}</h1>
-		{% include "templates/includes/webstore_portal_nav.html" %}
-	</div>
-</div>

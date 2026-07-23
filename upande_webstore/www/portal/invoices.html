@@ -1,32 +1,29 @@
-{% extends "templates/webstore_base.html" %}
+{% extends "templates/webstore_portal_base.html" %}
 {% block title %}{{ _("My Invoices") }}{% endblock %}
 
-{% block hero %}
-{% set portal_active = "invoices" %}
-{% set portal_title = _("My Invoices") %}
-{% include "templates/includes/webstore_portal_hero.html" %}
-{% endblock %}
+{% block portal_title %}{{ _("Invoices") }}{% endblock %}
+{% block portal_sub %}{{ _("Download PDFs and keep an eye on what's still outstanding.") }}{% endblock %}
 
-{% block page_content %}
+{% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
-{% if not invoices %}
-<div class="ws-empty">{{ _("No invoices yet.") }}</div>
-{% else %}
-<table class="table">
-	<thead><tr><th>{{ _("Invoice") }}</th><th>{{ _("Date") }}</th><th>{{ _("Due") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th><th class="text-right">{{ _("Outstanding") }}</th><th></th></tr></thead>
-	<tbody>
-	{% for inv in invoices %}
-	<tr>
-		<td><a href="/portal/invoice?name={{ inv.name | urlencode }}">{{ inv.name }}</a></td>
-		<td>{{ frappe.utils.formatdate(inv.posting_date) }}</td>
-		<td>{{ frappe.utils.formatdate(inv.due_date) if inv.due_date else "" }}</td>
-		<td>{{ status_badge(inv.status) }}</td>
-		<td class="text-right">{{ frappe.utils.fmt_money(inv.grand_total, currency=inv.currency) }}</td>
-		<td class="text-right">{{ frappe.utils.fmt_money(inv.outstanding_amount, currency=inv.currency) }}</td>
-		<td><a class="btn btn-sm btn-outline-secondary" href="/api/method/upande_webstore.api.portal.download_invoice_pdf?name={{ inv.name | urlencode }}">{{ _("PDF") }}</a></td>
-	</tr>
-	{% endfor %}
-	</tbody>
-</table>
-{% endif %}
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("All invoices") }}</h3><div class="meta">{{ invoices | length }} {{ _("shown") }}</div></div>
+	{% if not invoices %}
+	<div class="ws-empty">{{ _("No invoices yet.") }}</div>
+	{% else %}
+	<div class="ws-list">
+		{% for inv in invoices %}
+		<a class="ws-list-row noicon" href="/portal/invoice?name={{ inv.name | urlencode }}">
+			<span>
+				<span class="ws-list-name">{{ inv.name }} {{ status_badge(inv.status) }}</span>
+				<span class="ws-list-meta d-block">{{ frappe.utils.formatdate(inv.posting_date) }}{% if inv.due_date %} · {{ _("due") }} {{ frappe.utils.formatdate(inv.due_date) }}{% endif %}</span>
+			</span>
+			<span class="ws-list-qty">{{ frappe.utils.fmt_money(inv.grand_total, currency=inv.currency) }}
+				{% if inv.outstanding_amount %}<small>{{ frappe.utils.fmt_money(inv.outstanding_amount, currency=inv.currency) }} {{ _("due") }}</small>{% else %}<small>{{ _("settled") }}</small>{% endif %}
+			</span>
+		</a>
+		{% endfor %}
+	</div>
+	{% endif %}
+</div>
 {% endblock %}

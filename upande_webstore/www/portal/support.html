@@ -1,40 +1,40 @@
-{% extends "templates/webstore_base.html" %}
+{% extends "templates/webstore_portal_base.html" %}
 {% block title %}{{ _("Support") }}{% endblock %}
 
-{% block hero %}
-{% set portal_active = "support" %}
-{% set portal_title = _("Support") %}
-{% include "templates/includes/webstore_portal_hero.html" %}
-{% endblock %}
+{% block portal_title %}{{ _("Support") }}{% endblock %}
+{% block portal_sub %}{{ _("Raise an issue and our team will pick it up.") }}{% endblock %}
 
-{% block page_content %}
+{% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
-<div class="card mb-4"><div class="card-body">
-	<p class="ws-section-title mb-2">{{ _("Raise a new issue") }}</p>
-	<form id="webstore-issue-form" onsubmit="return false;">
-		<div class="form-group"><input class="form-control" id="issue-subject" placeholder="{{ _('Subject') }}"></div>
-		<div class="form-group"><textarea class="form-control" id="issue-description" rows="3" placeholder="{{ _('Describe the problem…') }}"></textarea></div>
-		<div class="form-group"><input type="file" id="issue-attachment"></div>
-		<button class="btn btn-primary" id="issue-submit">{{ _("Submit issue") }}</button>
-	</form>
-</div></div>
-<p class="ws-section-title">{{ _("Your issues") }}</p>
-{% if not issues %}
-<div class="ws-empty">{{ _("No issues raised — all growing smoothly.") }}</div>
-{% else %}
-<table class="table">
-	<thead><tr><th>{{ _("Subject") }}</th><th>{{ _("Status") }}</th><th>{{ _("Raised on") }}</th></tr></thead>
-	<tbody>
-	{% for issue in issues %}
-	<tr>
-		<td><a href="/portal/issue?name={{ issue.name | urlencode }}">{{ issue.subject }}</a></td>
-		<td>{{ status_badge(issue.status) }}</td>
-		<td>{{ frappe.utils.formatdate(issue.creation) }}</td>
-	</tr>
-	{% endfor %}
-	</tbody>
-</table>
-{% endif %}
+<div class="ws-row-2">
+	<div class="ws-panel">
+		<div class="ws-panel-head"><h3>{{ _("Your issues") }}</h3><div class="meta">{{ issues | length }} {{ _("shown") }}</div></div>
+		{% if not issues %}
+		<div class="ws-empty">{{ _("No issues raised — all growing smoothly.") }}</div>
+		{% else %}
+		<div class="ws-list">
+			{% for issue in issues %}
+			<a class="ws-list-row noicon" href="/portal/issue?name={{ issue.name | urlencode }}">
+				<span>
+					<span class="ws-list-name">{{ issue.subject }} {{ status_badge(issue.status) }}</span>
+					<span class="ws-list-meta d-block">{{ _("raised") }} {{ frappe.utils.formatdate(issue.creation) }}</span>
+				</span>
+				<span class="ws-list-qty"><small>{{ _("open thread") }} →</small></span>
+			</a>
+			{% endfor %}
+		</div>
+		{% endif %}
+	</div>
+	<div class="ws-panel">
+		<div class="ws-panel-head"><h3>{{ _("Raise a new issue") }}</h3></div>
+		<form id="webstore-issue-form" onsubmit="return false;">
+			<div class="form-group"><input class="form-control" id="issue-subject" placeholder="{{ _('Subject') }}"></div>
+			<div class="form-group"><textarea class="form-control" id="issue-description" rows="3" placeholder="{{ _('Describe the problem…') }}"></textarea></div>
+			<div class="form-group"><input type="file" id="issue-attachment"></div>
+			<button class="btn btn-primary" id="issue-submit">{{ _("Submit issue") }}</button>
+		</form>
+	</div>
+</div>
 <script>
 document.getElementById("issue-submit").addEventListener("click", async () => {
 	try {

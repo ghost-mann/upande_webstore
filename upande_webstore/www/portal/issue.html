@@ -1,27 +1,33 @@
-{% extends "templates/webstore_base.html" %}
+{% extends "templates/webstore_portal_base.html" %}
 {% block title %}{{ doc.subject }}{% endblock %}
 
-{% block hero %}
-{% set portal_active = "support" %}
-{% set portal_title = doc.subject %}
-{% set portal_eyebrow = _("Support issue") %}
-{% set portal_back_url = "/portal/support" %}
-{% set portal_back_label = _("All issues") %}
-{% include "templates/includes/webstore_portal_hero.html" %}
-{% endblock %}
+{% block portal_back %}<a class="ws-backbtn" href="/portal/support">← {{ _("All issues") }}</a>{% endblock %}
+{% block portal_eyebrow %}{{ _("Support issue") }}{% endblock %}
+{% block portal_title %}{{ doc.subject }}{% endblock %}
+{% block portal_sub %}{{ _("raised") }} {{ frappe.utils.formatdate(doc.creation) }}{% endblock %}
 
-{% block page_content %}
+{% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
-<p>{{ status_badge(doc.status) }}</p>
-<div class="card mb-3"><div class="card-body">{{ doc.description or "" }}</div></div>
-<p class="ws-section-title">{{ _("Replies") }}</p>
-{% if not replies %}
-<div class="ws-empty">{{ _("No replies yet — our team will respond soon.") }}</div>
-{% endif %}
-{% for reply in replies %}
-<div class="card mb-2"><div class="card-body">
-	<p class="small text-muted mb-1">{{ reply.sender }} — {{ frappe.utils.format_datetime(reply.communication_date) }}</p>
-	<div>{{ reply.content }}</div>
-</div></div>
-{% endfor %}
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("Issue") }}</h3><div class="meta">{{ status_badge(doc.status) }}</div></div>
+	<div>{{ doc.description or "" }}</div>
+</div>
+
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("Replies") }}</h3><div class="meta">{{ replies | length }}</div></div>
+	{% if not replies %}
+	<div class="ws-empty">{{ _("No replies yet — our team will respond soon.") }}</div>
+	{% endif %}
+	<div class="ws-list">
+		{% for reply in replies %}
+		<div class="ws-list-row">
+			<span class="ws-rank sc">{{ (reply.sender or "?")[0] | upper }}</span>
+			<span>
+				<span class="ws-list-meta">{{ reply.sender }} — {{ frappe.utils.format_datetime(reply.communication_date) }}</span>
+				<div>{{ reply.content }}</div>
+			</span>
+		</div>
+		{% endfor %}
+	</div>
+</div>
 {% endblock %}

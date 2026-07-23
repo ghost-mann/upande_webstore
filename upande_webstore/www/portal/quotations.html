@@ -1,30 +1,28 @@
-{% extends "templates/webstore_base.html" %}
+{% extends "templates/webstore_portal_base.html" %}
 {% block title %}{{ _("My Quotations") }}{% endblock %}
 
-{% block hero %}
-{% set portal_active = "quotations" %}
-{% set portal_title = _("My Quotations") %}
-{% include "templates/includes/webstore_portal_hero.html" %}
-{% endblock %}
+{% block portal_title %}{{ _("Quotations") }}{% endblock %}
+{% block portal_sub %}{{ _("Review, accept or decline — accepted quotations become orders.") }}{% endblock %}
+{% block portal_tools %}<a href="/cart" class="btn btn-primary btn-sm">{{ _("Request a new quotation") }}</a>{% endblock %}
 
-{% block page_content %}
+{% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
-{% if not quotations %}
-<div class="ws-empty">{{ _("No quotations yet — add products to your cart and request one.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
-{% else %}
-<table class="table">
-	<thead><tr><th>{{ _("Quotation") }}</th><th>{{ _("Date") }}</th><th>{{ _("Valid till") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th></tr></thead>
-	<tbody>
-	{% for q in quotations %}
-	<tr>
-		<td><a href="/portal/quotation?name={{ q.name | urlencode }}">{{ q.name }}</a></td>
-		<td>{{ frappe.utils.formatdate(q.transaction_date) }}</td>
-		<td>{{ frappe.utils.formatdate(q.valid_till) if q.valid_till else "" }}</td>
-		<td>{{ status_badge(q.webstore_portal_status or q.status) }}</td>
-		<td class="text-right">{{ frappe.utils.fmt_money(q.grand_total, currency=q.currency) }}</td>
-	</tr>
-	{% endfor %}
-	</tbody>
-</table>
-{% endif %}
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("All quotations") }}</h3><div class="meta">{{ quotations | length }} {{ _("shown") }}</div></div>
+	{% if not quotations %}
+	<div class="ws-empty">{{ _("No quotations yet — add products to your cart and request one.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+	{% else %}
+	<div class="ws-list">
+		{% for q in quotations %}
+		<a class="ws-list-row noicon" href="/portal/quotation?name={{ q.name | urlencode }}">
+			<span>
+				<span class="ws-list-name">{{ q.name }} {{ status_badge(q.webstore_portal_status or q.status) }}</span>
+				<span class="ws-list-meta d-block">{{ frappe.utils.formatdate(q.transaction_date) }}{% if q.valid_till %} · {{ _("valid till") }} {{ frappe.utils.formatdate(q.valid_till) }}{% endif %}</span>
+			</span>
+			<span class="ws-list-qty">{{ frappe.utils.fmt_money(q.grand_total, currency=q.currency) }}</span>
+		</a>
+		{% endfor %}
+	</div>
+	{% endif %}
+</div>
 {% endblock %}

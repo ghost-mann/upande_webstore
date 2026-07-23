@@ -1,48 +1,167 @@
-{% extends "templates/webstore_base.html" %}
+{% extends "templates/webstore_portal_base.html" %}
 {% block title %}{{ _("My Account") }}{% endblock %}
 
-{% block hero %}
-{% set portal_active = "dashboard" %}
-{% set portal_title = _("Welcome") + ", " + customer %}
-{% include "templates/includes/webstore_portal_hero.html" %}
+{% block portal_title %}{{ _("Welcome") }}, {{ customer }}{% endblock %}
+{% block portal_sub %}{{ _("Your orders, quotations and account — all in one place.") }}{% endblock %}
+{% block portal_tools %}
+<a href="/store" class="btn btn-primary btn-sm">{{ _("Keep shopping") }}</a>
 {% endblock %}
 
-{% block page_content %}
+{% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
-<div class="row mb-4">
-	<div class="col-md-4 mb-3"><div class="ws-tile">
-		<h6>{{ _("Outstanding balance") }}</h6>
-		<div class="ws-tile-value">{{ frappe.utils.fmt_money(balance, currency=currency) }}</div>
-		<div class="ws-tile-links"><a href="/portal/statement">{{ _("View statement") }}</a> <a href="/portal/invoices">{{ _("Invoices") }}</a></div>
-	</div></div>
-	<div class="col-md-4 mb-3"><div class="ws-tile">
-		<h6>{{ _("Open quotations") }}</h6>
-		<div class="ws-tile-value">{{ open_quotations }}</div>
-		<div class="ws-tile-links"><a href="/portal/quotations">{{ _("Review & accept") }}</a></div>
-	</div></div>
-	<div class="col-md-4 mb-3"><div class="ws-tile">
-		<h6>{{ _("Keep shopping") }}</h6>
-		<div class="ws-tile-value">→</div>
-		<div class="ws-tile-links"><a href="/store">{{ _("Browse the store") }}</a> <a href="/wishlist">{{ _("Wishlist") }}</a> <a href="/cart">{{ _("Cart") }}</a></div>
-	</div></div>
+
+<div class="ws-kpi-grid">
+	<div class="ws-kpi">
+		<div class="ws-kpi-label">{{ _("Outstanding balance") }}</div>
+		<div class="ws-kpi-value">{{ frappe.utils.fmt_money(balance, currency=currency) }}</div>
+		<div class="ws-kpi-unit">{{ _("across all open invoices") }}</div>
+		{% if portal_counts.unpaid_invoices %}
+		<a class="ws-kpi-trend warn" href="/portal/invoices">{{ portal_counts.unpaid_invoices }} {{ _("unpaid") }} <small>{{ _("view invoices") }}</small></a>
+		{% else %}
+		<span class="ws-kpi-trend up">{{ _("All settled") }}</span>
+		{% endif %}
+	</div>
+	<div class="ws-kpi">
+		<div class="ws-kpi-label">{{ _("Open quotations") }}</div>
+		<div class="ws-kpi-value">{{ portal_counts.open_quotations }}</div>
+		<div class="ws-kpi-unit">{{ _("awaiting your decision") }}</div>
+		{% if portal_counts.open_quotations %}
+		<a class="ws-kpi-trend flat" href="/portal/quotations">{{ _("Review & accept") }} →</a>
+		{% else %}
+		<span class="ws-kpi-trend up">{{ _("Nothing pending") }}</span>
+		{% endif %}
+	</div>
+	<div class="ws-kpi">
+		<div class="ws-kpi-label">{{ _("Orders in progress") }}</div>
+		<div class="ws-kpi-value">{{ portal_counts.orders_in_progress }}</div>
+		<div class="ws-kpi-unit">{{ _("confirmed, packing or in transit") }}</div>
+		<a class="ws-kpi-trend flat" href="/portal/orders">{{ _("Track orders") }} →</a>
+	</div>
+	<div class="ws-kpi">
+		{% if spend_chart.has_data %}
+		<svg class="ws-kpi-spark" viewBox="0 0 80 30" aria-hidden="true">
+			<polyline points="{{ spend_spark }}" fill="none" stroke="var(--ws-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+		</svg>
+		{% endif %}
+		<div class="ws-kpi-label">{{ _("Spend · 12 months") }}</div>
+		<div class="ws-kpi-value">{{ frappe.utils.fmt_money(spend_totals.current, currency=currency) }}</div>
+		<div class="ws-kpi-unit">{{ _("invoiced, last 12 months") }}</div>
+		{% if spend_totals.pct_change is not none %}
+		<span class="ws-kpi-trend {{ 'up' if spend_totals.pct_change >= 0 else 'down' }}">{{ "↑" if spend_totals.pct_change >= 0 else "↓" }} {{ spend_totals.pct_change | abs }}% <small>{{ _("vs prior 12 mo") }}</small></span>
+		{% else %}
+		<span class="ws-kpi-trend flat">{{ _("First year with us") }}</span>
+		{% endif %}
+	</div>
 </div>
 
-<p class="ws-section-title">{{ _("Recent orders") }}</p>
-{% if not recent_orders %}
-<div class="ws-empty">{{ _("No orders yet — your first order starts in the store.") }} <a href="/store">{{ _("Browse products") }}</a></div>
-{% else %}
-<table class="table">
-	<thead><tr><th>{{ _("Order") }}</th><th>{{ _("Date") }}</th><th>{{ _("Status") }}</th><th class="text-right">{{ _("Total") }}</th></tr></thead>
-	<tbody>
-	{% for order in recent_orders %}
-	<tr>
-		<td><a href="/portal/order?name={{ order.name | urlencode }}">{{ order.name }}</a></td>
-		<td>{{ frappe.utils.formatdate(order.transaction_date) }}</td>
-		<td>{{ status_badge(order.status) }}</td>
-		<td class="text-right">{{ frappe.utils.fmt_money(order.grand_total, currency=order.currency) }}</td>
-	</tr>
-	{% endfor %}
-	</tbody>
-</table>
-{% endif %}
+<div class="ws-row-2">
+	<div class="ws-panel">
+		<div class="ws-panel-head">
+			<h3>{{ _("Spend trend") }}</h3>
+			<div class="ws-clegend" style="margin-top:0">
+				<span><i class="line" style="background:linear-gradient(90deg,var(--ws-accent-light),var(--ws-accent-deep))"></i>{{ _("Invoiced") }}</span>
+				<span><i class="line" style="background:linear-gradient(90deg,var(--ws-ink-4),var(--ws-ink))"></i>{{ _("Paid") }}</span>
+			</div>
+		</div>
+		{% if spend_chart.has_data %}
+		<svg class="ws-chart" viewBox="0 0 {{ spend_chart.width }} {{ spend_chart.height }}" preserveAspectRatio="none" role="img" aria-label="{{ _('Monthly invoiced and paid totals, last 12 months') }}">
+			<defs>
+				<linearGradient id="ws-spend-fill" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" style="stop-color:var(--ws-accent)" stop-opacity="0.22"/>
+					<stop offset="100%" style="stop-color:var(--ws-accent)" stop-opacity="0"/>
+				</linearGradient>
+			</defs>
+			{% for tick in spend_chart.ticks %}
+			<line x1="{{ spend_chart.pad_left }}" y1="{{ tick.y }}" x2="{{ spend_chart.width }}" y2="{{ tick.y }}" stroke="rgba(10,10,10,0.05)"/>
+			<text x="{{ spend_chart.pad_left - 6 }}" y="{{ tick.y + 4 }}" text-anchor="end" font-size="10" fill="var(--ws-ink-mute)" font-family="Poppins">{{ tick.value }}</text>
+			{% endfor %}
+			<line x1="{{ spend_chart.pad_left }}" y1="{{ spend_chart.baseline }}" x2="{{ spend_chart.width }}" y2="{{ spend_chart.baseline }}" stroke="rgba(10,10,10,0.08)"/>
+			<path d="{{ spend_chart.invoiced_area }}" fill="url(#ws-spend-fill)"/>
+			<polyline points="{{ spend_chart.invoiced_points }}" fill="none" stroke="var(--ws-accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+			<polyline points="{{ spend_chart.paid_points }}" fill="none" stroke="var(--ws-ink-2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+			{% for mark in spend_chart.marks %}
+			{% if mark.show_label %}
+			<text x="{{ mark.x }}" y="{{ spend_chart.height - 14 }}" text-anchor="middle" font-size="11" fill="var(--ws-ink-mute)" font-family="Poppins">{{ mark.label }}</text>
+			{% endif %}
+			<g>
+				<title>{{ mark.label }} · {{ _("Invoiced") }} {{ frappe.utils.fmt_money(mark.invoiced, currency=currency) }} · {{ _("Paid") }} {{ frappe.utils.fmt_money(mark.paid, currency=currency) }}</title>
+				<rect x="{{ mark.x - 23 }}" y="0" width="46" height="{{ spend_chart.baseline }}" fill="transparent"/>
+				<circle cx="{{ mark.x }}" cy="{{ mark.y_invoiced }}" r="3" fill="var(--ws-accent)" stroke="#fff" stroke-width="1.5"/>
+				<circle cx="{{ mark.x }}" cy="{{ mark.y_paid }}" r="3" fill="var(--ws-ink-2)" stroke="#fff" stroke-width="1.5"/>
+			</g>
+			{% endfor %}
+		</svg>
+		{% else %}
+		<div class="ws-empty">{{ _("Once your first invoice lands, your spend history draws itself here.") }} <a href="/store">{{ _("Start in the store") }}</a></div>
+		{% endif %}
+	</div>
+
+	<div class="ws-panel">
+		<div class="ws-panel-head"><h3>{{ _("Top items") }}</h3><div class="meta">{{ _("by quantity ordered") }}</div></div>
+		{% if top_items %}
+		<div class="ws-list">
+			{% for item in top_items %}
+			<a class="ws-list-row" {% if item.route %}href="/{{ item.route }}"{% endif %}>
+				<span class="ws-rank {{ 'lead' if loop.first else '' }}">{{ loop.index }}</span>
+				<span>
+					<span class="ws-list-name">{{ item.item_name or item.item_code }}</span>
+					<span class="ws-list-meta d-block">{{ item.orders }} {{ _("orders") }} · {{ frappe.utils.fmt_money(item.amount, currency=currency) }}</span>
+				</span>
+				<span class="ws-list-qty">{{ item.qty | int }}<small>{{ _("units") }}</small></span>
+			</a>
+			{% endfor %}
+		</div>
+		{% else %}
+		<div class="ws-empty">{{ _("Your most-ordered items will rank themselves here.") }} <a href="/store">{{ _("Browse products") }}</a></div>
+		{% endif %}
+	</div>
+</div>
+
+<div class="ws-row-2-eq">
+	<div class="ws-panel">
+		<div class="ws-panel-head"><h3>{{ _("Quotation mix") }}</h3><div class="meta">{{ _("all time") }}</div></div>
+		{% if quotation_total %}
+		<div class="ws-piewrap">
+			<svg class="ws-chart-sm" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" style="height:240px" role="img" aria-label="{{ _('Share of quotations by outcome') }}">
+				<g transform="translate(150 150)">
+					{% for segment in quotation_donut %}
+					<circle r="80" fill="none" class="{{ segment.css }}" stroke-width="42"
+						stroke-dasharray="{{ segment.length }} {{ segment.circumference }}"
+						stroke-dashoffset="{{ segment.offset }}" transform="rotate(-90)">
+						<title>{{ _(segment.label) }} · {{ segment.value }}</title>
+					</circle>
+					{% endfor %}
+				</g>
+			</svg>
+			<div class="ws-piewrap-center"><b>{{ quotation_total }}</b><small>{{ _("quotations") }}</small></div>
+		</div>
+		<div class="ws-clegend">
+			{% for segment in quotation_mix %}
+			<span><i class="{{ segment.css }}-i"></i>{{ _(segment.label) }} · {{ segment.value }}</span>
+			{% endfor %}
+		</div>
+		{% else %}
+		<div class="ws-empty">{{ _("No quotations yet — your first basket becomes one.") }} <a href="/store">{{ _("Build a basket") }}</a></div>
+		{% endif %}
+	</div>
+
+	<div class="ws-panel">
+		<div class="ws-panel-head"><h3>{{ _("Recent orders") }}</h3><a class="meta" href="/portal/orders">{{ _("View all") }} →</a></div>
+		{% if recent_orders %}
+		<div class="ws-list">
+			{% for order in recent_orders %}
+			<a class="ws-list-row noicon" href="/portal/order?name={{ order.name | urlencode }}">
+				<span>
+					<span class="ws-list-name">{{ order.name }} {{ status_badge(order.status) }}</span>
+					<span class="ws-list-meta d-block">{{ frappe.utils.formatdate(order.transaction_date) }}</span>
+				</span>
+				<span class="ws-list-qty">{{ frappe.utils.fmt_money(order.grand_total, currency=order.currency) }}</span>
+			</a>
+			{% endfor %}
+		</div>
+		{% else %}
+		<div class="ws-empty">{{ _("No orders yet — your first order starts in the store.") }} <a href="/store">{{ _("Browse products") }}</a></div>
+		{% endif %}
+	</div>
+</div>
 {% endblock %}

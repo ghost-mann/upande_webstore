@@ -1,17 +1,13 @@
-{% extends "templates/webstore_base.html" %}
+{% extends "templates/webstore_portal_base.html" %}
 {% block title %}{{ _("Claims") }}{% endblock %}
 
-{% block hero %}
-{% set portal_active = "claims" %}
-{% set portal_title = _("Claims") %}
-{% set portal_eyebrow = _("Something arrived wrong? We'll make it right.") %}
-{% include "templates/includes/webstore_portal_hero.html" %}
-{% endblock %}
+{% block portal_title %}{{ _("Claims") }}{% endblock %}
+{% block portal_sub %}{{ _("Something arrived wrong? We'll make it right.") }}{% endblock %}
 
-{% block page_content %}
+{% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
-<div class="card mb-4"><div class="card-body">
-	<p class="ws-section-title mb-2">{{ _("File a new claim") }}</p>
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("File a new claim") }}</h3></div>
 	<form id="webstore-claim-form" onsubmit="return false;">
 		<div class="form-row">
 			<div class="col-md-5 form-group">
@@ -40,25 +36,26 @@
 		<div class="form-group"><input type="file" id="claim-attachment"></div>
 		<button class="btn btn-primary" id="claim-submit">{{ _("Submit claim") }}</button>
 	</form>
-</div></div>
+</div>
 
-<p class="ws-section-title">{{ _("Your claims") }}</p>
-{% if not claims %}
-<div class="ws-empty">{{ _("No claims filed — everything arrived as it should.") }}</div>
-{% else %}
-<table class="table">
-	<thead><tr><th>{{ _("Claim") }}</th><th>{{ _("Status") }}</th><th>{{ _("Filed on") }}</th></tr></thead>
-	<tbody>
-	{% for claim in claims %}
-	<tr>
-		<td><a href="/portal/issue?name={{ claim.name | urlencode }}">{{ claim.subject }}</a></td>
-		<td>{{ status_badge(claim.status) }}</td>
-		<td>{{ frappe.utils.formatdate(claim.creation) }}</td>
-	</tr>
-	{% endfor %}
-	</tbody>
-</table>
-{% endif %}
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("Your claims") }}</h3><div class="meta">{{ claims | length }} {{ _("shown") }}</div></div>
+	{% if not claims %}
+	<div class="ws-empty">{{ _("No claims filed — everything arrived as it should.") }}</div>
+	{% else %}
+	<div class="ws-list">
+		{% for claim in claims %}
+		<a class="ws-list-row noicon" href="/portal/issue?name={{ claim.name | urlencode }}">
+			<span>
+				<span class="ws-list-name">{{ claim.subject }} {{ status_badge(claim.status) }}</span>
+				<span class="ws-list-meta d-block">{{ _("filed") }} {{ frappe.utils.formatdate(claim.creation) }}</span>
+			</span>
+			<span class="ws-list-qty"><small>{{ _("open thread") }} →</small></span>
+		</a>
+		{% endfor %}
+	</div>
+	{% endif %}
+</div>
 <script>
 document.getElementById("claim-submit").addEventListener("click", async () => {
 	try {

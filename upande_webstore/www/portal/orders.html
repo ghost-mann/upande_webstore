@@ -1,31 +1,27 @@
-{% extends "templates/webstore_base.html" %}
+{% extends "templates/webstore_portal_base.html" %}
 {% block title %}{{ _("My Orders") }}{% endblock %}
 
-{% block hero %}
-{% set portal_active = "orders" %}
-{% set portal_title = _("My Orders") %}
-{% include "templates/includes/webstore_portal_hero.html" %}
-{% endblock %}
+{% block portal_title %}{{ _("Orders") }}{% endblock %}
+{% block portal_sub %}{{ _("Accepted quotations become orders — track delivery and billing here.") }}{% endblock %}
 
-{% block page_content %}
+{% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
-{% if not orders %}
-<div class="ws-empty">{{ _("No orders yet — accepted quotations become orders here.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
-{% else %}
-<table class="table">
-	<thead><tr><th>{{ _("Order") }}</th><th>{{ _("Date") }}</th><th>{{ _("Status") }}</th><th>{{ _("Delivered") }}</th><th>{{ _("Billed") }}</th><th class="text-right">{{ _("Total") }}</th></tr></thead>
-	<tbody>
-	{% for o in orders %}
-	<tr>
-		<td><a href="/portal/order?name={{ o.name | urlencode }}">{{ o.name }}</a></td>
-		<td>{{ frappe.utils.formatdate(o.transaction_date) }}</td>
-		<td>{{ status_badge(o.status) }}</td>
-		<td class="text-right">{{ o.per_delivered | int }}%</td>
-		<td class="text-right">{{ o.per_billed | int }}%</td>
-		<td class="text-right">{{ frappe.utils.fmt_money(o.grand_total, currency=o.currency) }}</td>
-	</tr>
-	{% endfor %}
-	</tbody>
-</table>
-{% endif %}
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("All orders") }}</h3><div class="meta">{{ orders | length }} {{ _("shown") }}</div></div>
+	{% if not orders %}
+	<div class="ws-empty">{{ _("No orders yet — accepted quotations become orders here.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+	{% else %}
+	<div class="ws-list">
+		{% for o in orders %}
+		<a class="ws-list-row noicon" href="/portal/order?name={{ o.name | urlencode }}">
+			<span>
+				<span class="ws-list-name">{{ o.name }} {{ status_badge(o.status) }}</span>
+				<span class="ws-list-meta d-block">{{ frappe.utils.formatdate(o.transaction_date) }} · {{ _("delivered") }} {{ o.per_delivered | int }}% · {{ _("billed") }} {{ o.per_billed | int }}%</span>
+			</span>
+			<span class="ws-list-qty">{{ frappe.utils.fmt_money(o.grand_total, currency=o.currency) }}</span>
+		</a>
+		{% endfor %}
+	</div>
+	{% endif %}
+</div>
 {% endblock %}

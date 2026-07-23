@@ -1,13 +1,12 @@
 import frappe
 from frappe.utils import add_days, getdate, nowdate
 
-from upande_webstore.services.portal import portal_guard
+from upande_webstore.services.portal import portal_page_context
 from upande_webstore.services.statement import get_statement
 
 
 def get_context(context):
-	portal_guard("/portal/statement")
-	context.no_cache = 1
+	portal_page_context(context, "/portal/statement", "statement")
 	context.from_date = getdate(frappe.form_dict.get("from") or add_days(nowdate(), -90))
 	context.to_date = getdate(frappe.form_dict.get("to") or nowdate())
 	context.statement = get_statement(context.from_date, context.to_date)
