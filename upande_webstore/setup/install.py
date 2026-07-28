@@ -102,5 +102,29 @@ def after_install():
 	seed_default_theme()
 
 
+def normalise_settings_docstatus():
+	"""Force Webstore Settings' docstatus back to 0.
+
+	The doctype is not submittable, but a stray docstatus of 2 in tabSingles
+	makes the desk treat the record as a cancelled document and offer Amend
+	instead of a plain Save. Something in the migrate path keeps re-setting it,
+	so this runs on every migrate rather than as a one-time patch.
+	"""
+	if not frappe.db.exists("DocType", "Webstore Settings"):
+		return
+	current = frappe.db.sql(
+		"select value from tabSingles where doctype = %s and field = 'docstatus'",
+		"Webstore Settings",
+	)
+	if not current or str(current[0][0]) == "0":
+		return
+	frappe.db.sql(
+		"update tabSingles set value = '0' where doctype = %s and field = 'docstatus'",
+		"Webstore Settings",
+	)
+	frappe.clear_cache(doctype="Webstore Settings")
+
+
 def after_migrate():
 	create_webstore_custom_fields()
+	normalise_settings_docstatus()
