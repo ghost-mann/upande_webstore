@@ -8,6 +8,36 @@ from upande_webstore.theme import color, fonts
 
 DEFAULT_CANVAS = (244, 243, 239)
 
+# Every settings field this module reads. Owned here because this is what
+# consumes them; theme/transfer.py imports this list rather than duplicating it.
+THEME_FIELDS = (
+	"accent",
+	"accent_dark",
+	"accent_soft",
+	"accent_drives_primary",
+	"ink",
+	"ink_muted",
+	"canvas",
+	"wash",
+	"border",
+	"border_strong",
+	"success",
+	"warning",
+	"danger",
+	"info",
+	"font_sans",
+	"font_sans_name",
+	"font_display",
+	"font_display_name",
+	"font_mono",
+	"font_mono_name",
+	"google_fonts_url",
+	"radius",
+	"radius_card",
+	"radius_panel",
+	"custom_css",
+)
+
 # seed fieldname -> ((scss token, derivation key), ...)
 # The token names differ from the field names where the SCSS already had its own
 # vocabulary: 'danger' fills the 'destructive' tokens, and warning is two-tone

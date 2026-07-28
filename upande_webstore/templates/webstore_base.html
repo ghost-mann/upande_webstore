@@ -5,6 +5,9 @@
 {%- if webstore_font_link %}
 <link rel="stylesheet" href="{{ webstore_font_link }}">
 {%- endif %}
+{%- if webstore_branding and webstore_branding.favicon %}
+<link rel="icon" href="{{ webstore_branding.favicon }}">
+{%- endif %}
 {%- if webstore_tokens or webstore_custom_css %}
 <style>
 	:root {
@@ -22,9 +25,9 @@
 {% block navbar %}
 <nav class="ws-navbar">
 	<div class="container">
-		<a class="ws-brand" href="/store" title="{{ _('Upande Store') }}">
-			<img src="{{ webstore_appearance.brand_logo or '/assets/upande_webstore/images/upande-logo.png' }}" alt="Upande">
-			<span data-sub="{{ _('Store & Customer Portal') }}">upande<b>store</b></span>
+		<a class="ws-brand" href="/store" title="{{ webstore_branding.site_name }}">
+			<img src="{{ webstore_branding.brand_logo }}" alt="{{ webstore_branding.site_name }}">
+			<span data-sub="{{ webstore_branding.wordmark_subtitle }}">{{ webstore_branding.wordmark }}<b>{{ webstore_branding.wordmark_bold }}</b></span>
 		</a>
 		<div class="ws-nav">
 			{% if webstore_features.search_palette %}
@@ -95,42 +98,32 @@
 	<div class="container">
 		<div class="ws-footer-grid">
 			<div>
-				<div class="ws-footer-brand">upande<b>store</b></div>
-				<p class="ws-footer-tag">{{ _("Export-grade flowers, coffee and fresh produce from Kenyan growers — ordered online, confirmed by people who know the farms.") }}</p>
+				<div class="ws-footer-brand">{{ webstore_branding.wordmark }}<b>{{ webstore_branding.wordmark_bold }}</b></div>
+				<p class="ws-footer-tag">{{ webstore_branding.footer_tagline }}</p>
 			</div>
+			{% for column in webstore_branding.footer_columns %}
 			<div>
-				<h6>{{ _("Shop") }}</h6>
+				<h6>{{ column.heading }}</h6>
 				<ul>
-					<li><a href="/store">{{ _("All products") }}</a></li>
-					<li><a href="/store?category=Flowers">{{ _("Flowers") }}</a></li>
-					<li><a href="/store?category=Coffee">{{ _("Coffee") }}</a></li>
-					<li><a href="/store?category=Fresh%20Produce">{{ _("Fresh Produce") }}</a></li>
+					{% for link in column.links %}
+					<li><a href="{{ link.url }}">{{ link.label }}</a></li>
+					{% endfor %}
 				</ul>
 			</div>
-			{% if webstore_features.portal %}
-			<div>
-				<h6>{{ _("Account") }}</h6>
-				<ul>
-					<li><a href="/portal">{{ _("Customer portal") }}</a></li>
-					{% if webstore_features.quotations %}<li><a href="/portal/quotations">{{ _("Quotations") }}</a></li>{% endif %}
-					{% if webstore_features.claims %}<li><a href="/portal/claims">{{ _("Claims") }}</a></li>{% endif %}
-					<li><a href="/app">{{ _("Team desk") }}</a></li>
-				</ul>
-			</div>
-			{% endif %}
+			{% endfor %}
 			<div>
 				<h6>{{ _("Contact") }}</h6>
 				<ul>
-					<li><a href="mailto:sales@upande.com">sales@upande.com</a></li>
-					<li>{{ _("Mon–Sat, 07:00–17:00 EAT") }}</li>
-					<li>{{ _("Nairobi, Kenya") }}</li>
-					<li><a href="https://upande.com" target="_blank" rel="noopener">upande.com</a></li>
+					<li><a href="mailto:{{ webstore_branding.footer_contact_email }}">{{ webstore_branding.footer_contact_email }}</a></li>
+					<li>{{ webstore_branding.footer_hours }}</li>
+					<li>{{ webstore_branding.footer_location }}</li>
+					<li><a href="{{ webstore_branding.footer_website }}" target="_blank" rel="noopener">{{ webstore_branding.footer_website | replace("https://", "") | replace("http://", "") }}</a></li>
 				</ul>
 			</div>
 		</div>
 		<div class="ws-footer-bottom">
-			<span>© {{ frappe.utils.now_datetime().year }} Upande Ltd. {{ _("All rights reserved.") }}</span>
-			<span>{{ _("Quotation-first ordering · No payment taken online") }}</span>
+			<span>© {{ frappe.utils.now_datetime().year }} {{ webstore_branding.footer_copyright }} {{ _("All rights reserved.") }}</span>
+			<span>{{ webstore_branding.footer_note }}</span>
 		</div>
 	</div>
 </footer>

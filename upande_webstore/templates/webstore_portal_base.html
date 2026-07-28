@@ -67,7 +67,7 @@
 		{% block portal_back %}{% endblock %}
 		<div class="ws-pagehead">
 			<div>
-				<span class="ws-eyebrow">{% block portal_eyebrow %}{{ _("Upande Store · Customer Portal") }}{% endblock %}</span>
+				<span class="ws-eyebrow">{% block portal_eyebrow %}{{ webstore_branding.portal_eyebrow }}{% endblock %}</span>
 				<h1 class="ws-pagehead-title">{% block portal_title %}{% endblock %}</h1>
 				{% set sub = self.portal_sub() %}
 				{% if sub | trim %}<p class="ws-pagehead-sub">{{ sub }}</p>{% endif %}

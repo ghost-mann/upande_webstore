@@ -37,59 +37,47 @@
 <div class="container ws-storefront-band">
 	{% if webstore_features.hero %}
 	<div class="ws-hero2">
-		<div class="ws-hero2-bg"><img src="{{ webstore_appearance.hero_image or '/assets/upande_webstore/images/site/hero.jpg' }}" alt=""></div>
+		<div class="ws-hero2-bg"><img src="{{ webstore_branding.hero_image }}" alt=""></div>
 		<div class="ws-hero2-inner">
-			<span class="ws-eyebrow on-dark rv in">{{ _("Upande · Nairobi · Est. for growers") }}</span>
-			<h1 class="rv in">{{ _("The harvest,") }} <em>{{ _("straight from the farm gate") }}</em></h1>
-			<p class="rv rv-1 in">{{ _("Export-grade flowers, coffee and fresh produce from Kenyan growers — wholesale quantities, quotation-first ordering, cold chain to your door.") }}</p>
+			<span class="ws-eyebrow on-dark rv in">{{ webstore_branding.hero_eyebrow }}</span>
+			<h1 class="rv in">{{ webstore_branding.hero_heading }} <em>{{ webstore_branding.hero_heading_em }}</em></h1>
+			<p class="rv rv-1 in">{{ webstore_branding.hero_body }}</p>
 			<div class="ws-hero2-actions rv rv-2 in">
-				<a href="#catalog" class="btn btn-primary">{{ _("Browse the catalog") }}</a>
+				<a href="#catalog" class="btn btn-primary">{{ webstore_branding.hero_cta_primary }}</a>
 				{% if frappe.session.user == "Guest" %}
 					{% if webstore_features.signup %}
-					<a href="/signup" class="btn btn-hero-ghost">{{ _("Open a trade account") }}</a>
+					<a href="/signup" class="btn btn-hero-ghost">{{ webstore_branding.hero_cta_secondary_guest }}</a>
 					{% else %}
 					<a href="/login" class="btn btn-hero-ghost">{{ _("Member login") }}</a>
 					{% endif %}
 				{% elif webstore_features.portal %}
-				<a href="/portal" class="btn btn-hero-ghost">{{ _("Go to your portal") }}</a>
+				<a href="/portal" class="btn btn-hero-ghost">{{ webstore_branding.hero_cta_secondary_member }}</a>
 				{% endif %}
 			</div>
-			{% if webstore_features.hero_stats %}
+			{% if webstore_features.hero_stats and webstore_branding.hero_stats %}
 			<div class="ws-hero2-stats rv rv-3 in">
-				<div class="ws-hero2-stat"><b>40+</b><span>{{ _("partner growers") }}</span></div>
-				<div class="ws-hero2-stat"><b>24h</b><span>{{ _("quotation turnaround") }}</span></div>
-				<div class="ws-hero2-stat"><b>4°C</b><span>{{ _("cold chain, farm to door") }}</span></div>
+				{% for stat in webstore_branding.hero_stats %}
+				<div class="ws-hero2-stat"><b>{{ stat.value }}</b><span>{{ stat.label }}</span></div>
+				{% endfor %}
 			</div>
 			{% endif %}
 		</div>
 	</div>
 	{% endif %}
 
-	{% if webstore_features.category_cards %}
+	{% if webstore_features.category_cards and webstore_branding.category_cards %}
 	<div class="ws-cats">
 		<span class="ws-eyebrow rv">{{ _("What we grow") }}</span>
 		<div class="row mt-3">
-			<div class="col-md-4 mb-4 rv">
-				<a class="ws-catcard" href="/store?category=Flowers">
-					<img src="{{ webstore_appearance.flowers_category_image or '/assets/upande_webstore/images/site/cat-flowers.jpg' }}" alt="{{ _('Flowers') }}" loading="lazy">
+			{% for card in webstore_branding.category_cards %}
+			<div class="col-md-4 mb-4 rv{% if loop.index0 %} rv-{{ loop.index0 }}{% endif %}">
+				<a class="ws-catcard" href="{{ card.href }}">
+					{% if card.image %}<img src="{{ card.image }}" alt="{{ card.label }}" loading="lazy">{% endif %}
 					<span class="ws-catcard-arrow">↗</span>
-					<span class="ws-catcard-label"><span class="t">{{ _("Flowers") }}</span><span class="n">{{ _("Roses, lilies & fillers") }}</span></span>
+					<span class="ws-catcard-label"><span class="t">{{ card.label }}</span><span class="n">{{ card.subtitle }}</span></span>
 				</a>
 			</div>
-			<div class="col-md-4 mb-4 rv rv-1">
-				<a class="ws-catcard" href="/store?category=Coffee">
-					<img src="{{ webstore_appearance.coffee_category_image or '/assets/upande_webstore/images/site/cat-coffee.jpg' }}" alt="{{ _('Coffee') }}" loading="lazy">
-					<span class="ws-catcard-arrow">↗</span>
-					<span class="ws-catcard-label"><span class="t">{{ _("Coffee") }}</span><span class="n">{{ _("AA & specialty grades") }}</span></span>
-				</a>
-			</div>
-			<div class="col-md-4 mb-4 rv rv-2">
-				<a class="ws-catcard" href="/store?category=Fresh%20Produce">
-					<img src="{{ webstore_appearance.produce_category_image or '/assets/upande_webstore/images/site/cat-produce.jpg' }}" alt="{{ _('Fresh Produce') }}" loading="lazy">
-					<span class="ws-catcard-arrow">↗</span>
-					<span class="ws-catcard-label"><span class="t">{{ _("Fresh Produce") }}</span><span class="n">{{ _("Avocado & vegetables") }}</span></span>
-				</a>
-			</div>
+			{% endfor %}
 		</div>
 	</div>
 	{% endif %}

@@ -13,16 +13,28 @@ def setup_webstore_settings():
 	for field in (
 		"brand_logo",
 		"hero_image",
+		"favicon",
 		"flowers_category_image",
 		"coffee_category_image",
 		"produce_category_image",
 		"primary_color",
 	):
 		settings.set(field, "")
-	from upande_webstore.theme.features import FEATURES
 
+	# Reset every theme seed, branding string and feature flag, so a test that
+	# customises one of them cannot leak into whichever test runs next.
+	from upande_webstore.theme.branding import DEFAULTS
+	from upande_webstore.theme.features import FEATURES
+	from upande_webstore.theme.tokens import THEME_FIELDS
+
+	for field in THEME_FIELDS:
+		settings.set(field, 0 if field == "accent_drives_primary" else "")
+	for field in DEFAULTS:
+		settings.set(field, "")
 	for feature in FEATURES:
 		settings.set(feature.fieldname, 1)
+	for table in ("hero_stats", "category_cards", "footer_links"):
+		settings.set(table, [])
 	settings.set("warehouses", [])
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
 	settings.save(ignore_permissions=True)

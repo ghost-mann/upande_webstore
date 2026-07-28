@@ -142,3 +142,87 @@ class TestBrandingTables(IntegrationTestCase):
 		frappe.clear_cache()
 		stats = get_branding()["hero_stats"]
 		self.assertEqual([s["value"] for s in stats], ["45+", "3"])
+
+
+class TestBrandingRender(IntegrationTestCase):
+	def setUp(self):
+		setup_webstore_settings()
+		clear_tables()
+
+	def _render_store(self):
+		from frappe.website.serve import get_response_content
+
+		return get_response_content("/store")
+
+	def test_default_wordmark_renders(self):
+		self.assertIn("upande<b>store</b>", self._render_store())
+
+	def test_custom_wordmark_appears(self):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.wordmark = "mona"
+		settings.wordmark_bold = "flowers"
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		self.assertIn("mona<b>flowers</b>", self._render_store())
+
+	def test_custom_footer_copy_appears(self):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.footer_copyright = "Mona Flowers Kenya Limited"
+		settings.footer_note = "Powered by Upande"
+		settings.footer_location = "P.O. Box 2707-30100, Eldoret, Kenya"
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		content = self._render_store()
+		self.assertIn("Mona Flowers Kenya Limited", content)
+		self.assertIn("Powered by Upande", content)
+		self.assertIn("Eldoret", content)
+
+	def test_empty_category_table_renders_no_shell(self):
+		"""An enabled section with an empty table must render nothing."""
+		self.assertNotIn("ws-cats", self._render_store())
+
+	def test_empty_hero_stats_render_no_shell(self):
+		self.assertNotIn("ws-hero2-stats", self._render_store())
+
+	def test_configured_cards_render(self):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.append(
+			"category_cards",
+			{"label": "Roses", "subtitle": "45+ varieties", "category": "Roses"},
+		)
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		content = self._render_store()
+		self.assertIn("ws-catcard", content)
+		self.assertIn("45+ varieties", content)
+		self.assertIn("/store?category=Roses", content)
+
+	def test_configured_hero_stats_render(self):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.append("hero_stats", {"value": "40–120cm", "label": "stem grades"})
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		content = self._render_store()
+		self.assertIn("ws-hero2-stats", content)
+		self.assertIn("stem grades", content)
+
+	def test_footer_columns_render_from_table(self):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.append("footer_links", {"column": "Shop", "label": "Roses", "url": "/store?category=Roses"})
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		content = self._render_store()
+		self.assertIn("<h6>Shop</h6>", content)
+		self.assertIn(">Roses</a>", content)
+
+	def test_favicon_link_emitted_when_set(self):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.favicon = "/files/mona-favicon.png"
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		self.assertIn('rel="icon" href="/files/mona-favicon.png"', self._render_store())
+
+	def test_no_favicon_override_when_unset(self):
+		"""Frappe emits its own rel="shortcut icon"; we must add none of our own
+		rather than a broken one."""
+		self.assertNotIn('<link rel="icon"', self._render_store())

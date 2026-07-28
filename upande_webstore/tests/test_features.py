@@ -286,7 +286,15 @@ class TestTemplateGating(IntegrationTestCase):
 
 		return get_response_content("/store")
 
+	def _seed_cards(self):
+		"""Category cards are data-driven, so a flag-on test needs a row to see."""
+		settings = frappe.get_doc("Webstore Settings")
+		settings.append("category_cards", {"label": "Roses", "category": "Roses"})
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
 	def test_everything_present_by_default(self):
+		self._seed_cards()
 		content = self._render_store()
 		self.assertIn("ws-hero2-inner", content)
 		self.assertIn("ws-catcard", content)
@@ -302,6 +310,7 @@ class TestTemplateGating(IntegrationTestCase):
 		self.assertNotIn("ws-hero2-stats", self._render_store())
 
 	def test_category_cards_hidden_when_off(self):
+		self._seed_cards()
 		set_flag("enable_category_cards", 0)
 		self.assertNotIn("ws-catcard", self._render_store())
 
