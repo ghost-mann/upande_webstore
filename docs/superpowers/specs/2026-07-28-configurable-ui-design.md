@@ -181,15 +181,38 @@ Without a `muted` seed, `muted` defaults to `mix(ink, canvas, MUTE)`. The two
 segments then algebraically collapse back to the single ink→canvas ramp:
 `mix(ink, mix(ink, canvas, MUTE), s/MUTE) == mix(ink, canvas, s)`.
 
-**The shipped ink values are hand-picked and do not sit on a clean ramp.**
-`--ws-ink-1` is `#1a1a18`, whose blue channel (24) implies a fraction of 0.061
-where its red and green channels imply 0.068 — the shipped scale was nudged
-warmer by eye. So feeding today's `#0a0a0a` / `#f4f3ef` back through the
-derivation **approximates** the shipped values within about one 8-bit step; it
-does not reproduce them bit-for-bit. That is fine and invisible in practice,
-because a site that wants today's look leaves the seeds blank and no override is
-emitted at all. The test asserts the approximation within a tolerance of 2 per
-channel, not equality.
+**The shipped ink values are hand-picked and do not sit on a clean ramp.** They
+were warm-shifted by eye: for `--ws-ink-mute` (`#8a8780`) the red channel implies
+a fraction of 0.547 but the blue channel implies 0.515 — blue was deliberately
+pulled down at every step to keep the grays warm against the cream canvas.
+
+A single-ratio ramp therefore *cannot* reproduce them. Measured divergence when
+today's `#0a0a0a` / `#f4f3ef` are fed back through the derivation:
+
+| Token | Shipped | Derived | Worst channel Δ |
+|---|---|---|---|
+| `ink` | `#0a0a0a` | `#0a0a0a` | 0 |
+| `ink-1` | `#1a1a18` | `#1a1a1a` | 2 |
+| `ink-2` | `#2a2a26` | `#2a2a29` | 3 |
+| `ink-3` | `#3a3a34` | `#3a3a39` | 5 |
+| `ink-4` | `#5a5a52` | `#5a5a58` | 6 |
+| `ink-mute` | `#8a8780` | `#8a8987` | **7** |
+| `ink-faint` | `#b8b6ae` | `#b8b7b4` | 6 |
+
+Worst case 7/255 ≈ 3%, entirely in blue — invisible in body text, but real. It
+does not matter in practice because **a site that wants today's look leaves the
+seeds blank and no override is emitted at all**; the divergence only appears if
+someone explicitly types the shipped hexes into the seed fields.
+
+The tests therefore assert the two properties that carry weight, not equality
+with the shipped scale:
+
+1. Blank seeds → `get_tokens() == {}` (the actual safety guarantee).
+2. The collapse identity: with `muted` unset the two segments reduce **exactly**
+   to the single ink→canvas ramp.
+
+Plus a regression bound of **≤ 8 per channel** against the shipped values, so the
+divergence documented above cannot silently grow.
 
 **Known approximation:** with Mona's seeds the derived `--ws-ink-4` is `#5d616a`
 against the CRM's `#54586b` — a few percent lighter and less saturated. Same for
@@ -436,11 +459,15 @@ unaffected by a deploy.
   override block is emitted and existing sites are provably untouched.
 - Mona's seeds produce the documented token values, including the
   `accent_drives_primary` remap.
-- Today's ink and canvas seeds, with no muted seed, land within 2 per channel of
-  the seven shipped ink values — a tolerance assertion, not equality, for the
-  reason given under *Ink scale derivation*.
+- Today's ink and canvas seeds, with no muted seed, land within **8 per channel**
+  of the seven shipped ink values — a regression bound, not equality, for the
+  reason and measured table given under *Ink scale derivation*.
 - The two-segment scale collapses to the single ramp when `muted` is unset:
   `ink_scale(ink, None, canvas) == ink_scale_single_ramp(ink, canvas)` exactly.
+- `mix()` returns unrounded floats and only `to_hex()` rounds, so chained mixes
+  do not accumulate rounding error. Asserted by checking that the existing
+  `derive_brand_colors` values are unchanged (`#13592e`, `#ecf3ef`, `#508c67`,
+  `#104c27` from seed `#166534`), which pins backward compatibility.
 
 `tests/test_features.py`
 - `require()` raises `DoesNotExistError` when off, passes when on, and composes
