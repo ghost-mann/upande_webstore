@@ -8,7 +8,8 @@ import frappe
 from frappe import _
 
 from upande_webstore.api.cart import _require_login
-from upande_webstore.services.claims import CLAIM_TYPES, get_claimable_documents
+from upande_webstore.services.claims import get_claimable_documents
+from upande_webstore.services.portal_settings import get, get_claim_types, is_on
 from upande_webstore.services.portal import get_current_customer
 from upande_webstore.theme.features import guard
 
@@ -33,10 +34,15 @@ def create_claim(claim_type, description, against_doctype=None, against_document
 	customer = get_current_customer()
 
 	claim_type = (claim_type or "").strip()
-	if claim_type not in CLAIM_TYPES:
+	if claim_type not in get_claim_types():
 		frappe.throw(_("Please select what the claim is about."), frappe.ValidationError)
 	if not (description or "").strip():
 		frappe.throw(_("Please describe the claim."), frappe.ValidationError)
+	if is_on("require_claim_document") and not (against_document or "").strip():
+		frappe.throw(
+			_("Please pick the order, invoice or delivery note this claim is about."),
+			frappe.ValidationError,
+		)
 
 	claim = frappe.get_doc(
 		{
@@ -86,4 +92,11 @@ def get_claim(name):
 def get_claim_options():
 	"""Claim types plus the documents this customer may claim against."""
 	customer = get_current_customer()
-	return {"types": list(CLAIM_TYPES), "documents": get_claimable_documents(customer)}
+	return {
+		"types": list(get_claim_types()),
+		"documents": get_claimable_documents(customer),
+		"require_document": is_on("require_claim_document"),
+		"allow_attachments": is_on("allow_claim_attachments"),
+		"max_attachment_mb": get("max_attachment_mb"),
+		"support_note": get("support_note"),
+	}

@@ -53,6 +53,10 @@ def decline_quotation(name):
 @frappe.whitelist()
 @guard("portal", "invoices")
 def download_invoice_pdf(name):
+	from upande_webstore.services.portal_settings import is_on
+
+	if not is_on("allow_invoice_pdf"):
+		frappe.throw(_("PDF download is not available."), frappe.PermissionError)
 	invoice = assert_customer_doc("Sales Invoice", name, "customer")
 	# Ownership verified above; render under elevated context because
 	# printview re-checks desk permissions website users lack.

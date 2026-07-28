@@ -40,12 +40,12 @@
   },
   {
    "fieldname": "claim_type",
-   "fieldtype": "Select",
+   "fieldtype": "Data",
    "label": "Claim Type",
-   "options": "Damaged goods\nShort delivery\nQuality below grade\nBilling error\nOther",
    "reqd": 1,
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "description": "Must be one of the types listed in Webstore Portal Settings."
   },
   {
    "fieldname": "status",

@@ -16,13 +16,9 @@ CLAIMABLE_DOCTYPES = {
 	"Delivery Note": "customer",
 }
 
-CLAIM_TYPES = (
-	"Damaged goods",
-	"Short delivery",
-	"Quality below grade",
-	"Billing error",
-	"Other",
-)
+# The shipped list lives in portal_settings so it is defined once; Portal
+# Settings may override it per site.
+from upande_webstore.services.portal_settings import SHIPPED_CLAIM_TYPES as CLAIM_TYPES
 
 
 def assert_belongs_to(customer, doctype, name):

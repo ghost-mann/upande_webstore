@@ -67,13 +67,23 @@ def _spend_chart(spend):
 
 def get_context(context):
 	portal_page_context(context, "/portal", "dashboard")
+
+	from upande_webstore.services.portal_settings import get, get_int, get_landing_route
+
+	landing = get_landing_route()
+	if landing:
+		frappe.local.flags.redirect_location = landing
+		raise frappe.Redirect
+
 	context.balance = context.portal_balance
 	context.currency = context.portal_currency
+	context.welcome_note = get("welcome_note")
 
-	spend = get_monthly_spend(12)
+	months = get_int("spend_months")
+	spend = get_monthly_spend(months)
 	context.spend_chart = _spend_chart(spend)
 	context.spend_spark = charts.spark_points([month["invoiced"] for month in spend])
-	context.spend_totals = get_spend_totals(12)
+	context.spend_totals = get_spend_totals(months)
 
 	mix = get_quotation_mix()
 	context.quotation_mix = [
@@ -84,13 +94,13 @@ def get_context(context):
 		[dict(segment) for segment in context.quotation_mix], radius=80
 	)
 
-	context.top_items = get_top_items(5)
+	context.top_items = get_top_items(get_int("top_items_count"))
 	context.recent_orders = get_customer_docs(
 		"Sales Order",
 		["name", "transaction_date", "status", "grand_total", "currency"],
 		"customer",
 		filters={"docstatus": 1},
-		limit=6,
+		limit=get_int("recent_orders_count"),
 		order_by="transaction_date desc",
 	)
 	return context

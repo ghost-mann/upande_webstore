@@ -1,0 +1,232 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Portal Settings",
+ "module": "Upande Webstore",
+ "issingle": 1,
+ "engine": "InnoDB",
+ "creation": "2026-07-28 00:00:01.000000",
+ "modified": "2026-07-28 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": [
+  "intro_section",
+  "intro",
+  "landing_section",
+  "landing_page",
+  "welcome_note",
+  "support_note",
+  "dashboard_tab",
+  "dashboard_section",
+  "spend_months",
+  "recent_orders_count",
+  "top_items_count",
+  "statement_section",
+  "statement_default_days",
+  "documents_tab",
+  "quotations_section",
+  "quotation_accept_requires_po",
+  "invoices_section",
+  "allow_invoice_pdf",
+  "claims_tab",
+  "claims_behaviour_section",
+  "require_claim_document",
+  "allow_claim_attachments",
+  "max_attachment_mb",
+  "claim_types_section",
+  "claim_types",
+  "account_tab",
+  "account_section",
+  "allow_profile_edit",
+  "allow_address_edit"
+ ],
+ "fields": [
+  {
+   "fieldname": "intro_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "intro",
+   "fieldtype": "HTML",
+   "options": "<p>How the customer portal <b>behaves</b>. Whether each portal page exists at all is controlled by <b>Webstore Settings &rarr; Features</b> — kept in one place so the two cannot disagree.</p>"
+  },
+  {
+   "fieldname": "landing_section",
+   "fieldtype": "Section Break",
+   "label": "Landing & Messaging"
+  },
+  {
+   "fieldname": "landing_page",
+   "fieldtype": "Select",
+   "label": "Portal Landing Page",
+   "options": "Dashboard\nOrders\nQuotations\nInvoices\nStatement",
+   "default": "Dashboard",
+   "description": "Where <code>/portal</code> sends the customer after login. If the page you pick is switched off in Webstore Settings &rarr; Features, they land on the Dashboard instead — a stale setting can never cause a 404."
+  },
+  {
+   "fieldname": "welcome_note",
+   "fieldtype": "Small Text",
+   "label": "Welcome Note",
+   "description": "A short line at the top of the portal dashboard. Blank = nothing shown."
+  },
+  {
+   "fieldname": "support_note",
+   "fieldtype": "Small Text",
+   "label": "Support Note",
+   "description": "Shown on the support and claims pages — e.g. a phone number for urgent cold-chain issues."
+  },
+  {
+   "fieldname": "dashboard_tab",
+   "fieldtype": "Tab Break",
+   "label": "Dashboard"
+  },
+  {
+   "fieldname": "dashboard_section",
+   "fieldtype": "Section Break",
+   "label": "Dashboard"
+  },
+  {
+   "fieldname": "spend_months",
+   "fieldtype": "Int",
+   "label": "Months Of Spend History",
+   "default": "12",
+   "description": "How far back the spend chart and totals on the dashboard reach. 1–36 months."
+  },
+  {
+   "fieldname": "recent_orders_count",
+   "fieldtype": "Int",
+   "label": "Recent Orders Shown",
+   "default": "6",
+   "description": "Rows in the “Recent orders” list on the dashboard. 1–50."
+  },
+  {
+   "fieldname": "top_items_count",
+   "fieldtype": "Int",
+   "label": "Top Items Shown",
+   "default": "5",
+   "description": "Rows in the “Most ordered” list on the dashboard. 1–25."
+  },
+  {
+   "fieldname": "statement_section",
+   "fieldtype": "Section Break",
+   "label": "Statement"
+  },
+  {
+   "fieldname": "statement_default_days",
+   "fieldtype": "Int",
+   "label": "Default Statement Range (Days)",
+   "default": "90",
+   "description": "The period the statement page opens on, before the customer changes the dates. 1–730."
+  },
+  {
+   "fieldname": "documents_tab",
+   "fieldtype": "Tab Break",
+   "label": "Documents"
+  },
+  {
+   "fieldname": "quotations_section",
+   "fieldtype": "Section Break",
+   "label": "Quotations"
+  },
+  {
+   "fieldname": "quotation_accept_requires_po",
+   "fieldtype": "Check",
+   "label": "Require A PO Reference To Accept",
+   "default": "0",
+   "description": "Customers must type their purchase order number before they can accept a quotation."
+  },
+  {
+   "fieldname": "invoices_section",
+   "fieldtype": "Section Break",
+   "label": "Invoices"
+  },
+  {
+   "fieldname": "allow_invoice_pdf",
+   "fieldtype": "Check",
+   "label": "Allow PDF Download",
+   "default": "1",
+   "description": "Off hides the Download PDF button and refuses the request, so the URL cannot be used directly either."
+  },
+  {
+   "fieldname": "claims_tab",
+   "fieldtype": "Tab Break",
+   "label": "Claims"
+  },
+  {
+   "fieldname": "claims_behaviour_section",
+   "fieldtype": "Section Break",
+   "label": "Behaviour"
+  },
+  {
+   "fieldname": "require_claim_document",
+   "fieldtype": "Check",
+   "label": "Require A Document",
+   "default": "0",
+   "description": "Customers must pick one of their <i>own</i> invoices, orders or delivery notes when filing a claim. Only their own documents are ever offered, and the server re-checks."
+  },
+  {
+   "fieldname": "allow_claim_attachments",
+   "fieldtype": "Check",
+   "label": "Allow Photo Attachments",
+   "default": "1",
+   "description": "Lets customers attach photos to a claim — usually the fastest way to settle a quality dispute."
+  },
+  {
+   "fieldname": "max_attachment_mb",
+   "fieldtype": "Int",
+   "label": "Max Attachment Size (MB)",
+   "default": "10",
+   "depends_on": "allow_claim_attachments",
+   "description": "Rejects anything larger. Phone photos are typically 2–5 MB."
+  },
+  {
+   "fieldname": "claim_types_section",
+   "fieldtype": "Section Break",
+   "label": "Claim Types",
+   "description": "The list customers choose from when filing a claim. Empty = the shipped five (Damaged goods, Short delivery, Quality below grade, Billing error, Other). Changing this list does not rename types on existing claims."
+  },
+  {
+   "fieldname": "claim_types",
+   "fieldtype": "Table",
+   "label": "Claim Types",
+   "options": "Webstore Claim Type"
+  },
+  {
+   "fieldname": "account_tab",
+   "fieldtype": "Tab Break",
+   "label": "Account"
+  },
+  {
+   "fieldname": "account_section",
+   "fieldtype": "Section Break",
+   "label": "What customers may change"
+  },
+  {
+   "fieldname": "allow_profile_edit",
+   "fieldtype": "Check",
+   "label": "Allow Name & Phone Edits",
+   "default": "1",
+   "description": "Lets customers change their own name and phone number from the portal."
+  },
+  {
+   "fieldname": "allow_address_edit",
+   "fieldtype": "Check",
+   "label": "Allow Adding Addresses",
+   "default": "1",
+   "description": "Lets customers add delivery addresses. Off means only your team creates them."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

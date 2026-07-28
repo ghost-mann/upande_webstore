@@ -77,6 +77,10 @@ def sign_up(email, full_name, phone, company_name=None):
 @frappe.whitelist(methods=["POST"])
 @guard("portal", "account")
 def update_profile(full_name, phone):
+	from upande_webstore.services.portal_settings import is_on
+
+	if not is_on("allow_profile_edit"):
+		frappe.throw(_("Profile changes are not available."), frappe.PermissionError)
 	from upande_webstore.api.cart import _require_login
 
 	_require_login()
@@ -97,6 +101,10 @@ def update_profile(full_name, phone):
 @frappe.whitelist(methods=["POST"])
 @guard("portal", "account")
 def add_address(address_title, address_line1, city, country, phone=None):
+	from upande_webstore.services.portal_settings import is_on
+
+	if not is_on("allow_address_edit"):
+		frappe.throw(_("Adding addresses is not available."), frappe.PermissionError)
 	from upande_webstore.api.cart import _require_login
 	from upande_webstore.services.portal import get_current_customer
 

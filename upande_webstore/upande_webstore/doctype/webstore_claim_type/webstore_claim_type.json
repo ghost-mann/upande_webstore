@@ -1,0 +1,18 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Claim Type",
+ "module": "Upande Webstore",
+ "istable": 1,
+ "engine": "InnoDB",
+ "creation": "2026-07-28 00:00:01.000000",
+ "modified": "2026-07-28 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": ["claim_type", "description"],
+ "fields": [
+  {"fieldname": "claim_type", "fieldtype": "Data", "label": "Claim Type", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "description", "fieldtype": "Data", "label": "Hint For Customer", "in_list_view": 1, "columns": 6}
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

@@ -18,6 +18,7 @@
   "notification_emails",
   "warehouses",
   "theme_tab",
+  "theme_intro",
   "brand_colors_section",
   "accent",
   "accent_dark",
@@ -92,6 +93,7 @@
   "coffee_category_image",
   "produce_category_image",
   "features_tab",
+  "features_intro",
   "storefront_features_section",
   "enable_cart",
   "enable_direct_order",
@@ -184,35 +186,40 @@
    "label": "Theme"
   },
   {
+   "fieldname": "theme_intro",
+   "fieldtype": "HTML",
+   "options": "<div style='font-size:.9em;line-height:1.6'><p><b>One theme covers the storefront and the customer portal.</b> Anything you change here shows in both.</p><p style='margin:.5em 0'>You set source colours; the rest is derived:</p><ul style='margin:.3em 0 .6em 1.2em'><li><b>Accent</b> &rarr; hover, light and deep shades, the button gradient, the focus ring</li><li><b>Ink</b> &rarr; the full 7-step grey scale and every card shadow</li><li><b>Page Canvas</b> &rarr; page background and the lifted surface tone</li><li><b>Each status colour</b> &rarr; a darker or brighter partner plus a soft badge tint</li></ul><p><b>Blank means the shipped default.</b> A site with nothing set here sends no colour overrides at all, so clearing a field always returns it to the stock Ink &amp; Gold design. Changes apply on the next page load — save, then reload the storefront.</p><p>Text over the accent (buttons, avatar) is chosen automatically as pure black or pure white, whichever measures more readable against your accent. You do not set it.</p></div>"
+  },
+  {
    "fieldname": "brand_colors_section",
    "fieldtype": "Section Break",
    "label": "Brand Colors",
-   "description": "Every field is optional. Blank = the shipped default, and nothing is emitted."
+   "description": "Set a few source colours; the rest of the palette is worked out from them. Every field is optional — blank means the shipped default, and a site with none set sends no overrides at all. <b>These colours apply to the storefront AND the customer portal.</b>"
   },
   {
    "fieldname": "accent",
    "fieldtype": "Color",
    "label": "Accent",
-   "description": "Blank = shipped gold."
+   "description": "Price chips, badges, the bold half of the wordmark, the basket count, chart series, hero italics and focus rings. With <b>Accent Drives Primary Actions</b> ticked it also paints every primary button, the active nav pill and the avatar. Blank = shipped gold."
   },
   {
    "fieldname": "accent_dark",
    "fieldtype": "Color",
    "label": "Accent Dark",
-   "description": "Blank = derived from Accent."
+   "description": "The deep end of the button gradient, and accent-coloured text on white. Blank = the accent darkened 25%."
   },
   {
    "fieldname": "accent_soft",
    "fieldtype": "Color",
    "label": "Accent Soft (tint)",
-   "description": "Blank = derived from Accent."
+   "description": "The pale tint behind accent badges and “Your price” chips. Blank = a near-white wash of the accent."
   },
   {
    "fieldname": "accent_drives_primary",
    "fieldtype": "Check",
    "label": "Accent Drives Primary Actions",
    "default": "0",
-   "description": "On: buttons, active nav pills and avatars use the accent instead of ink."
+   "description": "Off: the accent is trim only and near-black paints buttons, the active nav pill and avatars. On: those take the accent instead, while headings and body text stay ink. Tick this when the client's brand colour is their action colour."
   },
   {
    "fieldname": "neutral_cb",
@@ -222,50 +229,55 @@
    "fieldname": "ink",
    "fieldtype": "Color",
    "label": "Ink / Neutral",
-   "description": "Headings and body text. The whole neutral scale derives from this."
+   "description": "Headings and body text — and the source of the whole 7-step grey scale plus every card shadow, so this single field re-tints most of the page. Storefront and portal both."
   },
   {
    "fieldname": "ink_muted",
    "fieldtype": "Color",
    "label": "Muted Text",
-   "description": "Anchors the gray temperature. Blank = derived from Ink and Canvas."
+   "description": "Secondary text: card descriptions, table meta lines, sidebar labels, “filed on” dates. Set it to control how warm or cool your greys look; left blank they are a straight blend of Ink and Canvas and can look flat."
   },
   {
    "fieldname": "canvas",
    "fieldtype": "Color",
-   "label": "Page Canvas"
+   "label": "Page Canvas",
+   "description": "The page background behind every card, plus the slightly lighter surface used by table headers and the portal sidebar card."
   },
   {
    "fieldname": "wash",
    "fieldtype": "Color",
    "label": "Muted Fill",
-   "description": "Sunken fills. Should be darker than the canvas."
+   "description": "Sunken fills: table row hover, quiet panels, the search box background. Should be a little darker than the canvas."
   },
   {
    "fieldname": "border",
    "fieldtype": "Color",
-   "label": "Border"
+   "label": "Border",
+   "description": "Hairlines: card edges, table row dividers, input borders, section rules."
   },
   {
    "fieldname": "border_strong",
    "fieldtype": "Color",
-   "label": "Border (strong)"
+   "label": "Border (strong)",
+   "description": "Heavier dividers and the border on outlined buttons."
   },
   {
    "fieldname": "status_colors_section",
    "fieldtype": "Section Break",
-   "label": "Status Colors"
+   "label": "Status Colors",
+   "description": "Each one fills out a whole family: the flat colour, a darker or brighter partner, and a soft translucent tint for badge backgrounds."
   },
   {
    "fieldname": "success",
    "fieldtype": "Color",
-   "label": "Success"
+   "label": "Success",
+   "description": "“In stock” badges, paid invoices, accepted quotations, resolved claims."
   },
   {
    "fieldname": "warning",
    "fieldtype": "Color",
    "label": "Warning",
-   "description": "The dark text shade; the brighter fill is derived."
+   "description": "Unpaid and pending states, orders in progress, claims under review. Set the darker text shade — the brighter fill is derived from it."
   },
   {
    "fieldname": "status_cb",
@@ -274,23 +286,27 @@
   {
    "fieldname": "danger",
    "fieldtype": "Color",
-   "label": "Danger"
+   "label": "Danger",
+   "description": "“Out of stock”, overdue invoices, declined quotations, rejected claims."
   },
   {
    "fieldname": "info",
    "fieldtype": "Color",
-   "label": "Info"
+   "label": "Info",
+   "description": "Neutral informational badges and secondary chart series."
   },
   {
    "fieldname": "typography_section",
    "fieldtype": "Section Break",
-   "label": "Typography"
+   "label": "Typography",
+   "description": "Bundled families need no internet connection. Choose <b>Custom</b> to use any Google font — you must give both the family name and the stylesheet URL."
   },
   {
    "fieldname": "font_sans",
    "fieldtype": "Select",
    "label": "Body Font",
-   "options": "\nPoppins\nCustom"
+   "options": "\nPoppins\nCustom",
+   "description": "Body text, buttons, labels, tables — nearly everything."
   },
   {
    "fieldname": "font_sans_name",
@@ -302,7 +318,8 @@
    "fieldname": "font_display",
    "fieldtype": "Select",
    "label": "Display Font",
-   "options": "\nFraunces\nCustom"
+   "options": "\nFraunces\nCustom",
+   "description": "Large headings: the hero headline, page titles, panel headings and the footer wordmark."
   },
   {
    "fieldname": "font_display_name",
@@ -318,7 +335,8 @@
    "fieldname": "font_mono",
    "fieldtype": "Select",
    "label": "Mono Font",
-   "options": "\nIBM Plex Mono\nCustom"
+   "options": "\nIBM Plex Mono\nCustom",
+   "description": "Numbers and codes: SKUs, eyebrow labels, document numbers, KPI figures."
   },
   {
    "fieldname": "font_mono_name",
@@ -330,30 +348,31 @@
    "fieldname": "google_fonts_url",
    "fieldtype": "Data",
    "label": "Google Fonts URL",
-   "description": "https://fonts.googleapis.com/... Required for Custom families."
+   "description": "Needed only for Custom families. Must start <code>https://fonts.googleapis.com</code> — any other host is refused, because this adds a tag to every page."
   },
   {
    "fieldname": "shape_section",
    "fieldtype": "Section Break",
-   "label": "Shape"
+   "label": "Shape",
+   "description": "Corner rounding. Any CSS length: <code>4px</code>, <code>0.75rem</code>, or <code>0</code> for square corners."
   },
   {
    "fieldname": "radius",
    "fieldtype": "Data",
    "label": "Base Radius",
-   "description": "Any CSS length. Blank = 0.75rem."
+   "description": "Inputs, buttons, badges and small controls. Blank = 0.75rem."
   },
   {
    "fieldname": "radius_card",
    "fieldtype": "Data",
    "label": "Card Radius",
-   "description": "Blank = 20px."
+   "description": "Product cards, KPI tiles, category cards. Blank = 20px."
   },
   {
    "fieldname": "radius_panel",
    "fieldtype": "Data",
    "label": "Panel Radius",
-   "description": "Blank = 24px."
+   "description": "Large panels, the portal sidebar card, dialogs and drawers. Blank = 24px."
   },
   {
    "fieldname": "advanced_section",
@@ -366,7 +385,7 @@
    "fieldtype": "Code",
    "label": "Custom CSS",
    "options": "CSS",
-   "description": "Emitted after the generated tokens, inside :root, so it wins. Use for any token the seeds do not reach."
+   "description": "Applied last, inside :root, so it overrides anything above. Use it to pin one specific token rather than fighting the derivation — e.g. <code>--ws-ink-4: #54586b;</code>"
   },
   {
    "fieldname": "primary_color",
@@ -589,6 +608,11 @@
    "fieldname": "features_tab",
    "fieldtype": "Tab Break",
    "label": "Features"
+  },
+  {
+   "fieldname": "features_intro",
+   "fieldtype": "HTML",
+   "options": "<div style='font-size:.9em;line-height:1.6'><p>Unticking a feature does <b>three</b> things: hides it from the interface, makes its page return &ldquo;not found&rdquo;, and refuses the underlying request. A switched-off feature is genuinely unreachable — there is no leftover address a customer can still use.</p><p><b>Portal</b> is a master switch: off closes every portal page whatever the individual boxes say, and turning it back on restores exactly the arrangement you had.</p><p>How the portal <i>behaves</i> — dashboard ranges, claim types, what customers may edit — lives in <b>Webstore Portal Settings</b>, not here.</p></div>"
   },
   {
    "fieldname": "storefront_features_section",
