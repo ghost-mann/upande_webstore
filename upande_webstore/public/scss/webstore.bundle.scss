@@ -93,7 +93,7 @@
 	--ws-accent-light: #edc23c;
 	--ws-accent-deep: #a87d0d;
 	--ws-ring: rgba(217, 165, 20, 0.35);
-	--ws-on-accent: #0a0a0a; /* text over an accent fill; derived per-site by contrast */
+	--ws-on-accent: #000000; /* text over an accent fill; pure black or white, chosen per-site by measured contrast */
 
 	/* semantic */
 	--ws-success: #3f8f4f;

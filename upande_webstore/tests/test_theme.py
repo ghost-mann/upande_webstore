@@ -339,11 +339,15 @@ class TestGetTokens(unittest.TestCase):
 	def test_on_accent_absent_without_accent(self):
 		self.assertNotIn("on-accent", tokens.get_tokens({"ink": "#1a1a1a"}))
 
-	def test_gold_takes_ink_and_navy_takes_cream(self):
+	def test_on_accent_is_pure_black_or_pure_white(self):
+		"""Never the ink or canvas tones — on a saturated fill those read as
+		washed-out grey rather than crisp text."""
 		gold = tokens.get_tokens({"accent": "#d9a514", "accent_dark": "#a87d0d", "ink": "#0a0a0a"})
 		navy = tokens.get_tokens({"accent": "#1e4d8c", "accent_dark": "#143562", "ink": "#1a1a1a"})
-		self.assertEqual(gold["on-accent"], "#0a0a0a")
-		self.assertNotEqual(navy["on-accent"], "#1a1a1a")
+		self.assertEqual(gold["on-accent"], "#000000", "light accent takes pure black")
+		self.assertEqual(navy["on-accent"], "#ffffff", "dark accent takes pure white")
+		for seeds in ({"accent": "#b3123f"}, {"accent": "#f2e9c9"}, {"accent": "#0b1a2b"}):
+			self.assertIn(tokens.get_tokens(seeds)["on-accent"], ("#000000", "#ffffff"))
 
 	def test_custom_css_passthrough(self):
 		self.assertEqual(tokens.get_custom_css({"custom_css": "--ws-x: 1;"}), "--ws-x: 1;")
