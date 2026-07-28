@@ -83,7 +83,8 @@
    "fieldname": "against_doctype",
    "fieldtype": "Select",
    "label": "Document Type",
-   "options": "\nSales Invoice\nSales Order\nDelivery Note"
+   "options": "\nSales Invoice",
+   "default": "Sales Invoice"
   },
   {
    "fieldname": "against_document",
@@ -121,7 +122,8 @@
    "fieldtype": "Link",
    "label": "Credit Note",
    "options": "Sales Invoice",
-   "description": "Raise it from the invoice (Create → Return / Credit Note), then link it here."
+   "description": "Raise it from the invoice (Create → Return / Credit Note), then link it here.",
+   "link_filters": "[[\"Sales Invoice\",\"is_return\",\"=\",1]]"
   },
   {
    "fieldname": "resolution",

@@ -225,3 +225,63 @@ class TestDirectOrder(IntegrationTestCase):
 			)
 		]
 		self.assertIn(result["sales_order"], names)
+
+
+class TestCheckoutShippingDetails(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-SHIP-ITEM")
+		make_item_price("WS-SHIP-ITEM", "Standard Selling", 25)
+		make_portal_user("ship.buyer@example.com", "Shipping Details Ltd")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Webstore Cart", {"user": "ship.buyer@example.com"})
+		set_stock("WS-SHIP-ITEM", 40)
+		frappe.set_user("ship.buyer@example.com")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_quotation_stores_shipping_date_and_dropoff(self):
+		from upande_webstore.api import cart, checkout
+
+		when = add_days(nowdate(), 5)
+		cart.add_item("WS-SHIP-ITEM", 2)
+		result = checkout.place_order(shipping_date=when, dropoff_points="Gate 3\nDepot B")
+		quotation = frappe.get_doc("Quotation", result["quotation"])
+		self.assertEqual(str(quotation.webstore_shipping_date), when)
+		self.assertIn("Gate 3", quotation.webstore_dropoff_points)
+
+	def test_sales_order_uses_shipping_date_as_delivery_date(self):
+		"""ERPNext plans and picks against delivery_date, so the customer's
+		requested date has to land there rather than in a side field."""
+		from upande_webstore.api import cart, checkout
+
+		when = add_days(nowdate(), 9)
+		cart.add_item("WS-SHIP-ITEM", 1)
+		result = checkout.place_order(mode="order", shipping_date=when, dropoff_points="Cold room")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		self.assertEqual(str(order.delivery_date), when)
+		self.assertEqual(str(order.items[0].delivery_date), when)
+		self.assertEqual(order.webstore_dropoff_points, "Cold room")
+
+	def test_sales_order_falls_back_when_no_date_given(self):
+		from upande_webstore.api import cart, checkout
+		from upande_webstore.api.checkout import DEFAULT_DELIVERY_DAYS
+
+		cart.add_item("WS-SHIP-ITEM", 1)
+		result = checkout.place_order(mode="order")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		self.assertEqual(str(order.delivery_date), add_days(nowdate(), DEFAULT_DELIVERY_DAYS))
+
+	def test_both_are_optional(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SHIP-ITEM", 1)
+		result = checkout.place_order()
+		quotation = frappe.get_doc("Quotation", result["quotation"])
+		self.assertFalse(quotation.webstore_shipping_date)
+		self.assertFalse(quotation.webstore_dropoff_points)

@@ -36,11 +36,31 @@
 		</div>
 		<div class="ws-panel-head"><h3 style="font-size:.95rem">{{ _("Add address") }}</h3></div>
 		<form onsubmit="return false;">
-			<div class="form-group"><input class="form-control" id="addr-title" placeholder="{{ _('Label (e.g. Farm Gate, Head Office)') }}"></div>
-			<div class="form-group"><input class="form-control" id="addr-line1" placeholder="{{ _('Street / building') }}"></div>
 			<div class="form-row">
-				<div class="col form-group"><input class="form-control" id="addr-city" placeholder="{{ _('City') }}"></div>
-				<div class="col form-group"><input class="form-control" id="addr-country" placeholder="{{ _('Country') }}" value="Kenya"></div>
+				<div class="col-md-7 form-group"><input class="form-control" id="addr-title" placeholder="{{ _('Label (e.g. Farm Gate, Head Office)') }}"></div>
+				<div class="col-md-5 form-group">
+					<select class="form-control" id="addr-type">
+						{% for t in address_types %}<option value="{{ t }}"{{ ' selected' if t == 'Shipping' else '' }}>{{ _(t) }}</option>{% endfor %}
+					</select>
+				</div>
+			</div>
+			<div class="form-group"><input class="form-control" id="addr-line1" placeholder="{{ _('Address line 1') }}"></div>
+			<div class="form-group"><input class="form-control" id="addr-line2" placeholder="{{ _('Address line 2 (optional)') }}"></div>
+			<div class="form-row">
+				<div class="col form-group"><input class="form-control" id="addr-city" placeholder="{{ _('City / Town') }}"></div>
+				<div class="col form-group"><input class="form-control" id="addr-state" placeholder="{{ _('County / State') }}"></div>
+			</div>
+			<div class="form-row">
+				<div class="col form-group"><input class="form-control" id="addr-pincode" placeholder="{{ _('Postal code') }}"></div>
+				<div class="col form-group"><input class="form-control" id="addr-country" placeholder="{{ _('Country') }}" value="{{ default_country }}"></div>
+			</div>
+			<div class="form-row">
+				<div class="col form-group"><input class="form-control" id="addr-phone" placeholder="{{ _('Phone (optional)') }}"></div>
+				<div class="col form-group"><input class="form-control" id="addr-email" placeholder="{{ _('Email (optional)') }}"></div>
+			</div>
+			<div class="form-group" style="display:flex;gap:1.2rem;flex-wrap:wrap">
+				<label style="font-weight:400;margin:0"><input type="checkbox" id="addr-primary"> {{ _("Preferred billing address") }}</label>
+				<label style="font-weight:400;margin:0"><input type="checkbox" id="addr-shipping"> {{ _("Preferred shipping address") }}</label>
 			</div>
 			<button class="btn btn-secondary" id="addr-add">{{ _("Add address") }}</button>
 		</form>
@@ -60,9 +80,17 @@ document.getElementById("addr-add").addEventListener("click", async () => {
 	try {
 		await window.webstore.call("upande_webstore.api.account.add_address", {
 			address_title: document.getElementById("addr-title").value,
+			address_type: document.getElementById("addr-type").value,
 			address_line1: document.getElementById("addr-line1").value,
+			address_line2: document.getElementById("addr-line2").value || null,
 			city: document.getElementById("addr-city").value,
+			state: document.getElementById("addr-state").value || null,
+			pincode: document.getElementById("addr-pincode").value || null,
 			country: document.getElementById("addr-country").value,
+			phone: document.getElementById("addr-phone").value || null,
+			email_id: document.getElementById("addr-email").value || null,
+			is_primary_address: document.getElementById("addr-primary").checked ? 1 : 0,
+			is_shipping_address: document.getElementById("addr-shipping").checked ? 1 : 0,
 		});
 		window.location.reload();
 	} catch (err) { window.webstore.toast(err.message, true); }

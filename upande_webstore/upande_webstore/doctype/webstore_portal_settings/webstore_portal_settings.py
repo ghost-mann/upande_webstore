@@ -8,6 +8,7 @@ BOUNDS = {
 	"top_items_count": (1, 25),
 	"statement_default_days": (1, 730),
 	"max_attachment_mb": (1, 100),
+	"claim_window_days": (1, 365),
 }
 
 

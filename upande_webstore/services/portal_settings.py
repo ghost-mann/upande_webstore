@@ -19,6 +19,7 @@ DEFAULTS = {
 	"statement_default_days": 90,
 	"quotation_accept_requires_po": 0,
 	"allow_invoice_pdf": 1,
+	"claim_window_days": 14,
 	"require_claim_document": 0,
 	"allow_claim_attachments": 1,
 	"max_attachment_mb": 10,

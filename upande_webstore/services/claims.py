@@ -9,12 +9,13 @@ so it holds however the claim is created.
 import frappe
 from frappe import _
 
-# claimable doctype -> the field naming the customer on it
+# claimable doctype -> (customer field, date field used for the claim window).
+# Invoices only: a claim is about what was billed, and offering orders as well
+# let customers claim against a document that may never have shipped.
 CLAIMABLE_DOCTYPES = {
 	"Sales Invoice": "customer",
-	"Sales Order": "customer",
-	"Delivery Note": "customer",
 }
+CLAIM_DATE_FIELD = {"Sales Invoice": "posting_date"}
 
 # The shipped list lives in portal_settings so it is defined once; Portal
 # Settings may override it per site.
@@ -35,17 +36,53 @@ def assert_belongs_to(customer, doctype, name):
 		# deliberately the same message as a missing document: never confirm that
 		# another customer's document exists
 		frappe.throw(_("{0} {1} does not exist.").format(_(doctype), name), frappe.ValidationError)
+	if not within_claim_window(doctype, name):
+		frappe.throw(
+			_("{0} is older than the {1}-day claim window.").format(name, get_claim_window_days()),
+			frappe.ValidationError,
+		)
+
+
+def get_claim_window_days():
+	from upande_webstore.services.portal_settings import get_int
+
+	return get_int("claim_window_days")
+
+
+def within_claim_window(doctype, name):
+	"""False once a document is older than the claim window."""
+	from frappe.utils import add_days, getdate, nowdate
+
+	date_field = CLAIM_DATE_FIELD.get(doctype)
+	if not date_field:
+		return True
+	posted = frappe.db.get_value(doctype, name, date_field)
+	if not posted:
+		return True
+	return getdate(posted) >= getdate(add_days(nowdate(), -get_claim_window_days()))
 
 
 def get_claimable_documents(customer, limit=40):
-	"""{doctype: [names]} the customer may file a claim against."""
+	"""{doctype: [names]} the customer may file a claim against.
+
+	Only documents inside the claim window are offered — an invoice older than
+	that drops off the list, so customers cannot open a claim on ancient
+	billing.
+	"""
+	from frappe.utils import add_days, nowdate
+
+	cutoff = add_days(nowdate(), -get_claim_window_days())
 	out = {}
 	for doctype, party_field in CLAIMABLE_DOCTYPES.items():
 		if not frappe.db.exists("DocType", doctype):
 			continue
+		filters = {party_field: customer, "docstatus": 1}
+		date_field = CLAIM_DATE_FIELD.get(doctype)
+		if date_field:
+			filters[date_field] = [">=", cutoff]
 		out[doctype] = frappe.get_all(
 			doctype,
-			filters={party_field: customer, "docstatus": 1},
+			filters=filters,
 			pluck="name",
 			order_by="creation desc",
 			limit_page_length=limit,

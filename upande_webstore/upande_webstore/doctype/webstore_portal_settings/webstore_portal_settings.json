@@ -28,6 +28,7 @@
   "allow_invoice_pdf",
   "claims_tab",
   "claims_behaviour_section",
+  "claim_window_days",
   "require_claim_document",
   "allow_claim_attachments",
   "max_attachment_mb",
@@ -154,6 +155,13 @@
    "fieldname": "claims_behaviour_section",
    "fieldtype": "Section Break",
    "label": "Behaviour"
+  },
+  {
+   "fieldname": "claim_window_days",
+   "fieldtype": "Int",
+   "label": "Claim Window (Days)",
+   "default": "14",
+   "description": "How long after an invoice a claim may still be filed. Invoices older than this drop off the customer's list and are refused if submitted anyway. 1–365."
   },
   {
    "fieldname": "require_claim_document",

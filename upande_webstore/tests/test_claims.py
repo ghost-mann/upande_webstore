@@ -232,3 +232,81 @@ class TestClaimCreditNote(IntegrationTestCase):
 			self.assertEqual(seen.resolution, "Credited in full.")
 		finally:
 			frappe.set_user("Administrator")
+
+
+class TestClaimWindow(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-WIN-ITEM")
+		make_item_price("WS-WIN-ITEM", "Standard Selling", 30)
+		set_stock("WS-WIN-ITEM", 40)
+		make_portal_user("window.buyer@example.com", "Claim Window Ltd")
+
+	def _invoice_dated(self, days_ago):
+		"""Invoices must be created as Administrator: a Website User has no
+		permission on accounts, which is the whole point of the portal."""
+		previous = frappe.session.user
+		frappe.set_user("Administrator")
+		try:
+			invoice = make_submitted_invoice("Claim Window Ltd", "WS-WIN-ITEM")
+			frappe.db.set_value(
+				"Sales Invoice", invoice.name, "posting_date",
+				frappe.utils.add_days(frappe.utils.nowdate(), -days_ago),
+			)
+			frappe.db.commit()
+			return invoice.name
+		finally:
+			frappe.set_user(previous)
+
+	def setUp(self):
+		frappe.set_user("window.buyer@example.com")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_only_sales_invoices_are_claimable(self):
+		from upande_webstore.services.claims import CLAIMABLE_DOCTYPES
+
+		self.assertEqual(list(CLAIMABLE_DOCTYPES), ["Sales Invoice"])
+
+	def test_a_recent_invoice_is_offered_and_accepted(self):
+		from upande_webstore.api.claims import create_claim, get_claim_options
+
+		recent = self._invoice_dated(2)
+		self.assertIn(recent, get_claim_options()["documents"]["Sales Invoice"])
+		result = create_claim("Damaged goods", "Two boxes crushed.", "Sales Invoice", recent)
+		self.assertTrue(result["name"])
+
+	def test_an_invoice_past_the_window_drops_off_the_list(self):
+		from upande_webstore.api.claims import get_claim_options
+
+		old = self._invoice_dated(20)
+		self.assertNotIn(old, get_claim_options()["documents"]["Sales Invoice"])
+
+	def test_an_invoice_past_the_window_is_refused_if_submitted_anyway(self):
+		from upande_webstore.api.claims import create_claim
+
+		old = self._invoice_dated(20)
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			create_claim("Billing error", "Too late.", "Sales Invoice", old)
+		self.assertIn("claim window", str(ctx.exception))
+
+	def test_the_window_is_configurable(self):
+		from upande_webstore.api.claims import get_claim_options
+
+		old = self._invoice_dated(20)
+		frappe.set_user("Administrator")
+		settings = frappe.get_doc("Webstore Portal Settings")
+		settings.claim_window_days = 30
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		frappe.set_user("window.buyer@example.com")
+		try:
+			self.assertIn(old, get_claim_options()["documents"]["Sales Invoice"])
+		finally:
+			frappe.set_user("Administrator")
+			from upande_webstore.tests.utils import reset_portal_settings
+
+			reset_portal_settings()

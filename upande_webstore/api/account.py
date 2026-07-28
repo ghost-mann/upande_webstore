@@ -7,6 +7,13 @@ from upande_webstore.services.settings import get_settings
 from upande_webstore.theme.features import guard
 
 
+def _address_types():
+	"""Read the options straight off the Address doctype so the portal cannot
+	drift from what the desk accepts."""
+	field = frappe.get_meta("Address").get_field("address_type")
+	return tuple(o for o in (field.options or "").split("\n") if o.strip())
+
+
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=20, seconds=3600)
 @guard("signup")
@@ -100,7 +107,25 @@ def update_profile(full_name, phone):
 
 @frappe.whitelist(methods=["POST"])
 @guard("portal", "account")
-def add_address(address_title, address_line1, city, country, phone=None):
+def add_address(
+	address_title,
+	address_line1,
+	city,
+	country,
+	address_type="Shipping",
+	address_line2=None,
+	state=None,
+	pincode=None,
+	phone=None,
+	email_id=None,
+	is_primary_address=0,
+	is_shipping_address=0,
+):
+	"""Create an Address for the session user's customer.
+
+	Mirrors the Address doctype rather than a reduced subset, so a portal-created
+	address is indistinguishable from one your team enters in the desk.
+	"""
 	from upande_webstore.services.portal_settings import is_on
 
 	if not is_on("allow_address_edit"):
@@ -111,15 +136,32 @@ def add_address(address_title, address_line1, city, country, phone=None):
 	_require_login()
 	customer = get_current_customer()
 	if not (address_title and address_line1 and city and country):
-		frappe.throw(_("All address fields except phone are required."), frappe.ValidationError)
+		frappe.throw(
+			_("Label, street, city and country are required."), frappe.ValidationError
+		)
+
+	allowed_types = _address_types()
+	address_type = (address_type or "Shipping").strip()
+	if address_type not in allowed_types:
+		frappe.throw(
+			_("Address type must be one of: {0}").format(", ".join(allowed_types)),
+			frappe.ValidationError,
+		)
+
 	address = frappe.get_doc({
 		"doctype": "Address",
 		"address_title": address_title,
-		"address_type": "Shipping",
+		"address_type": address_type,
 		"address_line1": address_line1,
+		"address_line2": address_line2,
 		"city": city,
+		"state": state,
+		"pincode": pincode,
 		"country": country,
 		"phone": phone,
+		"email_id": email_id,
+		"is_primary_address": 1 if int(is_primary_address or 0) else 0,
+		"is_shipping_address": 1 if int(is_shipping_address or 0) else 0,
 		"links": [{"link_doctype": "Customer", "link_name": customer}],
 	})
 	address.flags.ignore_permissions = True

@@ -19,7 +19,14 @@ DEFAULT_DELIVERY_DAYS = 7
 
 @frappe.whitelist(methods=["POST"])
 @guard("cart")
-def place_order(address_name=None, po_reference=None, notes=None, mode=QUOTATION):
+def place_order(
+	address_name=None,
+	po_reference=None,
+	notes=None,
+	mode=QUOTATION,
+	shipping_date=None,
+	dropoff_points=None,
+):
 	"""Turn the open cart into a Quotation (price confirmation first) or a
 	Sales Order (commit now). Sales Orders are left as drafts for the sales
 	team to confirm."""
@@ -50,7 +57,10 @@ def place_order(address_name=None, po_reference=None, notes=None, mode=QUOTATION
 	session_user = frappe.session.user
 	frappe.set_user("Administrator")
 	try:
-		doc = build(cart, customer, settings, price_list, contact_name, address_name, po_reference, notes)
+		doc = build(
+			cart, customer, settings, price_list, contact_name, address_name,
+			po_reference, notes, shipping_date, dropoff_points,
+		)
 	finally:
 		frappe.set_user(session_user)
 
@@ -93,7 +103,10 @@ def _cart_items(cart):
 	]
 
 
-def _create_quotation(cart, customer, settings, price_list, contact_name, address_name, po_reference, notes):
+def _create_quotation(
+	cart, customer, settings, price_list, contact_name, address_name,
+	po_reference, notes, shipping_date=None, dropoff_points=None,
+):
 	quotation = frappe.get_doc({
 		"doctype": "Quotation",
 		"quotation_to": "Customer",
@@ -107,6 +120,8 @@ def _create_quotation(cart, customer, settings, price_list, contact_name, addres
 		"shipping_address_name": address_name,
 		"customer_po_reference": po_reference,
 		"webstore_notes": notes,
+		"webstore_shipping_date": shipping_date or None,
+		"webstore_dropoff_points": dropoff_points or None,
 		"items": _cart_items(cart),
 	})
 	quotation.flags.ignore_permissions = True
@@ -115,10 +130,15 @@ def _create_quotation(cart, customer, settings, price_list, contact_name, addres
 	return quotation
 
 
-def _create_sales_order(cart, customer, settings, price_list, contact_name, address_name, po_reference, notes):
+def _create_sales_order(
+	cart, customer, settings, price_list, contact_name, address_name,
+	po_reference, notes, shipping_date=None, dropoff_points=None,
+):
 	"""Left as a draft on purpose: the customer has committed, but the sales
 	team confirms freight and stock before it is submitted."""
-	delivery_date = add_days(nowdate(), DEFAULT_DELIVERY_DAYS)
+	# the customer's requested shipping date is the Sales Order's delivery date,
+	# which is what ERPNext plans and picks against
+	delivery_date = shipping_date or add_days(nowdate(), DEFAULT_DELIVERY_DAYS)
 	order = frappe.get_doc({
 		"doctype": "Sales Order",
 		"customer": customer,
@@ -133,6 +153,7 @@ def _create_sales_order(cart, customer, settings, price_list, contact_name, addr
 		# Sales Order has its own standard field for the customer's PO
 		"po_no": po_reference,
 		"webstore_notes": notes,
+		"webstore_dropoff_points": dropoff_points or None,
 		# Sales Order needs a warehouse per stock item; availability is summed
 		# across the configured webstore warehouses, so name the one holding it.
 		"items": [
