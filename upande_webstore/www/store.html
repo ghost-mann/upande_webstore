@@ -5,16 +5,11 @@
 <div class="col-md-4 mb-4">
 	<div class="ws-card">
 		{% if p.featured %}<span class="ws-featured-flag">{{ _("Featured") }}</span>{% endif %}
-		<div class="ws-card-media{{ '' if p.image else ' plain' }}">
-			{% if p.image %}<img src="{{ p.image }}" alt="{{ p.web_title }}" loading="lazy">
-			{%- else %}
-			{%- set parts = p.web_title.split("—") %}
-			<span class="ws-noimg">
-				<span class="v">{{ parts[0] | trim }}</span>
-				{%- if parts | length > 1 %}<span class="g">{{ parts[1] | trim }}</span>{% endif %}
-			</span>
-			{%- endif %}
+		{% if p.image %}
+		<div class="ws-card-media">
+			<img src="{{ p.image }}" alt="{{ p.web_title }}" loading="lazy">
 		</div>
+		{% endif %}
 		<div class="ws-card-body">
 			<span class="ws-sku">{{ p.item }}</span>
 			<h5 class="ws-card-title"><a href="/{{ p.route }}">{{ p.web_title }}</a></h5>

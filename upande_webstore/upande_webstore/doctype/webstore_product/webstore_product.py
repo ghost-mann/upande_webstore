@@ -25,6 +25,8 @@ class WebstoreProduct(WebsiteGenerator):
 		context.no_cache = 1
 		item_doc = frappe.get_cached_doc("Item", self.item)
 		context.item_doc = item_doc
+		# a photo set on the Item counts as the product photo
+		context.image = self.image or item_doc.image
 		context.is_template = bool(item_doc.has_variants)
 		if context.is_template:
 			context.attributes = get_attributes(self.item)

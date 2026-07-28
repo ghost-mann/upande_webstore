@@ -37,6 +37,10 @@ def get_products(search=None, category=None, featured_only=False, start=0, page_
 	for product in products:
 		has_variants = frappe.get_cached_value("Item", product["item"], "has_variants")
 		product["has_variants"] = has_variants
+		# most people attach the photo to the Item in ERPNext, so use that when
+		# the listing has none of its own
+		if not product.get("image"):
+			product["image"] = frappe.get_cached_value("Item", product["item"], "image")
 		product["price"] = None if has_variants else get_item_price(product["item"])
 		product["stock"] = None if has_variants else get_stock_info(product["item"])
 	return {"products": products, "total": total}

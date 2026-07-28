@@ -4,21 +4,16 @@
 <div class="ws-storefront-band">
 <a class="ws-backbtn" href="/store">← {{ _("All products") }}</a>
 <div class="row" id="webstore-product" data-product="{{ name }}" data-item="{{ item }}" data-is-template="{{ 1 if is_template else 0 }}">
+	{% if image %}
 	<div class="col-md-5 mb-4">
 		<div class="ws-card" style="overflow:hidden">
-			<div class="ws-card-media{{ '' if image else ' plain' }}" style="aspect-ratio: 1 / 1;">
-				{% if image %}<img src="{{ image }}" alt="{{ web_title }}">
-				{%- else %}
-				{%- set parts = web_title.split("—") %}
-				<span class="ws-noimg">
-					<span class="v" style="font-size:1.7rem">{{ parts[0] | trim }}</span>
-					{%- if parts | length > 1 %}<span class="g">{{ parts[1] | trim }}</span>{% endif %}
-				</span>
-				{%- endif %}
+			<div class="ws-card-media" style="aspect-ratio: 1 / 1;">
+				<img src="{{ image }}" alt="{{ web_title }}">
 			</div>
 		</div>
 	</div>
-	<div class="col-md-7">
+	{% endif %}
+	<div class="col-md-{{ 7 if image else 12 }}">
 		<div class="ws-panel" style="margin-bottom:0">
 			<span class="ws-eyebrow">{{ item }}</span>
 			<h1 class="ws-pagehead-title" style="font-size:clamp(1.6rem,2.8vw,2.3rem);margin-top:.5rem">{{ web_title }}

@@ -16,10 +16,11 @@
 	{% for entry in wishlist["items"] %}
 	<div class="col-md-4 mb-4">
 		<div class="ws-card">
+			{% if entry.image %}
 			<div class="ws-card-media">
-				{% if entry.image %}<img src="{{ entry.image }}" alt="{{ entry.web_title }}">
-				{% else %}<span class="ws-noimg">{{ entry.item_code }}</span>{% endif %}
+				<img src="{{ entry.image }}" alt="{{ entry.web_title }}" loading="lazy">
 			</div>
+			{% endif %}
 			<div class="ws-card-body">
 				<h5 class="ws-card-title" style="position:static"><a href="/{{ entry.route }}" style="position:static">{{ entry.web_title }}</a></h5>
 				<div class="ws-card-foot">
