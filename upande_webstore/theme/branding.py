@@ -22,16 +22,16 @@ DEFAULTS = {
 	"hero_heading": "The harvest,",
 	"hero_heading_em": "straight from the farm gate",
 	"hero_body": (
-		"Export-grade flowers, coffee and fresh produce from Kenyan growers — "
-		"wholesale quantities, quotation-first ordering, cold chain to your door."
+		"Export-grade roses from Kenyan growers — standard and spray varieties, "
+		"graded by stem length, quotation-first ordering with cold chain to your door."
 	),
 	"hero_cta_primary": "Browse the catalog",
 	"hero_cta_secondary_guest": "Open a trade account",
 	"hero_cta_secondary_member": "Go to your portal",
 	# footer
 	"footer_tagline": (
-		"Export-grade flowers, coffee and fresh produce from Kenyan growers — "
-		"ordered online, confirmed by people who know the farms."
+		"Export-grade roses from Kenyan growers — ordered online, confirmed by "
+		"people who know the farms."
 	),
 	"footer_contact_email": "sales@upande.com",
 	"footer_hours": "Mon–Sat, 07:00–17:00 EAT",

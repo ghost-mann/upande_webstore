@@ -149,7 +149,7 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 		if (!list) return;
 		activeIndex = hits.length ? 0 : -1;
 		if (!hits.length) {
-			list.innerHTML = `<div class="ws-palette-empty">Nothing fresh under that name — try “roses” or “coffee”.</div>`;
+			list.innerHTML = `<div class="ws-palette-empty">Nothing fresh under that name — try “roses” or “spray”.</div>`;
 			return;
 		}
 		list.innerHTML = hits.map((hit, index) => `

@@ -285,8 +285,8 @@ class TestPresets(IntegrationTestCase):
 		self.assertEqual(settings.accent, "#d9a514")
 		# both presets ship signup off; accounts come from Webstore Portal Access
 		self.assertEqual(settings.enable_signup, 0)
-		self.assertEqual(len(settings.category_cards), 3)
-		self.assertEqual([c.label for c in settings.category_cards][0], "Flowers")
+		self.assertEqual(len(settings.category_cards), 2)
+		self.assertEqual([c.label for c in settings.category_cards][0], "Standard Roses")
 
 	def test_unknown_preset_raises(self):
 		from upande_webstore.theme.transfer import apply_preset
@@ -337,8 +337,9 @@ class TestPresetRendersEndToEnd(IntegrationTestCase):
 		self.assertIn("Powered by Upande", html)
 		self.assertEqual(html.count('class="ws-catcard"'), 2)
 		self.assertEqual(html.count('class="ws-hero2-stat"'), 3)
-		self.assertIn("Silver Dollar & Baby Blue", html)
-		self.assertIn("/store?category=Eucalyptus", html)
+		self.assertIn("Single-head, 40–120cm", html)
+		self.assertIn("/store?category=Standard%20Roses", html)
+		self.assertIn("/store?category=Spray%20Roses", html)
 		# navy ink means navy-tinted shadows, not black ones
 		self.assertIn("rgba(26, 26, 26,", tokens_css)
 		self.assertIn("--ws-grad-ink: linear-gradient(135deg, var(--ws-accent-deep)", tokens_css)
@@ -366,7 +367,8 @@ class TestPresetRendersEndToEnd(IntegrationTestCase):
 		# ink still drives primary actions, so no remap is emitted
 		self.assertNotIn("--ws-primary:", tokens_css)
 		self.assertIn("upande<b>store</b>", html)
-		self.assertEqual(html.count('class="ws-catcard"'), 3)
+		# both presets are roses-only: Standard and Spray
+		self.assertEqual(html.count('class="ws-catcard"'), 2)
 		self.assertIn("Upande Ltd.", html)
 
 	def test_clearing_seeds_removes_the_override_block_entirely(self):

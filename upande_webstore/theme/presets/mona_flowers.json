@@ -23,11 +23,11 @@
     "hero_eyebrow": "Mona Flowers · Eldoret, Kenya",
     "hero_heading": "Graded roses,",
     "hero_heading_em": "cut to order, cooled in hours",
-    "hero_body": "Export-grade roses and eucalyptus from our Eldoret farm — 45+ varieties, 40 to 120cm, quotation-first ordering with cold chain to Nairobi, the Gulf and beyond.",
+    "hero_body": "Export-grade roses from our Eldoret farm — standard and spray varieties, graded 40 to 120cm, quotation-first ordering with cold chain to Nairobi, the Gulf and beyond.",
     "hero_cta_primary": "Browse varieties",
     "hero_cta_secondary_guest": "Open a trade account",
     "hero_cta_secondary_member": "Go to your portal",
-    "footer_tagline": "Export-grade roses and eucalyptus, grown in Eldoret and graded by stem length — ordered online, confirmed by people who know the farm.",
+    "footer_tagline": "Export-grade roses, grown in Eldoret and graded by stem length — ordered online, confirmed by people who know the farm.",
     "footer_contact_email": "sales@monaflowers.co.ke",
     "footer_hours": "Mon–Sat, 07:00–17:00 EAT",
     "footer_location": "P.O. Box 2707-30100, Eldoret, Kenya",
@@ -39,21 +39,62 @@
   },
   "tables": {
     "hero_stats": [
-      {"value": "45+", "label": "rose varieties"},
-      {"value": "40–120cm", "label": "stem grades"},
-      {"value": "3", "label": "continents shipped"}
+      {
+        "value": "45+",
+        "label": "rose varieties"
+      },
+      {
+        "value": "40–120cm",
+        "label": "stem grades"
+      },
+      {
+        "value": "3",
+        "label": "continents shipped"
+      }
     ],
     "category_cards": [
-      {"label": "Roses", "subtitle": "45+ varieties, 40–120cm", "category": "Roses"},
-      {"label": "Eucalyptus", "subtitle": "Silver Dollar & Baby Blue", "category": "Eucalyptus"}
+      {
+        "label": "Standard Roses",
+        "subtitle": "Single-head, 40–120cm",
+        "category": "Standard Roses"
+      },
+      {
+        "label": "Spray Roses",
+        "subtitle": "Multi-head, 4–6 blooms a stem",
+        "category": "Spray Roses"
+      }
     ],
     "footer_links": [
-      {"column": "Shop", "label": "All products", "url": "/store"},
-      {"column": "Shop", "label": "Roses", "url": "/store?category=Roses"},
-      {"column": "Shop", "label": "Eucalyptus", "url": "/store?category=Eucalyptus"},
-      {"column": "Account", "label": "Customer portal", "url": "/portal"},
-      {"column": "Account", "label": "Quotations", "url": "/portal/quotations"},
-      {"column": "Account", "label": "Claims", "url": "/portal/claims"}
+      {
+        "column": "Shop",
+        "label": "All varieties",
+        "url": "/store"
+      },
+      {
+        "column": "Shop",
+        "label": "Standard Roses",
+        "url": "/store?category=Standard%20Roses"
+      },
+      {
+        "column": "Shop",
+        "label": "Spray Roses",
+        "url": "/store?category=Spray%20Roses"
+      },
+      {
+        "column": "Account",
+        "label": "Customer portal",
+        "url": "/portal"
+      },
+      {
+        "column": "Account",
+        "label": "Quotations",
+        "url": "/portal/quotations"
+      },
+      {
+        "column": "Account",
+        "label": "Claims",
+        "url": "/portal/claims"
+      }
     ]
   }
 }
