@@ -402,7 +402,8 @@
   {
    "fieldname": "identity_section",
    "fieldtype": "Section Break",
-   "label": "Identity"
+   "label": "Identity",
+   "description": "Who the site belongs to: the name and marks that appear in the navigation bar and footer."
   },
   {
    "fieldname": "site_name",
@@ -425,7 +426,7 @@
    "fieldname": "brand_logo",
    "fieldtype": "Attach Image",
    "label": "Brand Logo",
-   "description": "Navbar logo. Blank = shipped Upande logo."
+   "description": "Shown in the navigation bar and, on a white plate, in the footer. Square marks and wide wordmarks both work. Blank = the shipped Upande logo."
   },
   {
    "fieldname": "identity_cb",
@@ -439,18 +440,20 @@
   {
    "fieldname": "favicon",
    "fieldtype": "Attach Image",
-   "label": "Favicon"
+   "label": "Favicon",
+   "description": "The small icon in the browser tab. Square, ideally 64&times;64px or larger."
   },
   {
    "fieldname": "hero_section",
    "fieldtype": "Section Break",
-   "label": "Hero"
+   "label": "Hero",
+   "description": "The large banner across the top of the storefront — background photo, headline and buttons. Switch the whole band off in <b>Features &rarr; Hero</b>."
   },
   {
    "fieldname": "hero_image",
    "fieldtype": "Attach Image",
    "label": "Hero Image",
-   "description": "Storefront hero photo. Blank = shipped default."
+   "description": "Background photo of the hero banner on /store. Landscape works best, around 2000&times;1000px; it is cropped to fill and darkened so the headline stays readable. Blank = the shipped photo."
   },
   {
    "fieldname": "hero_eyebrow",
