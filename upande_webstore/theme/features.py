@@ -42,15 +42,28 @@ FEATURES = (
 BY_KEY = {feature.key: feature for feature in FEATURES}
 
 
-def _is_on(value):
-	"""An unset field counts as ON, so a site that predates these fields behaves
-	exactly as it did before. Only an explicit 0 disables."""
+def _is_on(value, default=True):
+	"""An unset field falls back to the field's own DocType default, so a site
+	that predates a flag behaves the way that flag ships. Only an explicit 0
+	disables an otherwise-on feature."""
 	if value in (None, ""):
-		return True
+		return bool(default)
 	try:
 		return bool(int(value))
 	except (TypeError, ValueError):
 		return bool(value)
+
+
+def _field_defaults():
+	"""{fieldname: bool} from the DocType, so 'unset' means whatever the field
+	ships as. Signup, for instance, defaults to off."""
+	meta = frappe.get_meta("Webstore Settings")
+	defaults = {}
+	for feature in FEATURES:
+		field = meta.get_field(feature.fieldname)
+		raw = field.default if field else "1"
+		defaults[feature.fieldname] = False if str(raw or "0") == "0" else True
+	return defaults
 
 
 def enabled():
@@ -58,8 +71,14 @@ def enabled():
 	from upande_webstore.services.settings import get_settings
 
 	settings = get_settings()
+	defaults = _field_defaults()
 	return frappe._dict(
-		{feature.key: _is_on(settings.get(feature.fieldname)) for feature in FEATURES}
+		{
+			feature.key: _is_on(
+				settings.get(feature.fieldname), defaults[feature.fieldname]
+			)
+			for feature in FEATURES
+		}
 	)
 
 

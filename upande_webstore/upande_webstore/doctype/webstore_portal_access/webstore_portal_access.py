@@ -38,6 +38,24 @@ class WebstorePortalAccess(Document):
 		return {"user": user.name, "contact": contact.name}
 
 	@frappe.whitelist()
+	def password_setup_link(self):
+		"""A one-time link the customer uses to set their own password.
+
+		The welcome email carries the same link, but it only arrives if the site
+		has a working outgoing Email Account. This lets a salesperson hand the
+		link over another way — WhatsApp, SMS, read out on a call — so access
+		does not depend on email being configured.
+
+		Generating a new link invalidates any previous one.
+		"""
+		frappe.only_for(("System Manager", "Sales Manager", "Sales User"))
+		if not self.user:
+			frappe.throw(_("Grant access first."), frappe.ValidationError)
+		user = frappe.get_doc("User", self.user)
+		# Frappe exposes no public API that returns the link instead of mailing it
+		return {"link": user._reset_password(send_email=False)}
+
+	@frappe.whitelist()
 	def revoke(self):
 		"""Disable the login, keeping the Contact and its customer link."""
 		frappe.only_for(("System Manager", "Sales Manager", "Sales User"))

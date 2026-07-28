@@ -166,8 +166,9 @@ class TestExportImport(IntegrationTestCase):
 		self.assertEqual(restored.ink, "#000000")
 		self.assertFalse(restored.accent)
 		self.assertFalse(restored.wordmark)
-		# feature checks default to 1, so an omitted flag comes back ON
-		self.assertEqual(restored.enable_signup, 1)
+		# an omitted flag returns to its DocType default, whatever that is
+		self.assertEqual(restored.enable_wishlist, 1, "wishlist ships on")
+		self.assertEqual(restored.enable_signup, 0, "signup ships off")
 
 	def test_import_does_not_touch_general_settings(self):
 		"""Replace semantics must stop at the theme fields."""
@@ -282,7 +283,8 @@ class TestPresets(IntegrationTestCase):
 		apply_preset("upande")
 		settings = frappe.get_doc("Webstore Settings")
 		self.assertEqual(settings.accent, "#d9a514")
-		self.assertEqual(settings.enable_signup, 1)
+		# both presets ship signup off; accounts come from Webstore Portal Access
+		self.assertEqual(settings.enable_signup, 0)
 		self.assertEqual(len(settings.category_cards), 3)
 		self.assertEqual([c.label for c in settings.category_cards][0], "Flowers")
 

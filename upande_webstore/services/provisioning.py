@@ -36,7 +36,14 @@ def ensure_user(email, full_name, phone=None, send_welcome=True):
 			}
 		)
 		user.flags.ignore_permissions = True
-		user.insert()
+		try:
+			user.insert()
+		except frappe.OutgoingEmailError:
+			# a missing or misconfigured mail account must not block provisioning;
+			# the salesperson can hand over the password link instead
+			frappe.clear_messages()
+			user.flags.no_welcome_mail = True
+			user.insert()
 
 	if PORTAL_ROLE not in [r.role for r in user.roles]:
 		user.add_roles(PORTAL_ROLE)

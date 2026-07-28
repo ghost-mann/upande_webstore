@@ -189,7 +189,15 @@ a:hover { color: var(--ws-ink-4); }
 	text-decoration: none !important;
 	white-space: nowrap;
 }
-.ws-brand img { height: 30px; width: 30px; border-radius: 50%; }
+/* Fixed height, free width: a client logo may be a square mark or a wide
+   wordmark, and forcing 30x30 squashed wordmarks and clipped them into a circle. */
+.ws-brand img {
+	height: 30px;
+	width: auto;
+	max-width: 150px;
+	object-fit: contain;
+	border-radius: 6px;
+}
 .ws-brand::after {
 	content: "";
 	width: 1px;

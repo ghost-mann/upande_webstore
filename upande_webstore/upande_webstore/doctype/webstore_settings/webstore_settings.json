@@ -621,7 +621,8 @@
    "fieldname": "enable_signup",
    "fieldtype": "Check",
    "label": "Signup",
-   "default": "1"
+   "default": "0",
+   "description": "Self-registration. Off by default: accounts are created by the sales team via Webstore Portal Access."
   },
   {
    "fieldname": "enable_search_palette",

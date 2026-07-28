@@ -128,6 +128,34 @@ class TestPortalAccess(IntegrationTestCase):
 		self.assertEqual(doc.status, "Active")
 		self.assertTrue(frappe.db.get_value("User", doc.user, "enabled"))
 
+	def test_password_setup_link_is_usable_without_email(self):
+		"""The welcome email needs a configured Email Account; this link is how a
+		salesperson hands over access when there isn't one."""
+		doc = self._record()
+		doc.grant()
+		doc.reload()
+
+		result = doc.password_setup_link()
+		self.assertIn("/update-password?key=", result["link"])
+		self.assertTrue(frappe.db.get_value("User", doc.user, "reset_password_key"))
+
+	def test_password_setup_link_requires_access_first(self):
+		doc = self._record()
+		with self.assertRaises(frappe.ValidationError):
+			doc.password_setup_link()
+
+	def test_new_password_link_replaces_the_previous_one(self):
+		doc = self._record()
+		doc.grant()
+		doc.reload()
+		first = doc.password_setup_link()["link"]
+		key_after_first = frappe.db.get_value("User", doc.user, "reset_password_key")
+		second = doc.password_setup_link()["link"]
+		key_after_second = frappe.db.get_value("User", doc.user, "reset_password_key")
+
+		self.assertNotEqual(first, second)
+		self.assertNotEqual(key_after_first, key_after_second)
+
 	def test_revoke_before_grant_is_rejected(self):
 		doc = self._record()
 		with self.assertRaises(frappe.ValidationError):

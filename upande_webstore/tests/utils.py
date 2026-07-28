@@ -37,6 +37,7 @@ def setup_webstore_settings():
 		settings.set(table, [])
 	settings.set("warehouses", [])
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
+
 	settings.save(ignore_permissions=True)
 	frappe.clear_cache()
 	return settings

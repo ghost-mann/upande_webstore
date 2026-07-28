@@ -46,15 +46,28 @@ class TestFeatureRegistry(IntegrationTestCase):
 		for key, value in enabled().items():
 			self.assertTrue(value, f"{key} should default on")
 
-	def test_unset_and_blank_count_as_enabled(self):
+	def test_unset_falls_back_to_the_field_default(self):
 		from upande_webstore.theme.features import _is_on
 
 		for unset in (None, ""):
-			self.assertTrue(_is_on(unset))
+			self.assertTrue(_is_on(unset, True), "an on-by-default flag stays on")
+			self.assertFalse(_is_on(unset, False), "an off-by-default flag stays off")
 		for off in (0, "0"):
-			self.assertFalse(_is_on(off))
+			self.assertFalse(_is_on(off, True))
 		for on in (1, "1"):
-			self.assertTrue(_is_on(on))
+			self.assertTrue(_is_on(on, False))
+
+	def test_signup_ships_off_and_the_rest_ship_on(self):
+		"""Accounts are created by the sales team, so self-registration must not
+		be on just because a site has no stored value for it."""
+		from upande_webstore.theme.features import FEATURES, _field_defaults
+
+		defaults = _field_defaults()
+		self.assertFalse(defaults["enable_signup"])
+		for feature in FEATURES:
+			if feature.key == "signup":
+				continue
+			self.assertTrue(defaults[feature.fieldname], f"{feature.key} should ship on")
 
 	def test_disabling_reflects_in_enabled(self):
 		from upande_webstore.theme.features import enabled
