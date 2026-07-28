@@ -5,6 +5,7 @@ from frappe.utils import nowdate
 from upande_webstore.api.cart import _require_login
 from upande_webstore.services.pricing import get_item_price
 from upande_webstore.services.stock import get_stock_info
+from upande_webstore.theme.features import guard
 
 
 def _get_wishlist(create=False):
@@ -19,6 +20,7 @@ def _get_wishlist(create=False):
 
 
 @frappe.whitelist()
+@guard("wishlist")
 def toggle(product):
 	_require_login()
 	if not frappe.db.exists("Webstore Product", product):
@@ -36,6 +38,7 @@ def toggle(product):
 
 
 @frappe.whitelist()
+@guard("wishlist")
 def get_wishlisted_products():
 	_require_login()
 	doc = _get_wishlist()
@@ -43,6 +46,7 @@ def get_wishlisted_products():
 
 
 @frappe.whitelist()
+@guard("wishlist")
 def get_wishlist():
 	_require_login()
 	doc = _get_wishlist()

@@ -1,9 +1,11 @@
 import frappe
 
 from upande_webstore.services.catalog import get_products
+from upande_webstore.theme.features import guard
 
 
 @frappe.whitelist(allow_guest=True)
+@guard("search_palette")
 def search_products(q=None):
 	"""Lightweight product search for the command palette (top 8 matches)."""
 	q = (q or "").strip()

@@ -3,9 +3,11 @@ from frappe import _
 
 from upande_webstore.api.cart import _require_login
 from upande_webstore.services.portal import get_current_customer
+from upande_webstore.theme.features import guard
 
 
 @frappe.whitelist(methods=["POST"])
+@guard("portal", "support")
 def create_issue(subject, description):
 	_require_login()
 	customer = get_current_customer()
@@ -64,6 +66,7 @@ def _ensure_claim_issue_type():
 
 
 @frappe.whitelist(methods=["POST"])
+@guard("portal", "claims")
 def create_claim(claim_type, reference, description):
 	"""File a claim (damaged goods, short delivery, quality) as a typed Issue."""
 	_require_login()

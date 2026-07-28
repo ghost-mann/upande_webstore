@@ -4,6 +4,7 @@ from frappe.utils import get_url_to_form
 
 from upande_webstore.services.portal import assert_customer_doc
 from upande_webstore.services.settings import get_settings
+from upande_webstore.theme.features import guard
 
 
 def _act_on_quotation(name, status):
@@ -38,16 +39,19 @@ def _notify(quotation, status):
 
 
 @frappe.whitelist(methods=["POST"])
+@guard("portal", "quotations")
 def accept_quotation(name):
 	return _act_on_quotation(name, "Accepted")
 
 
 @frappe.whitelist(methods=["POST"])
+@guard("portal", "quotations")
 def decline_quotation(name):
 	return _act_on_quotation(name, "Declined")
 
 
 @frappe.whitelist()
+@guard("portal", "invoices")
 def download_invoice_pdf(name):
 	invoice = assert_customer_doc("Sales Invoice", name, "customer")
 	# Ownership verified above; render under elevated context because

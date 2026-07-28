@@ -3,6 +3,7 @@ from frappe import _
 
 from upande_webstore.services.pricing import get_item_price
 from upande_webstore.services.stock import get_stock_qty
+from upande_webstore.theme.features import guard
 
 
 def _require_login():
@@ -79,6 +80,7 @@ def serialize_cart(cart):
 
 
 @frappe.whitelist()
+@guard("cart")
 def get_cart():
 	_require_login()
 	cart = _get_open_cart()
@@ -89,6 +91,7 @@ def get_cart():
 
 
 @frappe.whitelist()
+@guard("cart")
 def get_cart_count():
 	_require_login()
 	cart = _get_open_cart()
@@ -96,6 +99,7 @@ def get_cart_count():
 
 
 @frappe.whitelist()
+@guard("cart")
 def add_item(item_code, qty=1):
 	_require_login()
 	qty = frappe.utils.flt(qty) or 1
@@ -117,6 +121,7 @@ def add_item(item_code, qty=1):
 
 
 @frappe.whitelist()
+@guard("cart")
 def update_qty(item_code, qty):
 	_require_login()
 	qty = frappe.utils.flt(qty)
@@ -136,6 +141,7 @@ def update_qty(item_code, qty):
 
 
 @frappe.whitelist()
+@guard("cart")
 def remove_item(item_code):
 	_require_login()
 	cart = _get_open_cart()

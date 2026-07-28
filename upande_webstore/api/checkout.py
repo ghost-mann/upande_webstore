@@ -6,9 +6,11 @@ from upande_webstore.api.cart import _get_open_cart, _require_login
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
 from upande_webstore.services.settings import get_settings
 from upande_webstore.services.stock import get_stock_qty
+from upande_webstore.theme.features import guard
 
 
 @frappe.whitelist(methods=["POST"])
+@guard("cart")
 def place_order(address_name=None, po_reference=None, notes=None):
 	_require_login()
 	customer = get_customer()

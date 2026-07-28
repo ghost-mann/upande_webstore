@@ -4,10 +4,12 @@ from frappe.rate_limiter import rate_limit
 from frappe.utils import validate_email_address
 
 from upande_webstore.services.settings import get_settings
+from upande_webstore.theme.features import guard
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=20, seconds=3600)
+@guard("signup")
 def sign_up(email, full_name, phone, company_name=None):
 	email = (email or "").strip().lower()
 	full_name = (full_name or "").strip()
@@ -73,6 +75,7 @@ def sign_up(email, full_name, phone, company_name=None):
 
 
 @frappe.whitelist(methods=["POST"])
+@guard("portal", "account")
 def update_profile(full_name, phone):
 	from upande_webstore.api.cart import _require_login
 
@@ -92,6 +95,7 @@ def update_profile(full_name, phone):
 
 
 @frappe.whitelist(methods=["POST"])
+@guard("portal", "account")
 def add_address(address_title, address_line1, city, country, phone=None):
 	from upande_webstore.api.cart import _require_login
 	from upande_webstore.services.portal import get_current_customer

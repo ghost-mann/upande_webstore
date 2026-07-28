@@ -50,9 +50,17 @@ def portal_guard(route):
 
 
 def portal_page_context(context, route, active):
-	"""Shared context for every portal page: guard, sidebar badges,
-	at-a-glance stats and the customer identity card."""
+	"""Shared context for every portal page: feature gate, guard, sidebar badges,
+	at-a-glance stats and the customer identity card.
+
+	`active` doubles as the page's feature key, so this single call gates all
+	twelve portal pages. Gated before the login redirect, so a disabled page
+	404s for guests rather than bouncing them to a login that leads nowhere.
+	"""
 	from upande_webstore.services.portal_data import get_sidebar_counts
+	from upande_webstore.theme.features import require
+
+	require("portal", active)
 
 	customer = portal_guard(route)
 	context.no_cache = 1
