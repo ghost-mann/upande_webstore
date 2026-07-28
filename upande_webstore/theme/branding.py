@@ -46,6 +46,20 @@ DEFAULTS = {
 IMAGE_DEFAULTS = {"brand_logo": SHIPPED_LOGO, "hero_image": SHIPPED_HERO, "favicon": None}
 
 
+def _card_image(row):
+	"""The row's own image, else the Item Group's.
+
+	A card's Category *is* an Item Group, so a picture set there is the natural
+	place to look — mirrors how a product falls back to the Item's photo.
+	"""
+	if row.get("image"):
+		return row.get("image")
+	category = row.get("category")
+	if category and frappe.db.exists("Item Group", category):
+		return frappe.get_cached_value("Item Group", category, "image") or None
+	return None
+
+
 def _card_href(row):
 	if row.get("url"):
 		return row.get("url")
@@ -73,7 +87,7 @@ def get_branding(settings=None):
 		{
 			"label": row.label,
 			"subtitle": row.subtitle or "",
-			"image": row.image or None,
+			"image": _card_image(row),
 			"href": _card_href(row),
 		}
 		for row in (settings.get("category_cards") or [])

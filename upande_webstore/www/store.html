@@ -72,7 +72,7 @@
 		<div class="row mt-3">
 			{% for card in webstore_branding.category_cards %}
 			<div class="col-md-4 mb-4 rv{% if loop.index0 %} rv-{{ loop.index0 }}{% endif %}">
-				<a class="ws-catcard" href="{{ card.href }}">
+				<a class="ws-catcard{{ '' if card.image else ' plain' }}" href="{{ card.href }}">
 					{% if card.image %}<img src="{{ card.image }}" alt="{{ card.label }}" loading="lazy">{% endif %}
 					<span class="ws-catcard-arrow">↗</span>
 					<span class="ws-catcard-label"><span class="t">{{ card.label }}</span><span class="n">{{ card.subtitle }}</span></span>

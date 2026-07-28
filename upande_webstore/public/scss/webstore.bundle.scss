@@ -1043,6 +1043,10 @@ select.form-control { border-radius: 999px; }
 	transition: transform 200ms ease, box-shadow 200ms ease;
 }
 .ws-catcard:hover { transform: translateY(-3px); box-shadow: var(--ws-shadow-hover); }
+/* Without a photo the card had no ground at all — just the bottom gradient over
+   the page, which read as half-rendered. --ws-grad-ink stays dark whether or not
+   the accent drives primary actions, so the white label keeps its contrast. */
+.ws-catcard.plain { background: var(--ws-grad-ink); }
 .ws-catcard img {
 	position: absolute;
 	inset: 0;
