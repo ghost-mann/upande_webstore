@@ -1,6 +1,23 @@
 import unittest
 
-from upande_webstore.theme import color
+from upande_webstore.theme import color, fonts, tokens
+
+MONA = {
+	"accent": "#1e4d8c",
+	"accent_dark": "#143562",
+	"accent_soft": "#e8f0fb",
+	"ink": "#1a1a1a",
+	"ink_muted": "#878c9c",
+	"canvas": "#f7f8fa",
+	"wash": "#eef0f4",
+	"border": "#e2e6ed",
+	"border_strong": "#c5cbd6",
+	"success": "#2d6a4f",
+	"warning": "#9a6700",
+	"danger": "#b42318",
+	"info": "#175cd3",
+	"accent_drives_primary": 1,
+}
 
 
 class TestColorPrimitives(unittest.TestCase):
@@ -132,11 +149,128 @@ class TestSurfaceScale(unittest.TestCase):
 
 
 class TestStatusScale(unittest.TestCase):
-	def test_derives_deep_and_soft(self):
+	def test_derives_deep_light_and_soft(self):
 		scale = color.status_scale((45, 106, 79))
 		self.assertEqual(scale["base"], "#2d6a4f")
 		self.assertEqual(scale["deep"], "#285d46")
 		self.assertEqual(scale["soft"], "rgba(45, 106, 79, 0.12)")
+		# light is the brighter fill tone the two-tone warning pair needs
+		self.assertEqual(scale["light"], "#628f7b")
+		for light, base in zip(color.parse(scale["light"]), (45, 106, 79)):
+			self.assertGreater(light, base)
 
 	def test_returns_empty_without_seed(self):
 		self.assertEqual(color.status_scale(None), {})
+
+
+class TestFonts(unittest.TestCase):
+	def test_shipped_families_have_stacks(self):
+		for family in fonts.SHIPPED_SANS + fonts.SHIPPED_DISPLAY + fonts.SHIPPED_MONO:
+			self.assertIn(family, fonts.STACKS)
+
+	def test_allows_only_google_fonts_host(self):
+		self.assertTrue(fonts.is_allowed_url("https://fonts.googleapis.com/css2?family=Inter"))
+		for bad in (
+			"https://evil.example.com/css2?family=Inter",
+			"https://fonts.googleapis.com.evil.example/css",
+			"http://fonts.googleapis.com/css2?family=Inter",  # must be https
+			"javascript:alert(1)",
+			"",
+			None,
+		):
+			self.assertFalse(fonts.is_allowed_url(bad), f"expected reject for {bad!r}")
+
+	def test_resolve_blank_returns_nones(self):
+		resolved = fonts.resolve({})
+		self.assertIsNone(resolved["sans"])
+		self.assertIsNone(resolved["link"])
+
+	def test_resolve_shipped_family(self):
+		resolved = fonts.resolve({"font_sans": "Poppins"})
+		self.assertEqual(resolved["sans"], fonts.STACKS["Poppins"])
+
+	def test_resolve_custom_family_uses_name_field(self):
+		resolved = fonts.resolve(
+			{
+				"font_sans": "Custom",
+				"font_sans_name": "Inter",
+				"google_fonts_url": "https://fonts.googleapis.com/css2?family=Inter",
+			}
+		)
+		self.assertTrue(resolved["sans"].startswith('"Inter"'))
+		self.assertEqual(resolved["link"], "https://fonts.googleapis.com/css2?family=Inter")
+
+	def test_disallowed_url_yields_no_link(self):
+		resolved = fonts.resolve({"google_fonts_url": "https://evil.example.com/f.css"})
+		self.assertIsNone(resolved["link"])
+
+
+class TestGetTokens(unittest.TestCase):
+	def test_blank_settings_emit_nothing(self):
+		"""THE safety guarantee: a blank site gets no override block at all."""
+		self.assertEqual(tokens.get_tokens({}), {})
+
+	def test_mona_seeds_produce_expected_tokens(self):
+		result = tokens.get_tokens(MONA)
+		self.assertEqual(result["accent"], "#1e4d8c")
+		self.assertEqual(result["accent-deep"], "#143562")
+		self.assertEqual(result["accent-soft"], "#e8f0fb")
+		self.assertEqual(result["ink"], "#1a1a1a")
+		self.assertEqual(result["ink-mute"], "#878c9c")
+		self.assertEqual(result["bg"], "#f7f8fa")
+		self.assertEqual(result["wash"], "#eef0f4")
+		self.assertEqual(result["hairline"], "#e2e6ed")
+		self.assertEqual(result["hairline-strong"], "#c5cbd6")
+		self.assertEqual(result["success"], "#2d6a4f")
+		self.assertEqual(result["info"], "#175cd3")
+
+	def test_accent_drives_primary_remaps_action_tokens(self):
+		result = tokens.get_tokens(MONA)
+		self.assertEqual(result["primary"], "var(--ws-accent)")
+		self.assertEqual(result["primary-hover"], "var(--ws-accent-hover)")
+		self.assertEqual(result["primary-soft"], "var(--ws-accent-soft)")
+		self.assertIn("var(--ws-accent-deep)", result["grad-ink"])
+
+	def test_primary_untouched_when_flag_off(self):
+		off = dict(MONA, accent_drives_primary=0)
+		result = tokens.get_tokens(off)
+		self.assertNotIn("primary", result)
+		# grad-ink still follows the ink seed, but must not reference the accent
+		self.assertNotIn("accent", result["grad-ink"])
+
+	def test_malformed_hex_treated_as_unset(self):
+		result = tokens.get_tokens(
+			{"accent": "not-a-color", "ink": "#1a1a1a", "canvas": "#f7f8fa"}
+		)
+		self.assertNotIn("accent", result)
+		self.assertEqual(result["ink"], "#1a1a1a")
+
+	def test_shape_and_font_tokens(self):
+		result = tokens.get_tokens(
+			{
+				"radius": "4px",
+				"radius_card": "6px",
+				"radius_panel": "8px",
+				"font_sans": "Poppins",
+			}
+		)
+		self.assertEqual(result["radius"], "4px")
+		self.assertEqual(result["radius-card"], "6px")
+		self.assertEqual(result["radius-panel"], "8px")
+		self.assertIn("Poppins", result["font-sans"])
+
+	def test_status_seed_fills_its_whole_family(self):
+		result = tokens.get_tokens({"success": "#2d6a4f"})
+		self.assertEqual(result["success"], "#2d6a4f")
+		self.assertEqual(result["success-deep"], "#285d46")
+		self.assertEqual(result["success-soft"], "rgba(45, 106, 79, 0.12)")
+
+	def test_danger_maps_to_destructive_tokens(self):
+		"""The SCSS calls it 'destructive'; the field is 'danger'."""
+		result = tokens.get_tokens({"danger": "#b42318"})
+		self.assertEqual(result["destructive"], "#b42318")
+		self.assertIn("destructive-soft", result)
+
+	def test_custom_css_passthrough(self):
+		self.assertEqual(tokens.get_custom_css({"custom_css": "--ws-x: 1;"}), "--ws-x: 1;")
+		self.assertEqual(tokens.get_custom_css({}), "")

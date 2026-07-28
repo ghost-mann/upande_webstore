@@ -112,11 +112,16 @@ def accent_scale(accent, dark, soft):
 
 
 def status_scale(seed):
-	"""One semantic status family: base, deep, soft."""
+	"""One semantic status family.
+
+	`light` exists because the shipped warning pair is two-tone: --ws-warning is
+	the dark text shade and --ws-warning-mid the brighter fill.
+	"""
 	if not seed:
 		return {}
 	return {
 		"base": to_hex(seed),
 		"deep": to_hex(mix(seed, BLACK, 0.12)),
+		"light": to_hex(mix(seed, WHITE, 0.25)),
 		"soft": rgba(seed, 0.12),
 	}
