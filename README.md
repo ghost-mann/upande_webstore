@@ -33,15 +33,81 @@ Open **Webstore Settings** (single doctype) in the desk and set:
 - **Stock Display** — In/Out badge or exact quantity
 - **Sales Notification Emails** — comma-separated recipients notified of new web quotations and portal accept/decline actions
 
-### Appearance
+## Customisation
 
-The site ships with the **Ink & Gold** design system: fixed cream/ink neutrals
-(canvas, cards, buttons, navigation) with one configurable **accent** color. On
-the *Appearance* tab of Webstore Settings you can set the navbar logo, hero
-image, the three category card images, and **Primary Color** — which drives the
-accent (default gold `#d9a514`) used for highlights, price chips, KPI trends,
-chart series, and the storefront hero italics. Hover, soft-tint, gradient and
-focus-ring variants are derived automatically; the ink neutrals never change.
+One branch serves many client projects: every visual and structural choice that
+differs between clients lives in Webstore Settings, not in code.
+
+| Tab | What it controls |
+|---|---|
+| Theme | 13 color seeds → the full `--ws-*` set, fonts, radii, custom CSS |
+| Branding | Logo, favicon, wordmark, hero copy, hero stats, category cards, footer |
+| Features | 19 checkboxes; off = hidden **and** 404 **and** API rejected |
+| Transfer | Export/import theme JSON, apply a shipped preset |
+
+**Every field is optional and blank means "use the shipped default".** A site
+with nothing filled in emits no CSS override block at all and renders exactly as
+the shipped Ink & Gold design — so adopting this on an existing site changes
+nothing until you start filling fields in.
+
+### Theme
+
+Set a few seeds and the rest is derived (`upande_webstore/theme/color.py`):
+
+| Seed | Derives |
+|---|---|
+| **Accent** (+ optional Dark, Soft) | hover, light, deep, focus ring, accent gradient |
+| **Ink / Neutral** | the seven-step ink scale, plus ink-tinted shadows |
+| **Muted Text** | anchors the gray temperature — set this to keep cool or warm greys through derivation |
+| **Page Canvas** | page background and the lifted surface tone |
+| **Muted Fill**, **Border**, **Border (strong)** | sunken fills and hairlines; opaque when set, alpha-on-ink when blank |
+| **Success / Warning / Danger / Info** | each fills its whole family (deep or brighter fill, plus a 12% soft tint) |
+
+**Accent Drives Primary Actions** is the switch that matters for a non-black
+brand. Off (shipped) the accent is decorative trim and ink paints buttons, active
+nav pills and avatars. On, those action surfaces use the accent instead, while
+ink keeps painting headings and body text.
+
+Fonts: pick a bundled family (Poppins / Fraunces / IBM Plex Mono) or choose
+*Custom*, name the family, and supply a Google Fonts URL. Only
+`https://fonts.googleapis.com` is accepted, so the field cannot inject an
+arbitrary remote origin into every page. Shape is three radius values, and
+**Custom CSS** is emitted last inside `:root` as the escape hatch for anything
+the seeds do not reach.
+
+### Branding
+
+Wordmark, subtitle, logo, favicon, all hero copy, and every footer string are
+fields. Three child tables drive the repeating lists — **Hero Stats**,
+**Category Cards** (label, subtitle, image, category or custom URL) and **Footer
+Links** (rows group by their `Column` heading, in table order, so the number of
+footer columns follows the data). An empty table omits its section rather than
+rendering an empty shell. Defaults all live in one place,
+`upande_webstore/theme/branding.py`.
+
+### Features
+
+Nineteen flags in one registry (`upande_webstore/theme/features.py`), all
+defaulting on, enforced at three layers so a disabled feature is genuinely
+unreachable: the UI is hidden, the route raises 404, and the whitelisted API
+methods throw. Turning off *Cart & Checkout* leaves a browse-only catalog;
+turning off *Signup* also swaps the hero's guest CTA to **Member login** so it
+cannot point at a dead route.
+
+### Transfer
+
+*Theme → Export Theme* downloads every Theme, Branding and Features value as
+JSON; *Import Theme* applies an attached file; *Apply Preset* loads one of the
+shipped presets in `upande_webstore/theme/presets/` (`mona_flowers`, `upande`).
+
+Import is a **replace**: fields absent from the payload reset to their defaults,
+so switching presets leaves no residue. General settings — company, price list,
+warehouses — are never touched.
+
+Images travel as **file URLs, not embedded bytes**, so an import reports which
+attachments do not exist on the target site and need re-uploading. A fresh
+install seeds the default preset; a site that already has a configured theme is
+never restyled by a deploy.
 
 ## Publish products
 

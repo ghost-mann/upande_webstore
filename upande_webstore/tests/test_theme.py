@@ -1,5 +1,10 @@
 import unittest
 
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from upande_webstore.tests.utils import setup_webstore_settings
+
 from upande_webstore.theme import color, fonts, tokens
 
 MONA = {
@@ -275,3 +280,60 @@ class TestGetTokens(unittest.TestCase):
 	def test_custom_css_passthrough(self):
 		self.assertEqual(tokens.get_custom_css({"custom_css": "--ws-x: 1;"}), "--ws-x: 1;")
 		self.assertEqual(tokens.get_custom_css({}), "")
+
+	def test_theme_fields_all_readable(self):
+		"""THEME_FIELDS is the export contract; every entry must be one this
+		module actually consumes."""
+		settings = {field: "" for field in tokens.THEME_FIELDS}
+		self.assertEqual(tokens.get_tokens(settings), {})
+		self.assertEqual(len(tokens.THEME_FIELDS), len(set(tokens.THEME_FIELDS)))
+
+
+class TestGetTheme(IntegrationTestCase):
+	def setUp(self):
+		setup_webstore_settings()
+
+	def test_payload_shape(self):
+		from upande_webstore.theme import get_theme
+
+		theme = get_theme()
+		for key in ("tokens", "custom_css", "font_link", "branding", "features"):
+			self.assertIn(key, theme)
+
+	def test_blank_site_emits_no_tokens(self):
+		from upande_webstore.theme import get_theme
+
+		self.assertEqual(get_theme().tokens, {})
+
+	def test_context_keys_all_present(self):
+		from upande_webstore.services.settings import update_website_context
+
+		context = frappe._dict()
+		update_website_context(context)
+		for key in (
+			"webstore_tokens",
+			"webstore_custom_css",
+			"webstore_font_link",
+			"webstore_branding",
+			"webstore_features",
+			"webstore_appearance",
+		):
+			self.assertIn(key, context)
+
+	def test_appearance_alias_still_works(self):
+		"""Backward-compat alias must survive until the next release."""
+		from upande_webstore.services.settings import update_website_context
+
+		context = frappe._dict()
+		update_website_context(context)
+		self.assertIn("colors", context.webstore_appearance)
+
+	def test_features_are_attribute_accessible_for_jinja(self):
+		from upande_webstore.theme import get_theme
+
+		self.assertTrue(get_theme().features.wishlist)
+
+	def test_branding_is_attribute_accessible_for_jinja(self):
+		from upande_webstore.theme import get_theme
+
+		self.assertEqual(get_theme().branding.wordmark, "upande")

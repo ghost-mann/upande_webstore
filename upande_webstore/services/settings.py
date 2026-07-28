@@ -63,15 +63,13 @@ def get_appearance():
 
 
 def update_website_context(context):
-	from upande_webstore.theme import fonts, tokens
-	from upande_webstore.theme.branding import get_branding
-	from upande_webstore.theme.features import enabled
+	from upande_webstore.theme import get_theme
 
-	settings = get_settings()
-	context.webstore_tokens = tokens.get_tokens(settings)
-	context.webstore_custom_css = tokens.get_custom_css(settings)
-	context.webstore_font_link = fonts.resolve(settings)["link"]
-	context.webstore_branding = get_branding(settings)
-	context.webstore_features = enabled()
+	theme = get_theme(get_settings())
+	context.webstore_tokens = theme.tokens
+	context.webstore_custom_css = theme.custom_css
+	context.webstore_font_link = theme.font_link
+	context.webstore_branding = theme.branding
+	context.webstore_features = theme.features
 	# retained one release for anything still reading the old key
 	context.webstore_appearance = get_appearance()
