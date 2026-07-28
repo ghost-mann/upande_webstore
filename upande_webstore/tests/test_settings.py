@@ -64,6 +64,46 @@ class TestAppearance(IntegrationTestCase):
 		self.assertIn("colors", context.webstore_appearance)
 
 
+class TestSettingsDocstatus(IntegrationTestCase):
+	def _stored(self):
+		rows = frappe.db.sql(
+			"select value from tabSingles where doctype = %s and field = 'docstatus'",
+			"Webstore Settings",
+		)
+		return str(rows[0][0]) if rows else None
+
+	def test_doctype_is_not_submittable(self):
+		"""No submit workflow exists, so the desk must never offer Submit,
+		Cancel or Amend on this form."""
+		self.assertFalse(frappe.get_meta("Webstore Settings").get("is_submittable"))
+
+	def test_patch_resets_a_cancelled_docstatus(self):
+		"""A stray docstatus 2 makes the desk treat the settings Single as a
+		cancelled document and offer Amend."""
+		from upande_webstore.patches.reset_webstore_settings_docstatus import execute
+
+		frappe.db.sql(
+			"update tabSingles set value = '2' where doctype = %s and field = 'docstatus'",
+			"Webstore Settings",
+		)
+		if self._stored() is None:
+			self.skipTest("no docstatus row stored for this Single")
+
+		execute()
+		self.assertEqual(self._stored(), "0")
+
+	def test_patch_is_a_noop_when_already_clean(self):
+		from upande_webstore.patches.reset_webstore_settings_docstatus import execute
+
+		execute()
+		execute()
+		self.assertIn(self._stored(), ("0", None))
+
+	def test_saving_settings_keeps_docstatus_zero(self):
+		setup_webstore_settings()
+		self.assertIn(self._stored(), ("0", None))
+
+
 class TestCategoryImageMigration(IntegrationTestCase):
 	def setUp(self):
 		setup_webstore_settings()
