@@ -50,6 +50,38 @@ def rgba(rgb, alpha):
 	return f"rgba({r}, {g}, {b}, {alpha})"
 
 
+def relative_luminance(rgb):
+	"""WCAG 2.1 relative luminance."""
+	channels = []
+	for value in rgb:
+		c = max(0.0, min(1.0, value / 255))
+		channels.append(c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4)
+	r, g, b = channels
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a, b):
+	"""WCAG contrast ratio between two colours, 1.0 – 21.0."""
+	la, lb = relative_luminance(a), relative_luminance(b)
+	high, low = max(la, lb), min(la, lb)
+	return (high + 0.05) / (low + 0.05)
+
+
+def best_contrast(backgrounds, candidates):
+	"""The candidate that reads most legibly across ALL of `backgrounds`.
+
+	Judged on the worst background rather than an average, because text over a
+	gradient has to stay legible at both ends — picking against the midpoint
+	alone lets one end fail. This is what allows a light accent to take dark
+	text and a dark accent light text with nobody maintaining the pairing
+	per client.
+	"""
+	return max(
+		candidates,
+		key=lambda candidate: min(contrast(bg, candidate) for bg in backgrounds),
+	)
+
+
 def ink_scale(ink, muted, canvas):
 	"""The seven ink tokens.
 

@@ -92,6 +92,46 @@ class TestInkScale(unittest.TestCase):
 		self.assertEqual(color.ink_scale(None, None, (244, 243, 239)), {})
 
 
+class TestContrast(unittest.TestCase):
+	INK = (10, 10, 10)
+	CREAM = (250, 250, 246)
+
+	def test_luminance_endpoints(self):
+		self.assertAlmostEqual(color.relative_luminance((0, 0, 0)), 0.0, places=6)
+		self.assertAlmostEqual(color.relative_luminance((255, 255, 255)), 1.0, places=6)
+
+	def test_contrast_is_symmetric_and_bounded(self):
+		self.assertAlmostEqual(color.contrast(self.INK, self.CREAM), color.contrast(self.CREAM, self.INK))
+		self.assertAlmostEqual(color.contrast((0, 0, 0), (255, 255, 255)), 21.0, places=4)
+		self.assertAlmostEqual(color.contrast(self.INK, self.INK), 1.0, places=6)
+
+	def test_known_ratio(self):
+		# gold accent against ink — the pairing the shipped CTA relies on
+		self.assertAlmostEqual(color.contrast((217, 165, 20), self.INK), 8.81, places=1)
+
+	def test_light_background_picks_dark_text(self):
+		self.assertEqual(
+			color.best_contrast([(217, 165, 20)], (self.INK, self.CREAM)), self.INK
+		)
+
+	def test_dark_background_picks_light_text(self):
+		self.assertEqual(
+			color.best_contrast([(30, 77, 140)], (self.INK, self.CREAM)), self.CREAM
+		)
+
+	def test_judges_worst_background_not_the_average(self):
+		"""Text over a gradient must clear both ends; a midpoint-only choice
+		would let one end fail."""
+		pale, deep = (226, 188, 79), (22, 58, 105)
+		# cream wins on deep alone, ink wins on pale alone; across both, the
+		# choice must be the one whose WORST end is better
+		chosen = color.best_contrast([pale, deep], (self.INK, self.CREAM))
+		worst_chosen = min(color.contrast(bg, chosen) for bg in (pale, deep))
+		other = self.CREAM if chosen == self.INK else self.INK
+		worst_other = min(color.contrast(bg, other) for bg in (pale, deep))
+		self.assertGreaterEqual(worst_chosen, worst_other)
+
+
 class TestAccentScale(unittest.TestCase):
 	def test_backward_compatible_with_derive_brand_colors(self):
 		"""These five values are pinned by the existing test_settings suite."""
@@ -276,6 +316,34 @@ class TestGetTokens(unittest.TestCase):
 		result = tokens.get_tokens({"danger": "#b42318"})
 		self.assertEqual(result["destructive"], "#b42318")
 		self.assertIn("destructive-soft", result)
+
+	def test_on_accent_is_readable_over_the_whole_cta_gradient(self):
+		"""The CTA fill runs accent-deep -> accent; the derived text colour must
+		clear WCAG AA at both ends, for any client accent."""
+		cases = [
+			{"accent": "#d9a514", "accent_dark": "#a87d0d", "ink": "#0a0a0a", "canvas": "#f4f3ef"},
+			{"accent": "#1e4d8c", "accent_dark": "#143562", "ink": "#1a1a1a", "canvas": "#f7f8fa"},
+			{"accent": "#b3123f", "ink": "#14100f", "canvas": "#f6f1ef"},
+			{"accent": "#f2e9c9", "ink": "#0a0a0a", "canvas": "#ffffff"},
+			{"accent": "#0b1a2b", "ink": "#0a0a0a", "canvas": "#f4f3ef"},
+		]
+		for seeds in cases:
+			result = tokens.get_tokens(seeds)
+			text = color.parse(result["on-accent"])
+			ends = (color.parse(result["accent-deep"]), color.parse(result["accent"]))
+			worst = min(color.contrast(end, text) for end in ends)
+			self.assertGreaterEqual(
+				worst, 4.5, f"accent {seeds['accent']} -> text {result['on-accent']} only {worst:.2f}:1"
+			)
+
+	def test_on_accent_absent_without_accent(self):
+		self.assertNotIn("on-accent", tokens.get_tokens({"ink": "#1a1a1a"}))
+
+	def test_gold_takes_ink_and_navy_takes_cream(self):
+		gold = tokens.get_tokens({"accent": "#d9a514", "accent_dark": "#a87d0d", "ink": "#0a0a0a"})
+		navy = tokens.get_tokens({"accent": "#1e4d8c", "accent_dark": "#143562", "ink": "#1a1a1a"})
+		self.assertEqual(gold["on-accent"], "#0a0a0a")
+		self.assertNotEqual(navy["on-accent"], "#1a1a1a")
 
 	def test_custom_css_passthrough(self):
 		self.assertEqual(tokens.get_custom_css({"custom_css": "--ws-x: 1;"}), "--ws-x: 1;")

@@ -86,6 +86,15 @@ def get_tokens(settings):
 		color.accent_scale(accent, _seed(settings, "accent_dark"), _seed(settings, "accent_soft"))
 	)
 
+	# Text laid over the CTA gradient, which runs accent-deep -> accent. Judged
+	# against both ends so neither fails: a pale gold accent takes ink text, a
+	# deep navy takes cream, with nobody maintaining that pairing per client.
+	if accent:
+		deep = color.parse(out["accent-deep"])
+		dark = ink or (10, 10, 10)
+		light = color.mix(canvas or DEFAULT_CANVAS, color.WHITE, 0.5)
+		out["on-accent"] = color.to_hex(color.best_contrast((deep, accent), (dark, light)))
+
 	for field, mapping in STATUS_TOKENS.items():
 		family = color.status_scale(_seed(settings, field))
 		if not family:

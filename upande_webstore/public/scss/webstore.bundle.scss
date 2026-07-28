@@ -93,6 +93,7 @@
 	--ws-accent-light: #edc23c;
 	--ws-accent-deep: #a87d0d;
 	--ws-ring: rgba(217, 165, 20, 0.35);
+	--ws-on-accent: #0a0a0a; /* text over an accent fill; derived per-site by contrast */
 
 	/* semantic */
 	--ws-success: #3f8f4f;
@@ -110,6 +111,9 @@
 	/* gradients */
 	--ws-grad-ink: linear-gradient(135deg, #0a0a0a 0%, #3a3a34 100%);
 	--ws-grad-accent: linear-gradient(135deg, var(--ws-accent-deep) 0%, var(--ws-accent-light) 100%);
+	/* CTA fill: stops at the accent rather than accent-light, so overlaid text
+	   clears 4.5:1 at both ends whatever the client's accent is */
+	--ws-grad-cta: linear-gradient(135deg, var(--ws-accent-deep) 0%, var(--ws-accent) 100%);
 
 	/* aliases kept for anything still reading the old names */
 	--ws-primary: var(--ws-ink);
@@ -245,8 +249,8 @@ a:hover { color: var(--ws-ink-4); }
 }
 #webstore-cart-badge:empty { display: none; }
 .ws-member-btn {
-	background: var(--ws-grad-ink);
-	color: var(--ws-surface) !important;
+	background: var(--ws-grad-cta);
+	color: var(--ws-on-accent) !important;
 	padding: 0.5rem 1.05rem !important;
 	border-radius: 999px;
 	font-weight: 500 !important;
@@ -255,13 +259,13 @@ a:hover { color: var(--ws-ink-4); }
 	margin-left: 0.35rem;
 	transition: box-shadow 160ms ease, transform 80ms ease;
 }
-.ws-member-btn:hover { color: var(--ws-surface) !important; box-shadow: 0 6px 18px rgba(10, 10, 10, 0.26); }
+.ws-member-btn:hover { color: var(--ws-on-accent) !important; box-shadow: 0 6px 18px rgba(10, 10, 10, 0.26); }
 .ws-avatar {
 	width: 32px;
 	height: 32px;
 	border-radius: 50%;
-	background: var(--ws-grad-ink);
-	color: var(--ws-surface);
+	background: var(--ws-grad-cta);
+	color: var(--ws-on-accent);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
