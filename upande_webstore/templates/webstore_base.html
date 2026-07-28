@@ -98,7 +98,13 @@
 	<div class="container">
 		<div class="ws-footer-grid">
 			<div>
-				<div class="ws-footer-brand">{{ webstore_branding.wordmark }}<b>{{ webstore_branding.wordmark_bold }}</b></div>
+				<div class="ws-footer-brand">
+					{%- if webstore_branding.brand_logo %}
+					<span class="ws-footer-logo"><img src="{{ webstore_branding.brand_logo }}" alt="{{ webstore_branding.site_name }}"></span>
+					{%- else %}
+					{{ webstore_branding.wordmark }}<b>{{ webstore_branding.wordmark_bold }}</b>
+					{%- endif %}
+				</div>
 				<p class="ws-footer-tag">{{ webstore_branding.footer_tagline }}</p>
 			</div>
 			{% for column in webstore_branding.footer_columns %}
