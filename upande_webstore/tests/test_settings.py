@@ -62,3 +62,63 @@ class TestAppearance(IntegrationTestCase):
 		context = frappe._dict()
 		update_website_context(context)
 		self.assertIn("colors", context.webstore_appearance)
+
+
+class TestCategoryImageMigration(IntegrationTestCase):
+	def setUp(self):
+		setup_webstore_settings()
+
+	def _set_legacy(self, **images):
+		for field, value in images.items():
+			frappe.db.set_single_value("Webstore Settings", field, value)
+		frappe.clear_cache()
+
+	def test_migrates_legacy_images_into_cards(self):
+		from upande_webstore.patches.move_category_images_to_table import execute
+
+		self._set_legacy(
+			flowers_category_image="/files/f.jpg", coffee_category_image="/files/c.jpg"
+		)
+		execute()
+
+		cards = frappe.get_doc("Webstore Settings").category_cards
+		self.assertEqual([card.label for card in cards], ["Flowers", "Coffee", "Fresh Produce"])
+		self.assertEqual(cards[0].image, "/files/f.jpg")
+		self.assertEqual(cards[1].image, "/files/c.jpg")
+		self.assertFalse(cards[2].image)
+		self.assertEqual(cards[0].category, "Flowers")
+		self.assertEqual(cards[2].category, "Fresh Produce")
+		# the subtitles the template used to hardcode must survive
+		self.assertEqual(cards[0].subtitle, "Roses, lilies & fillers")
+
+	def test_is_idempotent(self):
+		from upande_webstore.patches.move_category_images_to_table import execute
+
+		self._set_legacy(flowers_category_image="/files/f.jpg")
+		execute()
+		execute()
+		self.assertEqual(len(frappe.get_doc("Webstore Settings").category_cards), 3)
+
+	def test_noop_when_no_legacy_images(self):
+		"""A site that never uploaded category images must not gain cards."""
+		from upande_webstore.patches.move_category_images_to_table import execute
+
+		self._set_legacy(
+			flowers_category_image="", coffee_category_image="", produce_category_image=""
+		)
+		execute()
+		self.assertEqual(frappe.get_doc("Webstore Settings").category_cards, [])
+
+	def test_leaves_existing_cards_alone(self):
+		from upande_webstore.patches.move_category_images_to_table import execute
+
+		settings = frappe.get_doc("Webstore Settings")
+		settings.append("category_cards", {"label": "Roses", "category": "Roses"})
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		self._set_legacy(flowers_category_image="/files/f.jpg")
+
+		execute()
+
+		cards = frappe.get_doc("Webstore Settings").category_cards
+		self.assertEqual([card.label for card in cards], ["Roses"])

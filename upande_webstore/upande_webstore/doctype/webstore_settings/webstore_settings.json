@@ -7,131 +7,730 @@
  "creation": "2026-07-20 00:00:01.000000",
  "modified": "2026-07-28 00:00:01.000000",
  "owner": "Administrator",
- "field_order": ["company", "guest_price_list", "default_customer_group", "default_territory", "quotation_validity_days", "stock_display", "notification_emails", "warehouses", "theme_tab", "brand_colors_section", "accent", "accent_dark", "accent_soft", "accent_drives_primary", "neutral_cb", "ink", "ink_muted", "canvas", "wash", "border", "border_strong", "status_colors_section", "success", "warning", "status_cb", "danger", "info", "typography_section", "font_sans", "font_sans_name", "font_display", "font_display_name", "font_cb", "font_mono", "font_mono_name", "google_fonts_url", "shape_section", "radius", "radius_card", "radius_panel", "advanced_section", "custom_css", "primary_color", "appearance_tab", "identity_section", "site_name", "wordmark", "wordmark_bold", "brand_logo", "identity_cb", "wordmark_subtitle", "favicon", "hero_section", "hero_image", "hero_eyebrow", "hero_heading", "hero_heading_em", "hero_body", "hero_cta_cb", "hero_cta_primary", "hero_cta_secondary_guest", "hero_cta_secondary_member", "hero_stats_section", "hero_stats", "category_cards_section", "category_cards", "footer_section", "footer_tagline", "footer_links", "footer_contact_email", "footer_hours", "footer_contact_cb", "footer_location", "footer_website", "footer_copyright", "footer_note", "portal_branding_section", "portal_eyebrow", "category_images_section", "flowers_category_image", "coffee_category_image", "produce_category_image", "features_tab", "storefront_features_section", "enable_cart", "enable_wishlist", "enable_signup", "enable_search_palette", "enable_cart_drawer", "storefront_features_cb", "enable_hero", "enable_hero_stats", "enable_category_cards", "enable_footer", "portal_features_section", "enable_portal", "enable_dashboard", "enable_quotations", "enable_orders", "enable_invoices", "portal_features_cb", "enable_statement", "enable_support", "enable_claims", "enable_account", "enable_sidebar_stats"],
+ "field_order": [
+  "company",
+  "guest_price_list",
+  "default_customer_group",
+  "default_territory",
+  "quotation_validity_days",
+  "stock_display",
+  "notification_emails",
+  "warehouses",
+  "theme_tab",
+  "brand_colors_section",
+  "accent",
+  "accent_dark",
+  "accent_soft",
+  "accent_drives_primary",
+  "neutral_cb",
+  "ink",
+  "ink_muted",
+  "canvas",
+  "wash",
+  "border",
+  "border_strong",
+  "status_colors_section",
+  "success",
+  "warning",
+  "status_cb",
+  "danger",
+  "info",
+  "typography_section",
+  "font_sans",
+  "font_sans_name",
+  "font_display",
+  "font_display_name",
+  "font_cb",
+  "font_mono",
+  "font_mono_name",
+  "google_fonts_url",
+  "shape_section",
+  "radius",
+  "radius_card",
+  "radius_panel",
+  "advanced_section",
+  "custom_css",
+  "primary_color",
+  "appearance_tab",
+  "identity_section",
+  "site_name",
+  "wordmark",
+  "wordmark_bold",
+  "brand_logo",
+  "identity_cb",
+  "wordmark_subtitle",
+  "favicon",
+  "hero_section",
+  "hero_image",
+  "hero_eyebrow",
+  "hero_heading",
+  "hero_heading_em",
+  "hero_body",
+  "hero_cta_cb",
+  "hero_cta_primary",
+  "hero_cta_secondary_guest",
+  "hero_cta_secondary_member",
+  "hero_stats_section",
+  "hero_stats",
+  "category_cards_section",
+  "category_cards",
+  "footer_section",
+  "footer_tagline",
+  "footer_links",
+  "footer_contact_email",
+  "footer_hours",
+  "footer_contact_cb",
+  "footer_location",
+  "footer_website",
+  "footer_copyright",
+  "footer_note",
+  "portal_branding_section",
+  "portal_eyebrow",
+  "category_images_section",
+  "flowers_category_image",
+  "coffee_category_image",
+  "produce_category_image",
+  "features_tab",
+  "storefront_features_section",
+  "enable_cart",
+  "enable_wishlist",
+  "enable_signup",
+  "enable_search_palette",
+  "enable_cart_drawer",
+  "storefront_features_cb",
+  "enable_hero",
+  "enable_hero_stats",
+  "enable_category_cards",
+  "enable_footer",
+  "portal_features_section",
+  "enable_portal",
+  "enable_dashboard",
+  "enable_quotations",
+  "enable_orders",
+  "enable_invoices",
+  "portal_features_cb",
+  "enable_statement",
+  "enable_support",
+  "enable_claims",
+  "enable_account",
+  "enable_sidebar_stats"
+ ],
  "fields": [
-  {"fieldname": "company", "fieldtype": "Link", "label": "Company", "options": "Company", "reqd": 1},
-  {"fieldname": "guest_price_list", "fieldtype": "Link", "label": "Guest Price List", "options": "Price List", "reqd": 1},
-  {"fieldname": "default_customer_group", "fieldtype": "Link", "label": "Default Customer Group (Signups)", "options": "Customer Group"},
-  {"fieldname": "default_territory", "fieldtype": "Link", "label": "Default Territory (Signups)", "options": "Territory"},
-  {"fieldname": "quotation_validity_days", "fieldtype": "Int", "label": "Quotation Validity (Days)", "default": "14"},
-  {"fieldname": "stock_display", "fieldtype": "Select", "label": "Stock Display", "options": "In/Out Badge\nExact Quantity", "default": "In/Out Badge"},
-  {"fieldname": "notification_emails", "fieldtype": "Small Text", "label": "Sales Notification Emails (comma-separated)"},
-  {"fieldname": "warehouses", "fieldtype": "Table", "label": "Stock Warehouses", "options": "Webstore Warehouse"},
-
-  {"fieldname": "theme_tab", "fieldtype": "Tab Break", "label": "Theme"},
-  {"fieldname": "brand_colors_section", "fieldtype": "Section Break", "label": "Brand Colors", "description": "Every field is optional. Blank = the shipped default, and nothing is emitted."},
-  {"fieldname": "accent", "fieldtype": "Color", "label": "Accent", "description": "Blank = shipped gold."},
-  {"fieldname": "accent_dark", "fieldtype": "Color", "label": "Accent Dark", "description": "Blank = derived from Accent."},
-  {"fieldname": "accent_soft", "fieldtype": "Color", "label": "Accent Soft (tint)", "description": "Blank = derived from Accent."},
-  {"fieldname": "accent_drives_primary", "fieldtype": "Check", "label": "Accent Drives Primary Actions", "default": "0", "description": "On: buttons, active nav pills and avatars use the accent instead of ink."},
-  {"fieldname": "neutral_cb", "fieldtype": "Column Break"},
-  {"fieldname": "ink", "fieldtype": "Color", "label": "Ink / Neutral", "description": "Headings and body text. The whole neutral scale derives from this."},
-  {"fieldname": "ink_muted", "fieldtype": "Color", "label": "Muted Text", "description": "Anchors the gray temperature. Blank = derived from Ink and Canvas."},
-  {"fieldname": "canvas", "fieldtype": "Color", "label": "Page Canvas"},
-  {"fieldname": "wash", "fieldtype": "Color", "label": "Muted Fill", "description": "Sunken fills. Should be darker than the canvas."},
-  {"fieldname": "border", "fieldtype": "Color", "label": "Border"},
-  {"fieldname": "border_strong", "fieldtype": "Color", "label": "Border (strong)"},
-
-  {"fieldname": "status_colors_section", "fieldtype": "Section Break", "label": "Status Colors"},
-  {"fieldname": "success", "fieldtype": "Color", "label": "Success"},
-  {"fieldname": "warning", "fieldtype": "Color", "label": "Warning", "description": "The dark text shade; the brighter fill is derived."},
-  {"fieldname": "status_cb", "fieldtype": "Column Break"},
-  {"fieldname": "danger", "fieldtype": "Color", "label": "Danger"},
-  {"fieldname": "info", "fieldtype": "Color", "label": "Info"},
-
-  {"fieldname": "typography_section", "fieldtype": "Section Break", "label": "Typography"},
-  {"fieldname": "font_sans", "fieldtype": "Select", "label": "Body Font", "options": "\nPoppins\nCustom"},
-  {"fieldname": "font_sans_name", "fieldtype": "Data", "label": "Body Font Family", "depends_on": "eval:doc.font_sans=='Custom'"},
-  {"fieldname": "font_display", "fieldtype": "Select", "label": "Display Font", "options": "\nFraunces\nCustom"},
-  {"fieldname": "font_display_name", "fieldtype": "Data", "label": "Display Font Family", "depends_on": "eval:doc.font_display=='Custom'"},
-  {"fieldname": "font_cb", "fieldtype": "Column Break"},
-  {"fieldname": "font_mono", "fieldtype": "Select", "label": "Mono Font", "options": "\nIBM Plex Mono\nCustom"},
-  {"fieldname": "font_mono_name", "fieldtype": "Data", "label": "Mono Font Family", "depends_on": "eval:doc.font_mono=='Custom'"},
-  {"fieldname": "google_fonts_url", "fieldtype": "Data", "label": "Google Fonts URL", "description": "https://fonts.googleapis.com/... Required for Custom families."},
-
-  {"fieldname": "shape_section", "fieldtype": "Section Break", "label": "Shape"},
-  {"fieldname": "radius", "fieldtype": "Data", "label": "Base Radius", "description": "Any CSS length. Blank = 0.75rem."},
-  {"fieldname": "radius_card", "fieldtype": "Data", "label": "Card Radius", "description": "Blank = 20px."},
-  {"fieldname": "radius_panel", "fieldtype": "Data", "label": "Panel Radius", "description": "Blank = 24px."},
-
-  {"fieldname": "advanced_section", "fieldtype": "Section Break", "label": "Advanced", "collapsible": 1},
-  {"fieldname": "custom_css", "fieldtype": "Code", "label": "Custom CSS", "options": "CSS", "description": "Emitted after the generated tokens, inside :root, so it wins. Use for any token the seeds do not reach."},
-  {"fieldname": "primary_color", "fieldtype": "Color", "label": "Primary Color (legacy)", "hidden": 1, "description": "Superseded by Accent. Retained for one release."},
-
-  {"fieldname": "appearance_tab", "fieldtype": "Tab Break", "label": "Branding"},
-  {"fieldname": "identity_section", "fieldtype": "Section Break", "label": "Identity"},
-  {"fieldname": "site_name", "fieldtype": "Data", "label": "Site Name"},
-  {"fieldname": "wordmark", "fieldtype": "Data", "label": "Wordmark", "description": "Light-weight part, e.g. 'mona'."},
-  {"fieldname": "wordmark_bold", "fieldtype": "Data", "label": "Wordmark (bold)", "description": "Accented part, e.g. 'flowers'."},
-  {"fieldname": "brand_logo", "fieldtype": "Attach Image", "label": "Brand Logo", "description": "Navbar logo. Blank = shipped Upande logo."},
-  {"fieldname": "identity_cb", "fieldtype": "Column Break"},
-  {"fieldname": "wordmark_subtitle", "fieldtype": "Data", "label": "Wordmark Subtitle"},
-  {"fieldname": "favicon", "fieldtype": "Attach Image", "label": "Favicon"},
-
-  {"fieldname": "hero_section", "fieldtype": "Section Break", "label": "Hero"},
-  {"fieldname": "hero_image", "fieldtype": "Attach Image", "label": "Hero Image", "description": "Storefront hero photo. Blank = shipped default."},
-  {"fieldname": "hero_eyebrow", "fieldtype": "Data", "label": "Eyebrow"},
-  {"fieldname": "hero_heading", "fieldtype": "Data", "label": "Heading"},
-  {"fieldname": "hero_heading_em", "fieldtype": "Data", "label": "Heading (emphasis)", "description": "Rendered italic in the display face."},
-  {"fieldname": "hero_body", "fieldtype": "Small Text", "label": "Body"},
-  {"fieldname": "hero_cta_cb", "fieldtype": "Column Break"},
-  {"fieldname": "hero_cta_primary", "fieldtype": "Data", "label": "Primary CTA"},
-  {"fieldname": "hero_cta_secondary_guest", "fieldtype": "Data", "label": "Secondary CTA (guest)", "description": "Ignored when Signup is off; guests then see Member login."},
-  {"fieldname": "hero_cta_secondary_member", "fieldtype": "Data", "label": "Secondary CTA (member)"},
-
-  {"fieldname": "hero_stats_section", "fieldtype": "Section Break", "label": "Hero Stats", "description": "Empty = the stat row is omitted."},
-  {"fieldname": "hero_stats", "fieldtype": "Table", "label": "Hero Stats", "options": "Webstore Hero Stat"},
-
-  {"fieldname": "category_cards_section", "fieldtype": "Section Break", "label": "Category Cards", "description": "Empty = the card grid is omitted."},
-  {"fieldname": "category_cards", "fieldtype": "Table", "label": "Category Cards", "options": "Webstore Category Card"},
-
-  {"fieldname": "footer_section", "fieldtype": "Section Break", "label": "Footer"},
-  {"fieldname": "footer_tagline", "fieldtype": "Small Text", "label": "Tagline"},
-  {"fieldname": "footer_links", "fieldtype": "Table", "label": "Footer Links", "options": "Webstore Footer Link"},
-  {"fieldname": "footer_contact_email", "fieldtype": "Data", "label": "Contact Email"},
-  {"fieldname": "footer_hours", "fieldtype": "Data", "label": "Hours"},
-  {"fieldname": "footer_contact_cb", "fieldtype": "Column Break"},
-  {"fieldname": "footer_location", "fieldtype": "Data", "label": "Location"},
-  {"fieldname": "footer_website", "fieldtype": "Data", "label": "Website"},
-  {"fieldname": "footer_copyright", "fieldtype": "Data", "label": "Copyright Holder", "description": "The year is prepended automatically."},
-  {"fieldname": "footer_note", "fieldtype": "Data", "label": "Footer Note"},
-
-  {"fieldname": "portal_branding_section", "fieldtype": "Section Break", "label": "Portal"},
-  {"fieldname": "portal_eyebrow", "fieldtype": "Data", "label": "Portal Eyebrow"},
-
-  {"fieldname": "category_images_section", "fieldtype": "Section Break", "label": "Category Card Images (legacy)", "collapsible": 1},
-  {"fieldname": "flowers_category_image", "fieldtype": "Attach Image", "label": "Flowers Card Image"},
-  {"fieldname": "coffee_category_image", "fieldtype": "Attach Image", "label": "Coffee Card Image"},
-  {"fieldname": "produce_category_image", "fieldtype": "Attach Image", "label": "Fresh Produce Card Image"},
-
-  {"fieldname": "features_tab", "fieldtype": "Tab Break", "label": "Features"},
-  {"fieldname": "storefront_features_section", "fieldtype": "Section Break", "label": "Storefront", "description": "Unticking hides the UI, 404s the route and rejects the API."},
-  {"fieldname": "enable_cart", "fieldtype": "Check", "label": "Cart & Checkout", "default": "1", "description": "Off = browse-only catalog."},
-  {"fieldname": "enable_wishlist", "fieldtype": "Check", "label": "Wishlist", "default": "1"},
-  {"fieldname": "enable_signup", "fieldtype": "Check", "label": "Signup", "default": "1"},
-  {"fieldname": "enable_search_palette", "fieldtype": "Check", "label": "Search Palette (⌘K)", "default": "1"},
-  {"fieldname": "enable_cart_drawer", "fieldtype": "Check", "label": "Cart Drawer", "default": "1", "depends_on": "enable_cart"},
-  {"fieldname": "storefront_features_cb", "fieldtype": "Column Break"},
-  {"fieldname": "enable_hero", "fieldtype": "Check", "label": "Hero", "default": "1"},
-  {"fieldname": "enable_hero_stats", "fieldtype": "Check", "label": "Hero Stats", "default": "1"},
-  {"fieldname": "enable_category_cards", "fieldtype": "Check", "label": "Category Cards", "default": "1"},
-  {"fieldname": "enable_footer", "fieldtype": "Check", "label": "Footer", "default": "1"},
-
-  {"fieldname": "portal_features_section", "fieldtype": "Section Break", "label": "Portal"},
-  {"fieldname": "enable_portal", "fieldtype": "Check", "label": "Portal", "default": "1", "description": "Master switch for every /portal page."},
-  {"fieldname": "enable_dashboard", "fieldtype": "Check", "label": "Dashboard", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "enable_quotations", "fieldtype": "Check", "label": "Quotations", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "enable_orders", "fieldtype": "Check", "label": "Orders", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "enable_invoices", "fieldtype": "Check", "label": "Invoices", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "portal_features_cb", "fieldtype": "Column Break"},
-  {"fieldname": "enable_statement", "fieldtype": "Check", "label": "Statement", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "enable_support", "fieldtype": "Check", "label": "Support", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "enable_claims", "fieldtype": "Check", "label": "Claims", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "enable_account", "fieldtype": "Check", "label": "Account", "default": "1", "depends_on": "enable_portal"},
-  {"fieldname": "enable_sidebar_stats", "fieldtype": "Check", "label": "Sidebar Stats", "default": "1", "depends_on": "enable_portal"}
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "guest_price_list",
+   "fieldtype": "Link",
+   "label": "Guest Price List",
+   "options": "Price List",
+   "reqd": 1
+  },
+  {
+   "fieldname": "default_customer_group",
+   "fieldtype": "Link",
+   "label": "Default Customer Group (Signups)",
+   "options": "Customer Group"
+  },
+  {
+   "fieldname": "default_territory",
+   "fieldtype": "Link",
+   "label": "Default Territory (Signups)",
+   "options": "Territory"
+  },
+  {
+   "fieldname": "quotation_validity_days",
+   "fieldtype": "Int",
+   "label": "Quotation Validity (Days)",
+   "default": "14"
+  },
+  {
+   "fieldname": "stock_display",
+   "fieldtype": "Select",
+   "label": "Stock Display",
+   "options": "In/Out Badge\nExact Quantity",
+   "default": "In/Out Badge"
+  },
+  {
+   "fieldname": "notification_emails",
+   "fieldtype": "Small Text",
+   "label": "Sales Notification Emails (comma-separated)"
+  },
+  {
+   "fieldname": "warehouses",
+   "fieldtype": "Table",
+   "label": "Stock Warehouses",
+   "options": "Webstore Warehouse"
+  },
+  {
+   "fieldname": "theme_tab",
+   "fieldtype": "Tab Break",
+   "label": "Theme"
+  },
+  {
+   "fieldname": "brand_colors_section",
+   "fieldtype": "Section Break",
+   "label": "Brand Colors",
+   "description": "Every field is optional. Blank = the shipped default, and nothing is emitted."
+  },
+  {
+   "fieldname": "accent",
+   "fieldtype": "Color",
+   "label": "Accent",
+   "description": "Blank = shipped gold."
+  },
+  {
+   "fieldname": "accent_dark",
+   "fieldtype": "Color",
+   "label": "Accent Dark",
+   "description": "Blank = derived from Accent."
+  },
+  {
+   "fieldname": "accent_soft",
+   "fieldtype": "Color",
+   "label": "Accent Soft (tint)",
+   "description": "Blank = derived from Accent."
+  },
+  {
+   "fieldname": "accent_drives_primary",
+   "fieldtype": "Check",
+   "label": "Accent Drives Primary Actions",
+   "default": "0",
+   "description": "On: buttons, active nav pills and avatars use the accent instead of ink."
+  },
+  {
+   "fieldname": "neutral_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ink",
+   "fieldtype": "Color",
+   "label": "Ink / Neutral",
+   "description": "Headings and body text. The whole neutral scale derives from this."
+  },
+  {
+   "fieldname": "ink_muted",
+   "fieldtype": "Color",
+   "label": "Muted Text",
+   "description": "Anchors the gray temperature. Blank = derived from Ink and Canvas."
+  },
+  {
+   "fieldname": "canvas",
+   "fieldtype": "Color",
+   "label": "Page Canvas"
+  },
+  {
+   "fieldname": "wash",
+   "fieldtype": "Color",
+   "label": "Muted Fill",
+   "description": "Sunken fills. Should be darker than the canvas."
+  },
+  {
+   "fieldname": "border",
+   "fieldtype": "Color",
+   "label": "Border"
+  },
+  {
+   "fieldname": "border_strong",
+   "fieldtype": "Color",
+   "label": "Border (strong)"
+  },
+  {
+   "fieldname": "status_colors_section",
+   "fieldtype": "Section Break",
+   "label": "Status Colors"
+  },
+  {
+   "fieldname": "success",
+   "fieldtype": "Color",
+   "label": "Success"
+  },
+  {
+   "fieldname": "warning",
+   "fieldtype": "Color",
+   "label": "Warning",
+   "description": "The dark text shade; the brighter fill is derived."
+  },
+  {
+   "fieldname": "status_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "danger",
+   "fieldtype": "Color",
+   "label": "Danger"
+  },
+  {
+   "fieldname": "info",
+   "fieldtype": "Color",
+   "label": "Info"
+  },
+  {
+   "fieldname": "typography_section",
+   "fieldtype": "Section Break",
+   "label": "Typography"
+  },
+  {
+   "fieldname": "font_sans",
+   "fieldtype": "Select",
+   "label": "Body Font",
+   "options": "\nPoppins\nCustom"
+  },
+  {
+   "fieldname": "font_sans_name",
+   "fieldtype": "Data",
+   "label": "Body Font Family",
+   "depends_on": "eval:doc.font_sans=='Custom'"
+  },
+  {
+   "fieldname": "font_display",
+   "fieldtype": "Select",
+   "label": "Display Font",
+   "options": "\nFraunces\nCustom"
+  },
+  {
+   "fieldname": "font_display_name",
+   "fieldtype": "Data",
+   "label": "Display Font Family",
+   "depends_on": "eval:doc.font_display=='Custom'"
+  },
+  {
+   "fieldname": "font_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "font_mono",
+   "fieldtype": "Select",
+   "label": "Mono Font",
+   "options": "\nIBM Plex Mono\nCustom"
+  },
+  {
+   "fieldname": "font_mono_name",
+   "fieldtype": "Data",
+   "label": "Mono Font Family",
+   "depends_on": "eval:doc.font_mono=='Custom'"
+  },
+  {
+   "fieldname": "google_fonts_url",
+   "fieldtype": "Data",
+   "label": "Google Fonts URL",
+   "description": "https://fonts.googleapis.com/... Required for Custom families."
+  },
+  {
+   "fieldname": "shape_section",
+   "fieldtype": "Section Break",
+   "label": "Shape"
+  },
+  {
+   "fieldname": "radius",
+   "fieldtype": "Data",
+   "label": "Base Radius",
+   "description": "Any CSS length. Blank = 0.75rem."
+  },
+  {
+   "fieldname": "radius_card",
+   "fieldtype": "Data",
+   "label": "Card Radius",
+   "description": "Blank = 20px."
+  },
+  {
+   "fieldname": "radius_panel",
+   "fieldtype": "Data",
+   "label": "Panel Radius",
+   "description": "Blank = 24px."
+  },
+  {
+   "fieldname": "advanced_section",
+   "fieldtype": "Section Break",
+   "label": "Advanced",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "custom_css",
+   "fieldtype": "Code",
+   "label": "Custom CSS",
+   "options": "CSS",
+   "description": "Emitted after the generated tokens, inside :root, so it wins. Use for any token the seeds do not reach."
+  },
+  {
+   "fieldname": "primary_color",
+   "fieldtype": "Color",
+   "label": "Primary Color (legacy)",
+   "hidden": 1,
+   "description": "Superseded by Accent. Retained for one release."
+  },
+  {
+   "fieldname": "appearance_tab",
+   "fieldtype": "Tab Break",
+   "label": "Branding"
+  },
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Identity"
+  },
+  {
+   "fieldname": "site_name",
+   "fieldtype": "Data",
+   "label": "Site Name"
+  },
+  {
+   "fieldname": "wordmark",
+   "fieldtype": "Data",
+   "label": "Wordmark",
+   "description": "Light-weight part, e.g. 'mona'."
+  },
+  {
+   "fieldname": "wordmark_bold",
+   "fieldtype": "Data",
+   "label": "Wordmark (bold)",
+   "description": "Accented part, e.g. 'flowers'."
+  },
+  {
+   "fieldname": "brand_logo",
+   "fieldtype": "Attach Image",
+   "label": "Brand Logo",
+   "description": "Navbar logo. Blank = shipped Upande logo."
+  },
+  {
+   "fieldname": "identity_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "wordmark_subtitle",
+   "fieldtype": "Data",
+   "label": "Wordmark Subtitle"
+  },
+  {
+   "fieldname": "favicon",
+   "fieldtype": "Attach Image",
+   "label": "Favicon"
+  },
+  {
+   "fieldname": "hero_section",
+   "fieldtype": "Section Break",
+   "label": "Hero"
+  },
+  {
+   "fieldname": "hero_image",
+   "fieldtype": "Attach Image",
+   "label": "Hero Image",
+   "description": "Storefront hero photo. Blank = shipped default."
+  },
+  {
+   "fieldname": "hero_eyebrow",
+   "fieldtype": "Data",
+   "label": "Eyebrow"
+  },
+  {
+   "fieldname": "hero_heading",
+   "fieldtype": "Data",
+   "label": "Heading"
+  },
+  {
+   "fieldname": "hero_heading_em",
+   "fieldtype": "Data",
+   "label": "Heading (emphasis)",
+   "description": "Rendered italic in the display face."
+  },
+  {
+   "fieldname": "hero_body",
+   "fieldtype": "Small Text",
+   "label": "Body"
+  },
+  {
+   "fieldname": "hero_cta_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hero_cta_primary",
+   "fieldtype": "Data",
+   "label": "Primary CTA"
+  },
+  {
+   "fieldname": "hero_cta_secondary_guest",
+   "fieldtype": "Data",
+   "label": "Secondary CTA (guest)",
+   "description": "Ignored when Signup is off; guests then see Member login."
+  },
+  {
+   "fieldname": "hero_cta_secondary_member",
+   "fieldtype": "Data",
+   "label": "Secondary CTA (member)"
+  },
+  {
+   "fieldname": "hero_stats_section",
+   "fieldtype": "Section Break",
+   "label": "Hero Stats",
+   "description": "Empty = the stat row is omitted."
+  },
+  {
+   "fieldname": "hero_stats",
+   "fieldtype": "Table",
+   "label": "Hero Stats",
+   "options": "Webstore Hero Stat"
+  },
+  {
+   "fieldname": "category_cards_section",
+   "fieldtype": "Section Break",
+   "label": "Category Cards",
+   "description": "Empty = the card grid is omitted."
+  },
+  {
+   "fieldname": "category_cards",
+   "fieldtype": "Table",
+   "label": "Category Cards",
+   "options": "Webstore Category Card"
+  },
+  {
+   "fieldname": "footer_section",
+   "fieldtype": "Section Break",
+   "label": "Footer"
+  },
+  {
+   "fieldname": "footer_tagline",
+   "fieldtype": "Small Text",
+   "label": "Tagline"
+  },
+  {
+   "fieldname": "footer_links",
+   "fieldtype": "Table",
+   "label": "Footer Links",
+   "options": "Webstore Footer Link"
+  },
+  {
+   "fieldname": "footer_contact_email",
+   "fieldtype": "Data",
+   "label": "Contact Email"
+  },
+  {
+   "fieldname": "footer_hours",
+   "fieldtype": "Data",
+   "label": "Hours"
+  },
+  {
+   "fieldname": "footer_contact_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "footer_location",
+   "fieldtype": "Data",
+   "label": "Location"
+  },
+  {
+   "fieldname": "footer_website",
+   "fieldtype": "Data",
+   "label": "Website"
+  },
+  {
+   "fieldname": "footer_copyright",
+   "fieldtype": "Data",
+   "label": "Copyright Holder",
+   "description": "The year is prepended automatically."
+  },
+  {
+   "fieldname": "footer_note",
+   "fieldtype": "Data",
+   "label": "Footer Note"
+  },
+  {
+   "fieldname": "portal_branding_section",
+   "fieldtype": "Section Break",
+   "label": "Portal"
+  },
+  {
+   "fieldname": "portal_eyebrow",
+   "fieldtype": "Data",
+   "label": "Portal Eyebrow"
+  },
+  {
+   "fieldname": "category_images_section",
+   "fieldtype": "Section Break",
+   "label": "Category Card Images (legacy)",
+   "collapsible": 1,
+   "hidden": 1,
+   "description": "Superseded by the Category Cards table. Migrated automatically; retained one release."
+  },
+  {
+   "fieldname": "flowers_category_image",
+   "fieldtype": "Attach Image",
+   "label": "Flowers Card Image",
+   "hidden": 1
+  },
+  {
+   "fieldname": "coffee_category_image",
+   "fieldtype": "Attach Image",
+   "label": "Coffee Card Image",
+   "hidden": 1
+  },
+  {
+   "fieldname": "produce_category_image",
+   "fieldtype": "Attach Image",
+   "label": "Fresh Produce Card Image",
+   "hidden": 1
+  },
+  {
+   "fieldname": "features_tab",
+   "fieldtype": "Tab Break",
+   "label": "Features"
+  },
+  {
+   "fieldname": "storefront_features_section",
+   "fieldtype": "Section Break",
+   "label": "Storefront",
+   "description": "Unticking hides the UI, 404s the route and rejects the API."
+  },
+  {
+   "fieldname": "enable_cart",
+   "fieldtype": "Check",
+   "label": "Cart & Checkout",
+   "default": "1",
+   "description": "Off = browse-only catalog."
+  },
+  {
+   "fieldname": "enable_wishlist",
+   "fieldtype": "Check",
+   "label": "Wishlist",
+   "default": "1"
+  },
+  {
+   "fieldname": "enable_signup",
+   "fieldtype": "Check",
+   "label": "Signup",
+   "default": "1"
+  },
+  {
+   "fieldname": "enable_search_palette",
+   "fieldtype": "Check",
+   "label": "Search Palette (⌘K)",
+   "default": "1"
+  },
+  {
+   "fieldname": "enable_cart_drawer",
+   "fieldtype": "Check",
+   "label": "Cart Drawer",
+   "default": "1",
+   "depends_on": "enable_cart"
+  },
+  {
+   "fieldname": "storefront_features_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enable_hero",
+   "fieldtype": "Check",
+   "label": "Hero",
+   "default": "1"
+  },
+  {
+   "fieldname": "enable_hero_stats",
+   "fieldtype": "Check",
+   "label": "Hero Stats",
+   "default": "1"
+  },
+  {
+   "fieldname": "enable_category_cards",
+   "fieldtype": "Check",
+   "label": "Category Cards",
+   "default": "1"
+  },
+  {
+   "fieldname": "enable_footer",
+   "fieldtype": "Check",
+   "label": "Footer",
+   "default": "1"
+  },
+  {
+   "fieldname": "portal_features_section",
+   "fieldtype": "Section Break",
+   "label": "Portal"
+  },
+  {
+   "fieldname": "enable_portal",
+   "fieldtype": "Check",
+   "label": "Portal",
+   "default": "1",
+   "description": "Master switch for every /portal page."
+  },
+  {
+   "fieldname": "enable_dashboard",
+   "fieldtype": "Check",
+   "label": "Dashboard",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "enable_quotations",
+   "fieldtype": "Check",
+   "label": "Quotations",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "enable_orders",
+   "fieldtype": "Check",
+   "label": "Orders",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "enable_invoices",
+   "fieldtype": "Check",
+   "label": "Invoices",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "portal_features_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enable_statement",
+   "fieldtype": "Check",
+   "label": "Statement",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "enable_support",
+   "fieldtype": "Check",
+   "label": "Support",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "enable_claims",
+   "fieldtype": "Check",
+   "label": "Claims",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "enable_account",
+   "fieldtype": "Check",
+   "label": "Account",
+   "default": "1",
+   "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "enable_sidebar_stats",
+   "fieldtype": "Check",
+   "label": "Sidebar Stats",
+   "default": "1",
+   "depends_on": "enable_portal"
+  }
  ],
  "permissions": [
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1}
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
  ],
  "sort_field": "modified",
  "sort_order": "DESC"
