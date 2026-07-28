@@ -120,8 +120,9 @@ class TestSurfaceScale(unittest.TestCase):
 	def test_alpha_hairlines_when_border_seeds_absent(self):
 		scale = color.surface_scale((10, 10, 10), (244, 243, 239), None, None, None)
 		self.assertEqual(scale["hairline"], "rgba(10, 10, 10, 0.06)")
-		self.assertEqual(scale["hairline-strong"], "rgba(10, 10, 10, 0.12)")
 		self.assertEqual(scale["wash"], "rgba(10, 10, 10, 0.04)")
+		# must match the SCSS default so seeding ink alone shifts nothing
+		self.assertEqual(scale["hairline-strong"], "rgba(10, 10, 10, 0.16)")
 
 	def test_surface_is_a_lift_toward_white(self):
 		"""--ws-surface must sit BETWEEN canvas and white, never below canvas."""

@@ -2,15 +2,18 @@
 
 {% block style %}
 {{ super() }}
-{%- if webstore_appearance and webstore_appearance.colors %}
+{%- if webstore_font_link %}
+<link rel="stylesheet" href="{{ webstore_font_link }}">
+{%- endif %}
+{%- if webstore_tokens or webstore_custom_css %}
 <style>
 	:root {
-		--ws-accent: {{ webstore_appearance.colors.primary }};
-		--ws-accent-hover: {{ webstore_appearance.colors.primary_hover }};
-		--ws-accent-soft: {{ webstore_appearance.colors.primary_soft }};
-		--ws-accent-light: {{ webstore_appearance.colors.primary_light }};
-		--ws-accent-deep: {{ webstore_appearance.colors.primary_deep }};
-		--ws-ring: {{ webstore_appearance.colors.ring }};
+	{%- for name, value in webstore_tokens.items() %}
+		--ws-{{ name }}: {{ value }};
+	{%- endfor %}
+	{%- if webstore_custom_css %}
+		{{ webstore_custom_css }}
+	{%- endif %}
 	}
 </style>
 {%- endif %}

@@ -80,6 +80,7 @@
 	--ws-surface: #fafaf6;
 	--ws-card: #ffffff;
 	--ws-hairline: rgba(10, 10, 10, 0.06);
+	--ws-hairline-strong: rgba(10, 10, 10, 0.16);
 	--ws-wash: rgba(10, 10, 10, 0.04);
 	--ws-shadow-card: 0 1px 0 rgba(10, 10, 10, 0.04), 0 8px 32px -16px rgba(10, 10, 10, 0.1);
 	--ws-shadow-hover: 0 1px 0 rgba(10, 10, 10, 0.06), 0 24px 48px -24px rgba(10, 10, 10, 0.18);
@@ -154,8 +155,8 @@ h4, .h4 { font-size: 1.05rem; }
 a { color: var(--ws-ink); text-decoration: none; }
 a:hover { color: var(--ws-ink-4); }
 .text-muted { color: var(--ws-ink-mute) !important; }
-::selection { background: var(--ws-ink); color: var(--ws-surface); }
-:where(button, a):focus-visible { outline: 2px solid var(--ws-ink); outline-offset: 2px; }
+::selection { background: var(--ws-primary); color: var(--ws-surface); }
+:where(button, a):focus-visible { outline: 2px solid var(--ws-primary); outline-offset: 2px; }
 .page_content { padding-bottom: 4rem; }
 .ws-display { font-family: var(--ws-display); }
 .ws-sku {
@@ -224,7 +225,7 @@ a:hover { color: var(--ws-ink-4); }
 	transition: background 160ms ease, color 160ms ease;
 }
 .ws-nav > a:hover { color: var(--ws-ink) !important; background: var(--ws-wash); }
-.ws-nav > a.active { color: var(--ws-surface) !important; background: var(--ws-ink); }
+.ws-nav > a.active { color: var(--ws-surface) !important; background: var(--ws-primary); }
 .ws-cart-link { position: relative; }
 #webstore-cart-badge {
 	position: absolute;
@@ -344,10 +345,10 @@ a:hover { color: var(--ws-ink-4); }
 .btn-secondary:hover { background: rgba(10, 10, 10, 0.08) !important; border-color: transparent !important; color: var(--ws-ink) !important; }
 .btn-outline-secondary {
 	background: transparent;
-	border-color: rgba(10, 10, 10, 0.16);
+	border-color: var(--ws-hairline-strong);
 	color: var(--ws-ink);
 }
-.btn-outline-secondary:hover { background: var(--ws-ink); border-color: var(--ws-ink); color: var(--ws-surface); }
+.btn-outline-secondary:hover { background: var(--ws-primary); border-color: var(--ws-primary); color: var(--ws-surface); }
 .btn-outline-danger { background: transparent; border-color: rgba(196, 48, 43, 0.35); color: var(--ws-destructive); }
 .btn-outline-danger:hover { background: var(--ws-destructive-soft); border-color: var(--ws-destructive); color: var(--ws-destructive); }
 .btn-link { color: var(--ws-ink-mute); }
@@ -393,7 +394,7 @@ a:hover { color: var(--ws-ink-4); }
 	transition: background 160ms ease, color 160ms ease;
 }
 .ws-chip:hover { color: var(--ws-ink); }
-.ws-chip.on { background: var(--ws-ink); color: var(--ws-surface); }
+.ws-chip.on { background: var(--ws-primary); color: var(--ws-surface); }
 .ws-chip b {
 	font-size: 0.64rem;
 	font-weight: 600;
@@ -432,7 +433,7 @@ a:hover { color: var(--ws-ink-4); }
 }
 .ws-pillgroup > a:hover, .ws-pillgroup > button:hover { color: var(--ws-ink); }
 .ws-pillgroup > a.on, .ws-pillgroup > button.on {
-	background: var(--ws-ink);
+	background: var(--ws-primary);
 	color: var(--ws-surface);
 	box-shadow: 0 2px 8px rgba(10, 10, 10, 0.15);
 }
@@ -455,7 +456,7 @@ textarea.form-control { height: auto; padding: 0.7rem 1rem; border-radius: 16px;
 .form-control:focus, .ws-search input:focus {
 	outline: none;
 	background: var(--ws-card);
-	border-color: var(--ws-ink);
+	border-color: var(--ws-primary);
 	box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
 }
 .form-control::placeholder { color: var(--ws-ink-mute); }
@@ -604,7 +605,7 @@ select.form-control { border-radius: 999px; }
 	margin-bottom: 1.4rem;
 	transition: background 160ms ease, color 160ms ease;
 }
-.ws-backbtn:hover { background: var(--ws-ink); color: var(--ws-surface) !important; }
+.ws-backbtn:hover { background: var(--ws-primary); color: var(--ws-surface) !important; }
 
 /* ---------- portal shell ---------- */
 .ws-portal {
@@ -662,7 +663,7 @@ select.form-control { border-radius: 999px; }
 	font-size: 0.62rem;
 	font-weight: 600;
 	color: var(--ws-ink-4);
-	background: rgba(10, 10, 10, 0.06);
+	background: var(--ws-hairline);
 	border-radius: 99px;
 	padding: 2px 8px;
 }
@@ -720,7 +721,7 @@ select.form-control { border-radius: 999px; }
 	transition: background 160ms ease, color 160ms ease;
 	flex-shrink: 0;
 }
-.ws-side-gear:hover { background: var(--ws-ink); color: var(--ws-surface); }
+.ws-side-gear:hover { background: var(--ws-primary); color: var(--ws-surface); }
 .ws-side-gear svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
 @media (max-width: 1100px) {
 	.ws-portal { grid-template-columns: 1fr; }
@@ -1109,7 +1110,7 @@ select.form-control { border-radius: 999px; }
 	font-weight: 600;
 	font-family: var(--ws-font-sans);
 	color: var(--ws-ink-4);
-	background: rgba(10, 10, 10, 0.06);
+	background: var(--ws-hairline);
 	border-radius: 99px;
 	padding: 2px 8px;
 }
@@ -1195,7 +1196,7 @@ select.form-control { border-radius: 999px; }
 	position: absolute;
 	right: 0.8rem;
 	bottom: 0.8rem;
-	background: var(--ws-ink);
+	background: var(--ws-primary);
 	border: none;
 	border-radius: 999px;
 	font-size: 0.7rem;
@@ -1245,7 +1246,7 @@ select.form-control { border-radius: 999px; }
 	transition: color 140ms ease, background 140ms ease;
 }
 .pagination .page-link:hover { color: var(--ws-ink); }
-.pagination .page-item.active .page-link { background: var(--ws-ink); color: var(--ws-surface); box-shadow: 0 2px 8px rgba(10, 10, 10, 0.15); }
+.pagination .page-item.active .page-link { background: var(--ws-primary); color: var(--ws-surface); box-shadow: 0 2px 8px rgba(10, 10, 10, 0.15); }
 
 /* ---------- process band ---------- */
 .ws-process {
@@ -1328,7 +1329,7 @@ dialog.ws-drawer[open] .ws-drawer-panel { animation: ws-slide-in 200ms cubic-bez
 	padding: 0.3rem 0.6rem;
 	transition: background 160ms ease, color 160ms ease;
 }
-.ws-drawer-head button:hover { background: var(--ws-ink); color: var(--ws-surface); }
+.ws-drawer-head button:hover { background: var(--ws-primary); color: var(--ws-surface); }
 .ws-drawer-scroll { flex: 1; overflow-y: auto; padding: 0.5rem 1.3rem; }
 .ws-drawer-line {
 	display: grid;
@@ -1352,7 +1353,7 @@ dialog.ws-drawer[open] .ws-drawer-panel { animation: ws-slide-in 200ms cubic-bez
 	cursor: pointer;
 	transition: background 140ms ease, color 140ms ease;
 }
-.ws-step:hover { background: var(--ws-ink); color: var(--ws-surface); }
+.ws-step:hover { background: var(--ws-primary); color: var(--ws-surface); }
 .ws-step-remove:hover { background: var(--ws-destructive-soft); color: var(--ws-destructive); }
 .ws-step-qty { font-family: var(--ws-font-mono); font-size: 0.85rem; min-width: 2ch; text-align: center; }
 .ws-drawer-line-amount { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-weight: 600; font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--ws-ink); }
@@ -1453,7 +1454,7 @@ dialog.ws-palette[open] .ws-palette-panel { animation: ws-pop 150ms cubic-bezier
 	display: flex;
 	align-items: center;
 	gap: 0.6rem;
-	background: var(--ws-ink);
+	background: var(--ws-primary);
 	color: var(--ws-surface);
 	border: none;
 	border-radius: 999px;

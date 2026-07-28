@@ -17,7 +17,8 @@ INK_FAINT = 0.744
 # Alphas the shipped SCSS used as literal rgba(10, 10, 10, N).
 WASH_ALPHA = 0.04
 HAIRLINE_ALPHA = 0.06
-HAIRLINE_STRONG_ALPHA = 0.12
+# 0.16 matches the SCSS default, so seeding ink alone does not shift these borders
+HAIRLINE_STRONG_ALPHA = 0.16
 RING_ALPHA = 0.35
 
 
