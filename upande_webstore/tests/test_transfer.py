@@ -287,3 +287,129 @@ class TestPresets(IntegrationTestCase):
 		for evil in ("../../../etc/passwd", "..%2fupande", "a/b", "../upande", ".", ""):
 			with self.assertRaises(frappe.ValidationError):
 				apply_preset(evil)
+
+
+class TestPresetRendersEndToEnd(IntegrationTestCase):
+	"""Applying a preset must actually restyle the served page, not just the doc."""
+
+	def setUp(self):
+		setup_webstore_settings()
+
+	def _render_store(self):
+		from frappe.website.serve import get_response_content
+
+		return get_response_content("/store")
+
+	def _root_block(self, html):
+		import re
+
+		match = re.search(r":root \{(.*?)\n\t\}", html, re.S)
+		return match.group(1) if match else ""
+
+	def test_mona_preset_restyles_the_page(self):
+		from upande_webstore.theme.transfer import apply_preset
+
+		apply_preset("mona_flowers")
+		html = self._render_store()
+		tokens_css = self._root_block(html)
+
+		self.assertIn("--ws-accent: #1e4d8c;", tokens_css)
+		self.assertIn("--ws-primary: var(--ws-accent);", tokens_css)
+		self.assertIn("--ws-bg: #f7f8fa;", tokens_css)
+		self.assertIn("--ws-ink-mute: #878c9c;", tokens_css)
+
+		self.assertIn("mona<b>flowers</b>", html)
+		self.assertIn("Eldoret", html)
+		self.assertIn("Mona Flowers Kenya Limited", html)
+		self.assertIn("Powered by Upande", html)
+		self.assertEqual(html.count('class="ws-catcard"'), 2)
+		self.assertEqual(html.count('class="ws-hero2-stat"'), 3)
+		self.assertIn("Silver Dollar & Baby Blue", html)
+		self.assertIn("/store?category=Eucalyptus", html)
+		# navy ink means navy-tinted shadows, not black ones
+		self.assertIn("rgba(26, 26, 26,", tokens_css)
+		self.assertIn("--ws-grad-ink: linear-gradient(135deg, var(--ws-accent-deep)", tokens_css)
+
+	def test_mona_preset_hides_signup_for_guests(self):
+		from upande_webstore.theme.transfer import apply_preset
+
+		apply_preset("mona_flowers")
+		frappe.set_user("Guest")
+		try:
+			html = self._render_store()
+			self.assertNotIn('href="/signup"', html)
+			self.assertIn("Member login", html)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_upande_preset_restores_ink_and_gold(self):
+		from upande_webstore.theme.transfer import apply_preset
+
+		apply_preset("upande")
+		html = self._render_store()
+		tokens_css = self._root_block(html)
+
+		self.assertIn("--ws-accent: #d9a514;", tokens_css)
+		# ink still drives primary actions, so no remap is emitted
+		self.assertNotIn("--ws-primary:", tokens_css)
+		self.assertIn("upande<b>store</b>", html)
+		self.assertEqual(html.count('class="ws-catcard"'), 3)
+		self.assertIn("Upande Ltd.", html)
+
+	def test_clearing_seeds_removes_the_override_block_entirely(self):
+		"""The blank-site guarantee, asserted through a real render."""
+		from upande_webstore.theme.transfer import apply_preset
+
+		apply_preset("mona_flowers")
+		self.assertIn("--ws-accent", self._render_store())
+
+		setup_webstore_settings()
+		self.assertNotIn("--ws-", self._render_store())
+
+
+class TestInstallSeeding(IntegrationTestCase):
+	def setUp(self):
+		setup_webstore_settings()
+
+	def test_seeds_default_preset_on_blank_site(self):
+		from upande_webstore.setup.install import seed_default_theme
+
+		seed_default_theme()
+		settings = frappe.get_doc("Webstore Settings")
+		self.assertEqual(settings.accent, "#1e4d8c")
+		self.assertEqual(settings.wordmark_bold, "flowers")
+
+	def test_does_not_touch_a_configured_site(self):
+		"""Deploying to an existing site must never restyle it."""
+		from upande_webstore.setup.install import seed_default_theme
+
+		settings = frappe.get_doc("Webstore Settings")
+		settings.accent = "#123456"
+		settings.wordmark = "someone-else"
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
+		seed_default_theme()
+
+		settings = frappe.get_doc("Webstore Settings")
+		self.assertEqual(settings.accent, "#123456")
+		self.assertEqual(settings.wordmark, "someone-else")
+
+	def test_does_not_touch_a_site_with_its_own_cards(self):
+		from upande_webstore.setup.install import seed_default_theme
+
+		settings = frappe.get_doc("Webstore Settings")
+		settings.append("category_cards", {"label": "Roses", "category": "Roses"})
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
+		seed_default_theme()
+
+		cards = frappe.get_doc("Webstore Settings").category_cards
+		self.assertEqual([card.label for card in cards], ["Roses"])
+
+	def test_after_migrate_does_not_seed(self):
+		from upande_webstore.setup.install import after_migrate
+
+		after_migrate()
+		self.assertFalse(frappe.db.get_single_value("Webstore Settings", "accent"))

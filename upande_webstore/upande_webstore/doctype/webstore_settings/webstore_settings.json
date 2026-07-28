@@ -113,7 +113,12 @@
   "enable_support",
   "enable_claims",
   "enable_account",
-  "enable_sidebar_stats"
+  "enable_sidebar_stats",
+  "transfer_tab",
+  "preset_section",
+  "preset",
+  "transfer_section",
+  "theme_file"
  ],
  "fields": [
   {
@@ -722,6 +727,33 @@
    "label": "Sidebar Stats",
    "default": "1",
    "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "transfer_tab",
+   "fieldtype": "Tab Break",
+   "label": "Transfer"
+  },
+  {
+   "fieldname": "preset_section",
+   "fieldtype": "Section Break",
+   "label": "Shipped Presets",
+   "description": "Applying a preset overwrites every Theme, Branding and Features value."
+  },
+  {
+   "fieldname": "preset",
+   "fieldtype": "Select",
+   "label": "Preset"
+  },
+  {
+   "fieldname": "transfer_section",
+   "fieldtype": "Section Break",
+   "label": "Export / Import"
+  },
+  {
+   "fieldname": "theme_file",
+   "fieldtype": "Attach",
+   "label": "Theme JSON",
+   "description": "Attach an exported theme, then use Theme → Import Theme."
   }
  ],
  "permissions": [

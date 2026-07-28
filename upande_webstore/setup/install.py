@@ -1,4 +1,7 @@
+import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
+DEFAULT_PRESET = "mona_flowers"
 
 WEBSTORE_CUSTOM_FIELDS = {
 	"Quotation": [
@@ -39,8 +42,25 @@ def create_webstore_custom_fields():
 	create_custom_fields(WEBSTORE_CUSTOM_FIELDS, ignore_validate=True)
 
 
+def seed_default_theme():
+	"""Fresh installs get the default preset.
+
+	A site whose theme is already configured is never touched, so deploying to
+	an existing site cannot restyle it. Deliberately not called from
+	after_migrate for that reason.
+	"""
+	if frappe.db.get_single_value("Webstore Settings", "accent"):
+		return
+	if frappe.get_all("Webstore Category Card", limit=1):
+		return
+	from upande_webstore.theme.transfer import apply_preset
+
+	apply_preset(DEFAULT_PRESET)
+
+
 def after_install():
 	create_webstore_custom_fields()
+	seed_default_theme()
 
 
 def after_migrate():
