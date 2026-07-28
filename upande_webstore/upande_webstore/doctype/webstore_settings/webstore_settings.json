@@ -8,6 +8,7 @@
  "modified": "2026-07-28 00:00:01.000000",
  "owner": "Administrator",
  "field_order": [
+  "general_tab",
   "company",
   "guest_price_list",
   "default_customer_group",
@@ -122,6 +123,11 @@
   "theme_file"
  ],
  "fields": [
+  {
+   "fieldname": "general_tab",
+   "fieldtype": "Tab Break",
+   "label": "General"
+  },
   {
    "fieldname": "company",
    "fieldtype": "Link",
@@ -751,7 +757,9 @@
   {
    "fieldname": "preset",
    "fieldtype": "Select",
-   "label": "Preset"
+   "label": "Preset",
+   "options": "\nmona_flowers\nupande",
+   "description": "Shipped configurations. Apply from the Theme menu above."
   },
   {
    "fieldname": "transfer_section",

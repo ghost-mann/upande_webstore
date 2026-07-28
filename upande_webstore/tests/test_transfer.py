@@ -217,6 +217,17 @@ class TestPresets(IntegrationTestCase):
 		self.assertIn("mona_flowers", names)
 		self.assertIn("upande", names)
 
+	def test_preset_field_options_match_the_shipped_files(self):
+		"""The dropdown must be selectable without any client script, and must
+		never drift from the presets actually on disk — an empty options list is
+		what made the preset unpickable in the desk."""
+		from upande_webstore.theme.transfer import list_presets
+
+		field = frappe.get_meta("Webstore Settings").get_field("preset")
+		self.assertTrue(field.options, "preset field has no options — dropdown would be empty")
+		offered = [o for o in (field.options or "").split("\n") if o]
+		self.assertEqual(offered, list_presets())
+
 	def test_every_preset_loads_and_validates(self):
 		from upande_webstore.theme.transfer import apply_preset, list_presets
 
