@@ -23,6 +23,29 @@ def _bin_qty(item_code):
 	return float(sum(row.actual_qty or 0 for row in rows))
 
 
+def get_source_warehouse(item_code):
+	"""The configured webstore warehouse to fulfil an item from.
+
+	Availability is summed across every configured warehouse, so a direct Sales
+	Order has to name one. Picks the warehouse actually holding the most of this
+	item, falling back to the first configured one so a non-stock or zero-stock
+	item still gets a valid warehouse.
+	"""
+	warehouses = get_warehouses()
+	if not warehouses:
+		return None
+	rows = frappe.get_all(
+		"Bin",
+		filters={"item_code": item_code, "warehouse": ["in", warehouses]},
+		fields=["warehouse", "actual_qty"],
+		order_by="actual_qty desc",
+		limit=1,
+	)
+	if rows and (rows[0].actual_qty or 0) > 0:
+		return rows[0].warehouse
+	return warehouses[0]
+
+
 def get_stock_info(item_code):
 	item = frappe.get_cached_doc("Item", item_code)
 	settings = get_settings()

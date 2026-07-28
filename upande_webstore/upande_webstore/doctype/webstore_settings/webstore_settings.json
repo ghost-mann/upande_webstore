@@ -93,6 +93,7 @@
   "features_tab",
   "storefront_features_section",
   "enable_cart",
+  "enable_direct_order",
   "enable_wishlist",
   "enable_signup",
   "enable_search_palette",
@@ -595,6 +596,14 @@
    "label": "Cart & Checkout",
    "default": "1",
    "description": "Off = browse-only catalog."
+  },
+  {
+   "fieldname": "enable_direct_order",
+   "fieldtype": "Check",
+   "label": "Direct Ordering",
+   "default": "1",
+   "depends_on": "enable_cart",
+   "description": "Adds a Place order button at checkout that creates a draft Sales Order (type Shopping Cart). Off leaves quotation-only checkout."
   },
   {
    "fieldname": "enable_wishlist",

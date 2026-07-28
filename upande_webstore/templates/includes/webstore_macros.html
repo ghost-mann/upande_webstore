@@ -1,6 +1,10 @@
 {% macro status_badge(status) -%}
+{#- "Draft" is desk jargon; to the customer who just placed the order it is
+    waiting on us, so say that instead. -#}
 {%- set s = (status or "") -%}
-{%- if s in ("Paid", "Accepted", "Completed", "Delivered", "Closed", "Ordered", "Resolved") -%}
+{%- if s == "Draft" -%}
+<span class="badge badge-warning">{{ _("Awaiting confirmation") }}</span>
+{%- elif s in ("Paid", "Accepted", "Completed", "Delivered", "Closed", "Ordered", "Resolved") -%}
 <span class="badge badge-success">{{ _(s) }}</span>
 {%- elif s in ("Overdue", "Declined", "Lost", "Cancelled", "Expired") -%}
 <span class="badge badge-danger">{{ _(s) }}</span>

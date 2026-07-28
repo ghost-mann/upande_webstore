@@ -66,3 +66,162 @@ class TestCheckout(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError) as ctx:
 			checkout.place_order()
 		self.assertIn("no longer available", str(ctx.exception))
+
+	def test_quotation_is_still_the_default_mode(self):
+		"""Callers that pass no mode must keep getting a Quotation."""
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-CHK-ITEM", 1)
+		result = checkout.place_order()
+		self.assertEqual(result["doctype"], "Quotation")
+		self.assertIn("quotation", result)
+
+
+class TestDirectOrder(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-SO-ITEM")
+		make_item_price("WS-SO-ITEM", "Standard Selling", 40)
+		make_portal_user("direct.buyer@example.com", "Direct Buyer")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		setup_webstore_settings()
+		frappe.db.delete("Webstore Cart", {"user": "direct.buyer@example.com"})
+		set_stock("WS-SO-ITEM", 20)
+		frappe.set_user("direct.buyer@example.com")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_creates_draft_sales_order_of_type_shopping_cart(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 4)
+		result = checkout.place_order(po_reference="PO-CREATE", notes="Gate 3", mode="order")
+
+		self.assertEqual(result["doctype"], "Sales Order")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		self.assertEqual(order.docstatus, 0, "must be left as a draft for the sales team")
+		self.assertEqual(order.order_type, "Shopping Cart")
+		self.assertEqual(order.customer, "Direct Buyer")
+		self.assertEqual(order.items[0].item_code, "WS-SO-ITEM")
+		self.assertEqual(order.items[0].qty, 4)
+		self.assertEqual(order.items[0].rate, 40)
+
+	def test_po_reference_and_notes_survive(self):
+		"""Sales Order has no customer_po_reference field — the PO must land in
+		the standard po_no, and the notes in the custom webstore_notes."""
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 1)
+		result = checkout.place_order(po_reference="PO-NOTES", notes="Gate 3", mode="order")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		self.assertEqual(order.po_no, "PO-NOTES")
+		self.assertEqual(order.webstore_notes, "Gate 3")
+
+	def test_delivery_date_is_set(self):
+		from frappe.utils import add_days, nowdate
+
+		from upande_webstore.api import cart, checkout
+		from upande_webstore.api.checkout import DEFAULT_DELIVERY_DAYS
+
+		cart.add_item("WS-SO-ITEM", 1)
+		result = checkout.place_order(mode="order")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		expected = add_days(nowdate(), DEFAULT_DELIVERY_DAYS)
+		self.assertEqual(str(order.delivery_date), expected)
+
+	def test_cart_records_the_sales_order_not_a_quotation(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 2)
+		result = checkout.place_order(mode="order")
+		row = frappe.get_all(
+			"Webstore Cart",
+			{"user": "direct.buyer@example.com"},
+			["status", "quotation", "sales_order"],
+		)[0]
+		self.assertEqual(row.status, "Ordered")
+		self.assertEqual(row.sales_order, result["sales_order"])
+		self.assertFalse(row.quotation)
+
+	def test_stock_revalidated_for_direct_orders_too(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 5)
+		frappe.set_user("Administrator")
+		set_stock("WS-SO-ITEM", 1)
+		frappe.set_user("direct.buyer@example.com")
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			checkout.place_order(mode="order")
+		self.assertIn("no longer available", str(ctx.exception))
+
+	def test_unknown_mode_rejected(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 1)
+		with self.assertRaises(frappe.ValidationError):
+			checkout.place_order(mode="invoice")
+
+	def test_blocked_when_direct_ordering_disabled(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 1)
+		frappe.set_user("Administrator")
+		settings = frappe.get_doc("Webstore Settings")
+		settings.enable_direct_order = 0
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		frappe.set_user("direct.buyer@example.com")
+		with self.assertRaises(frappe.PermissionError):
+			checkout.place_order(mode="order")
+
+	def test_duplicate_po_reference_is_rejected(self):
+		"""ERPNext refuses a second Sales Order against the same customer PO
+		number, which usefully stops a customer double-ordering. Pinned here so
+		the behaviour is visible rather than surprising."""
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 1)
+		checkout.place_order(po_reference="PO-DUPLICATE", mode="order")
+
+		frappe.set_user("Administrator")
+		frappe.db.delete("Webstore Cart", {"user": "direct.buyer@example.com"})
+		frappe.set_user("direct.buyer@example.com")
+		cart.add_item("WS-SO-ITEM", 1)
+		with self.assertRaises(frappe.ValidationError):
+			checkout.place_order(po_reference="PO-DUPLICATE", mode="order")
+
+	def test_blank_po_reference_allows_repeat_orders(self):
+		"""Most customers do not supply a PO, and they must still be able to
+		order more than once."""
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-SO-ITEM", 1)
+		first = checkout.place_order(mode="order")
+
+		frappe.set_user("Administrator")
+		frappe.db.delete("Webstore Cart", {"user": "direct.buyer@example.com"})
+		frappe.set_user("direct.buyer@example.com")
+		cart.add_item("WS-SO-ITEM", 1)
+		second = checkout.place_order(mode="order")
+		self.assertNotEqual(first["sales_order"], second["sales_order"])
+
+	def test_draft_order_is_visible_to_the_customer_who_placed_it(self):
+		"""A draft Sales Order the customer created must appear in their portal —
+		otherwise their own order is invisible until the team submits it."""
+		from upande_webstore.api import cart, checkout
+		from upande_webstore.services.portal import get_customer_docs
+
+		cart.add_item("WS-SO-ITEM", 1)
+		result = checkout.place_order(mode="order")
+		names = [
+			row.name
+			for row in get_customer_docs(
+				"Sales Order", ["name"], "customer", filters={"docstatus": ["<", 2]}, limit=50
+			)
+		]
+		self.assertIn(result["sales_order"], names)

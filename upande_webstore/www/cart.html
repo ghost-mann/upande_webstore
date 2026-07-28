@@ -10,8 +10,8 @@
 </div>
 <div id="webstore-checkout-done" class="d-none">
 	<div class="alert alert-success">
-		{{ _("Quotation requested! Our team will review it shortly.") }}
-		<a id="webstore-quotation-link" href="/portal/quotations">{{ _("View your quotations") }}</a>
+		<span id="webstore-checkout-message"></span>
+		<a id="webstore-checkout-link" href="/portal/quotations"></a>
 	</div>
 </div>
 <div id="webstore-cart-wrapper">
@@ -40,7 +40,7 @@
 
 	<div>
 		<div class="ws-panel" style="position:sticky;top:82px">
-			<div class="ws-panel-head"><h3>{{ _("Request a quotation") }}</h3></div>
+			<div class="ws-panel-head"><h3>{% if webstore_features.direct_order %}{{ _("Checkout") }}{% else %}{{ _("Request a quotation") }}{% endif %}</h3></div>
 			<form id="webstore-checkout-form" onsubmit="return false;">
 				<div class="form-group">
 					<label>{{ _("Delivery address") }}</label>
@@ -56,8 +56,13 @@
 					<input type="text" class="form-control" id="webstore-po"></div>
 				<div class="form-group"><label>{{ _("Notes (optional)") }}</label>
 					<textarea class="form-control" id="webstore-notes" rows="2"></textarea></div>
-				<button class="btn btn-primary btn-block" id="webstore-place-order" style="width:100%">{{ _("Request quotation") }}</button>
+				<button class="btn btn-primary btn-block" id="webstore-place-order" data-mode="quotation" style="width:100%">{{ _("Create quotation") }}</button>
+				{% if webstore_features.direct_order %}
+				<button class="btn btn-secondary btn-block" id="webstore-create-order" data-mode="order" style="width:100%;margin-top:.5rem">{{ _("Make a sales order") }}</button>
+				<p class="text-muted" style="font-size:.75rem;margin:.8rem 0 0">{{ _("A quotation gets pricing, availability and freight confirmed before you commit. A sales order goes straight to our team as an order. No payment is taken online either way.") }}</p>
+				{% else %}
 				<p class="text-muted" style="font-size:.75rem;margin:.8rem 0 0">{{ _("Our team confirms pricing, availability and freight within 24 hours — you accept online, payment is arranged offline.") }}</p>
+				{% endif %}
 			</form>
 		</div>
 	</div>
@@ -79,21 +84,31 @@ document.addEventListener("click", async (e) => {
 		await window.webstore.call("upande_webstore.api.cart.remove_item", { item_code: e.target.dataset.item });
 		window.location.reload();
 	}
-	if (e.target.id === "webstore-place-order") {
-		e.target.disabled = true;
+	if (e.target.id === "webstore-place-order" || e.target.id === "webstore-create-order") {
+		const buttons = document.querySelectorAll("#webstore-place-order, #webstore-create-order");
+		buttons.forEach((b) => (b.disabled = true));
 		try {
 			const result = await window.webstore.call("upande_webstore.api.checkout.place_order", {
 				address_name: document.getElementById("webstore-address").value || null,
 				po_reference: document.getElementById("webstore-po").value || null,
 				notes: document.getElementById("webstore-notes").value || null,
+				mode: e.target.dataset.mode,
 			});
+			const ordered = result.doctype === "Sales Order";
+			document.getElementById("webstore-checkout-message").textContent = ordered
+				? "{{ _('Order placed. Our team will confirm it shortly.') }}"
+				: "{{ _('Quotation requested! Our team will review it shortly.') }}";
+			const link = document.getElementById("webstore-checkout-link");
+			link.textContent = ordered ? "{{ _('View your orders') }}" : "{{ _('View your quotations') }}";
+			link.href = ordered
+				? "/portal/order?name=" + encodeURIComponent(result.name)
+				: "/portal/quotation?name=" + encodeURIComponent(result.name);
 			document.getElementById("webstore-cart-wrapper").classList.add("d-none");
 			document.getElementById("webstore-checkout-done").classList.remove("d-none");
-			document.getElementById("webstore-quotation-link").href = "/portal/quotation?name=" + encodeURIComponent(result.quotation);
 			window.webstore.refreshCartBadge();
 		} catch (err) {
 			window.webstore.toast(err.message, true);
-			e.target.disabled = false;
+			buttons.forEach((b) => (b.disabled = false));
 		}
 	}
 });

@@ -34,7 +34,25 @@ WEBSTORE_CUSTOM_FIELDS = {
 			"insert_after": "webstore_notes",
 			"read_only": 1,
 		},
-	]
+	],
+	# Direct webstore orders carry the customer's notes too. The PO reference
+	# uses Sales Order's own standard po_no field rather than a custom one.
+	"Sales Order": [
+		{
+			"fieldname": "webstore_section",
+			"fieldtype": "Section Break",
+			"label": "Webstore",
+			"insert_after": "order_type",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "webstore_notes",
+			"fieldtype": "Small Text",
+			"label": "Webstore Notes",
+			"insert_after": "webstore_section",
+			"read_only": 1,
+		},
+	],
 }
 
 

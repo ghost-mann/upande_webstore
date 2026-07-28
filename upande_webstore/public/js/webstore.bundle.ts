@@ -107,7 +107,7 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 			</div>`).join("");
 		foot.innerHTML = `
 			<div class="ws-drawer-total"><span>Subtotal</span><strong>${money(cart.total, cart.currency)}</strong></div>
-			<a href="/cart" class="ws-drawer-checkout">Review &amp; request quotation →</a>`;
+			<a href="/cart" class="ws-drawer-checkout">Checkout →</a>`;
 	}
 
 	async function openCart(): Promise<void> {
