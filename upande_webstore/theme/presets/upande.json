@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "fields": {
+    "accent": "#d9a514",
+    "accent_dark": "#a87d0d",
+    "accent_soft": "#f7edcd",
+    "accent_drives_primary": 0,
+    "ink": "#0a0a0a",
+    "ink_muted": "#8a8780",
+    "canvas": "#f4f3ef",
+    "success": "#3f8f4f",
+    "warning": "#96650f",
+    "danger": "#c4302b",
+    "info": "#228883",
+    "site_name": "Upande Store",
+    "wordmark": "upande",
+    "wordmark_bold": "store",
+    "wordmark_subtitle": "Store & Customer Portal",
+    "hero_eyebrow": "Upande · Nairobi · Est. for growers",
+    "hero_heading": "The harvest,",
+    "hero_heading_em": "straight from the farm gate",
+    "hero_body": "Export-grade flowers, coffee and fresh produce from Kenyan growers — wholesale quantities, quotation-first ordering, cold chain to your door.",
+    "hero_cta_primary": "Browse the catalog",
+    "hero_cta_secondary_guest": "Open a trade account",
+    "hero_cta_secondary_member": "Go to your portal",
+    "footer_tagline": "Export-grade flowers, coffee and fresh produce from Kenyan growers — ordered online, confirmed by people who know the farms.",
+    "footer_contact_email": "sales@upande.com",
+    "footer_hours": "Mon–Sat, 07:00–17:00 EAT",
+    "footer_location": "Nairobi, Kenya",
+    "footer_website": "https://upande.com",
+    "footer_copyright": "Upande Ltd.",
+    "footer_note": "Quotation-first ordering · No payment taken online",
+    "portal_eyebrow": "Upande Store · Customer Portal"
+  },
+  "tables": {
+    "hero_stats": [
+      {"value": "40+", "label": "partner growers"},
+      {"value": "24h", "label": "quotation turnaround"},
+      {"value": "4°C", "label": "cold chain, farm to door"}
+    ],
+    "category_cards": [
+      {"label": "Flowers", "subtitle": "Roses, lilies & fillers", "category": "Flowers", "image": "/assets/upande_webstore/images/site/cat-flowers.jpg"},
+      {"label": "Coffee", "subtitle": "AA & specialty grades", "category": "Coffee", "image": "/assets/upande_webstore/images/site/cat-coffee.jpg"},
+      {"label": "Fresh Produce", "subtitle": "Avocado & vegetables", "category": "Fresh Produce", "image": "/assets/upande_webstore/images/site/cat-produce.jpg"}
+    ],
+    "footer_links": [
+      {"column": "Shop", "label": "All products", "url": "/store"},
+      {"column": "Shop", "label": "Flowers", "url": "/store?category=Flowers"},
+      {"column": "Shop", "label": "Coffee", "url": "/store?category=Coffee"},
+      {"column": "Shop", "label": "Fresh Produce", "url": "/store?category=Fresh%20Produce"},
+      {"column": "Account", "label": "Customer portal", "url": "/portal"},
+      {"column": "Account", "label": "Quotations", "url": "/portal/quotations"},
+      {"column": "Account", "label": "Claims", "url": "/portal/claims"},
+      {"column": "Account", "label": "Team desk", "url": "/app"}
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "fields": {
+    "accent": "#1e4d8c",
+    "accent_dark": "#143562",
+    "accent_soft": "#e8f0fb",
+    "accent_drives_primary": 1,
+    "ink": "#1a1a1a",
+    "ink_muted": "#878c9c",
+    "canvas": "#f7f8fa",
+    "wash": "#eef0f4",
+    "border": "#e2e6ed",
+    "border_strong": "#c5cbd6",
+    "success": "#2d6a4f",
+    "warning": "#9a6700",
+    "danger": "#b42318",
+    "info": "#175cd3",
+    "site_name": "Mona Flowers",
+    "wordmark": "mona",
+    "wordmark_bold": "flowers",
+    "wordmark_subtitle": "Store & Customer Portal",
+    "brand_logo": "/files/Mona-Flowers-Main-Logo.png",
+    "hero_eyebrow": "Mona Flowers · Eldoret, Kenya",
+    "hero_heading": "Graded roses,",
+    "hero_heading_em": "cut to order, cooled in hours",
+    "hero_body": "Export-grade roses and eucalyptus from our Eldoret farm — 45+ varieties, 40 to 120cm, quotation-first ordering with cold chain to Nairobi, the Gulf and beyond.",
+    "hero_cta_primary": "Browse varieties",
+    "hero_cta_secondary_guest": "Open a trade account",
+    "hero_cta_secondary_member": "Go to your portal",
+    "footer_tagline": "Export-grade roses and eucalyptus, grown in Eldoret and graded by stem length — ordered online, confirmed by people who know the farm.",
+    "footer_contact_email": "sales@monaflowers.co.ke",
+    "footer_hours": "Mon–Sat, 07:00–17:00 EAT",
+    "footer_location": "P.O. Box 2707-30100, Eldoret, Kenya",
+    "footer_website": "https://upande.com",
+    "footer_copyright": "Mona Flowers Kenya Limited",
+    "footer_note": "Powered by Upande",
+    "portal_eyebrow": "Mona Flowers · Customer Portal",
+    "enable_signup": 0
+  },
+  "tables": {
+    "hero_stats": [
+      {"value": "45+", "label": "rose varieties"},
+      {"value": "40–120cm", "label": "stem grades"},
+      {"value": "3", "label": "continents shipped"}
+    ],
+    "category_cards": [
+      {"label": "Roses", "subtitle": "45+ varieties, 40–120cm", "category": "Roses"},
+      {"label": "Eucalyptus", "subtitle": "Silver Dollar & Baby Blue", "category": "Eucalyptus"}
+    ],
+    "footer_links": [
+      {"column": "Shop", "label": "All products", "url": "/store"},
+      {"column": "Shop", "label": "Roses", "url": "/store?category=Roses"},
+      {"column": "Shop", "label": "Eucalyptus", "url": "/store?category=Eucalyptus"},
+      {"column": "Account", "label": "Customer portal", "url": "/portal"},
+      {"column": "Account", "label": "Quotations", "url": "/portal/quotations"},
+      {"column": "Account", "label": "Claims", "url": "/portal/claims"}
+    ]
+  }
+}
