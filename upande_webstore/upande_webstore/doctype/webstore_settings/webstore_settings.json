@@ -7,7 +7,7 @@
  "creation": "2026-07-20 00:00:01.000000",
  "modified": "2026-07-28 00:00:01.000000",
  "owner": "Administrator",
- "field_order": ["company", "guest_price_list", "default_customer_group", "default_territory", "quotation_validity_days", "stock_display", "notification_emails", "warehouses", "theme_tab", "brand_colors_section", "accent", "accent_dark", "accent_soft", "accent_drives_primary", "neutral_cb", "ink", "ink_muted", "canvas", "wash", "border", "border_strong", "status_colors_section", "success", "warning", "status_cb", "danger", "info", "typography_section", "font_sans", "font_sans_name", "font_display", "font_display_name", "font_cb", "font_mono", "font_mono_name", "google_fonts_url", "shape_section", "radius", "radius_card", "radius_panel", "advanced_section", "custom_css", "primary_color", "appearance_tab", "brand_logo", "hero_image", "category_images_section", "flowers_category_image", "coffee_category_image", "produce_category_image"],
+ "field_order": ["company", "guest_price_list", "default_customer_group", "default_territory", "quotation_validity_days", "stock_display", "notification_emails", "warehouses", "theme_tab", "brand_colors_section", "accent", "accent_dark", "accent_soft", "accent_drives_primary", "neutral_cb", "ink", "ink_muted", "canvas", "wash", "border", "border_strong", "status_colors_section", "success", "warning", "status_cb", "danger", "info", "typography_section", "font_sans", "font_sans_name", "font_display", "font_display_name", "font_cb", "font_mono", "font_mono_name", "google_fonts_url", "shape_section", "radius", "radius_card", "radius_panel", "advanced_section", "custom_css", "primary_color", "appearance_tab", "brand_logo", "hero_image", "category_images_section", "flowers_category_image", "coffee_category_image", "produce_category_image", "features_tab", "storefront_features_section", "enable_cart", "enable_wishlist", "enable_signup", "enable_search_palette", "enable_cart_drawer", "storefront_features_cb", "enable_hero", "enable_hero_stats", "enable_category_cards", "enable_footer", "portal_features_section", "enable_portal", "enable_dashboard", "enable_quotations", "enable_orders", "enable_invoices", "portal_features_cb", "enable_statement", "enable_support", "enable_claims", "enable_account", "enable_sidebar_stats"],
  "fields": [
   {"fieldname": "company", "fieldtype": "Link", "label": "Company", "options": "Company", "reqd": 1},
   {"fieldname": "guest_price_list", "fieldtype": "Link", "label": "Guest Price List", "options": "Price List", "reqd": 1},
@@ -64,7 +64,33 @@
   {"fieldname": "category_images_section", "fieldtype": "Section Break", "label": "Category Card Images (legacy)"},
   {"fieldname": "flowers_category_image", "fieldtype": "Attach Image", "label": "Flowers Card Image"},
   {"fieldname": "coffee_category_image", "fieldtype": "Attach Image", "label": "Coffee Card Image"},
-  {"fieldname": "produce_category_image", "fieldtype": "Attach Image", "label": "Fresh Produce Card Image"}
+  {"fieldname": "produce_category_image", "fieldtype": "Attach Image", "label": "Fresh Produce Card Image"},
+
+  {"fieldname": "features_tab", "fieldtype": "Tab Break", "label": "Features"},
+  {"fieldname": "storefront_features_section", "fieldtype": "Section Break", "label": "Storefront", "description": "Unticking hides the UI, 404s the route and rejects the API."},
+  {"fieldname": "enable_cart", "fieldtype": "Check", "label": "Cart & Checkout", "default": "1", "description": "Off = browse-only catalog."},
+  {"fieldname": "enable_wishlist", "fieldtype": "Check", "label": "Wishlist", "default": "1"},
+  {"fieldname": "enable_signup", "fieldtype": "Check", "label": "Signup", "default": "1"},
+  {"fieldname": "enable_search_palette", "fieldtype": "Check", "label": "Search Palette (⌘K)", "default": "1"},
+  {"fieldname": "enable_cart_drawer", "fieldtype": "Check", "label": "Cart Drawer", "default": "1", "depends_on": "enable_cart"},
+  {"fieldname": "storefront_features_cb", "fieldtype": "Column Break"},
+  {"fieldname": "enable_hero", "fieldtype": "Check", "label": "Hero", "default": "1"},
+  {"fieldname": "enable_hero_stats", "fieldtype": "Check", "label": "Hero Stats", "default": "1"},
+  {"fieldname": "enable_category_cards", "fieldtype": "Check", "label": "Category Cards", "default": "1"},
+  {"fieldname": "enable_footer", "fieldtype": "Check", "label": "Footer", "default": "1"},
+
+  {"fieldname": "portal_features_section", "fieldtype": "Section Break", "label": "Portal"},
+  {"fieldname": "enable_portal", "fieldtype": "Check", "label": "Portal", "default": "1", "description": "Master switch for every /portal page."},
+  {"fieldname": "enable_dashboard", "fieldtype": "Check", "label": "Dashboard", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "enable_quotations", "fieldtype": "Check", "label": "Quotations", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "enable_orders", "fieldtype": "Check", "label": "Orders", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "enable_invoices", "fieldtype": "Check", "label": "Invoices", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "portal_features_cb", "fieldtype": "Column Break"},
+  {"fieldname": "enable_statement", "fieldtype": "Check", "label": "Statement", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "enable_support", "fieldtype": "Check", "label": "Support", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "enable_claims", "fieldtype": "Check", "label": "Claims", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "enable_account", "fieldtype": "Check", "label": "Account", "default": "1", "depends_on": "enable_portal"},
+  {"fieldname": "enable_sidebar_stats", "fieldtype": "Check", "label": "Sidebar Stats", "default": "1", "depends_on": "enable_portal"}
  ],
  "permissions": [
   {"role": "System Manager", "read": 1, "write": 1, "create": 1}

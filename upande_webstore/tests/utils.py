@@ -19,6 +19,10 @@ def setup_webstore_settings():
 		"primary_color",
 	):
 		settings.set(field, "")
+	from upande_webstore.theme.features import FEATURES
+
+	for feature in FEATURES:
+		settings.set(feature.fieldname, 1)
 	settings.set("warehouses", [])
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
 	settings.save(ignore_permissions=True)

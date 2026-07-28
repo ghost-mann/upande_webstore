@@ -8,6 +8,12 @@ from upande_webstore.theme import fonts
 class WebstoreSettings(Document):
 	def validate(self):
 		self.validate_font_url()
+		self.apply_feature_dependencies()
+
+	def apply_feature_dependencies(self):
+		# the drawer has nothing to show without a cart
+		if not self.enable_cart and self.enable_cart_drawer:
+			self.enable_cart_drawer = 0
 
 	def validate_font_url(self):
 		url = (self.google_fonts_url or "").strip()
