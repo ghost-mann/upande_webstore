@@ -1,32 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from upande_webstore.tests.utils import setup_webstore_settings
-
-
-def reset_portal_settings():
-	doc = frappe.get_doc("Webstore Portal Settings")
-	for fieldname in (
-		"landing_page",
-		"welcome_note",
-		"support_note",
-		"spend_months",
-		"recent_orders_count",
-		"top_items_count",
-		"statement_default_days",
-		"max_attachment_mb",
-	):
-		doc.set(fieldname, None)
-	doc.quotation_accept_requires_po = 0
-	doc.require_claim_document = 0
-	doc.allow_invoice_pdf = 1
-	doc.allow_claim_attachments = 1
-	doc.allow_profile_edit = 1
-	doc.allow_address_edit = 1
-	doc.set("claim_types", [])
-	doc.save(ignore_permissions=True)
-	frappe.clear_cache()
-	return doc
+from upande_webstore.tests.utils import reset_portal_settings, setup_webstore_settings
 
 
 def set_portal(**values):

@@ -39,8 +39,46 @@ def setup_webstore_settings():
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
 
 	settings.save(ignore_permissions=True)
+	reset_portal_settings()
 	frappe.clear_cache()
 	return settings
+
+
+PORTAL_SETTING_DEFAULTS = {
+	"landing_page": "Dashboard",
+	"welcome_note": "",
+	"support_note": "",
+	"spend_months": 0,
+	"recent_orders_count": 0,
+	"top_items_count": 0,
+	"statement_default_days": 0,
+	"max_attachment_mb": 0,
+	"quotation_accept_requires_po": 0,
+	"allow_invoice_pdf": 1,
+	"require_claim_document": 0,
+	"allow_claim_attachments": 1,
+	"allow_profile_edit": 1,
+	"allow_address_edit": 1,
+}
+
+
+def reset_portal_settings():
+	"""Webstore Portal Settings is a second Single, so it leaks across test
+	modules exactly like Webstore Settings does — require_claim_document set by
+	one module used to break claim tests in another.
+
+	Written column-by-column rather than through a full doc save: this runs in
+	every setUp, and repeated Single saves contend for the same tabSingles row.
+	"""
+	if not frappe.db.exists("DocType", "Webstore Portal Settings"):
+		return
+	for fieldname, value in PORTAL_SETTING_DEFAULTS.items():
+		frappe.db.set_single_value("Webstore Portal Settings", fieldname, value)
+	frappe.db.delete(
+		"Webstore Claim Type",
+		{"parent": "Webstore Portal Settings", "parentfield": "claim_types"},
+	)
+	frappe.clear_cache(doctype="Webstore Portal Settings")
 
 
 def get_default_warehouse():

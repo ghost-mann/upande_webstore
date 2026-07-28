@@ -268,6 +268,16 @@ a:hover { color: var(--ws-ink-4); }
 	transition: box-shadow 160ms ease, transform 80ms ease;
 }
 .ws-member-btn:hover { color: var(--ws-on-accent) !important; box-shadow: 0 6px 18px rgba(10, 10, 10, 0.26); }
+/* `.ws-nav > a` sets a grey with !important and, being more specific than a bare
+   `.ws-member-btn`, was winning the cascade and greying out the CTA text. These
+   selectors outrank it so the derived pure black/white actually applies. */
+.ws-nav > a.ws-member-btn,
+.ws-nav > a.ws-member-btn:hover,
+.ws-nav > a.ws-member-btn:focus,
+.ws-nav > a.ws-avatar,
+.ws-nav > a.ws-avatar:hover {
+	color: var(--ws-on-accent) !important;
+}
 .ws-avatar {
 	width: 32px;
 	height: 32px;
