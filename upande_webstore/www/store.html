@@ -33,7 +33,9 @@
 {% endmacro %}
 
 {% block hero %}
+{% if webstore_features.hero or webstore_features.category_cards %}
 <div class="container ws-storefront-band">
+	{% if webstore_features.hero %}
 	<div class="ws-hero2">
 		<div class="ws-hero2-bg"><img src="{{ webstore_appearance.hero_image or '/assets/upande_webstore/images/site/hero.jpg' }}" alt=""></div>
 		<div class="ws-hero2-inner">
@@ -43,19 +45,27 @@
 			<div class="ws-hero2-actions rv rv-2 in">
 				<a href="#catalog" class="btn btn-primary">{{ _("Browse the catalog") }}</a>
 				{% if frappe.session.user == "Guest" %}
-				<a href="/signup" class="btn btn-hero-ghost">{{ _("Open a trade account") }}</a>
-				{% else %}
+					{% if webstore_features.signup %}
+					<a href="/signup" class="btn btn-hero-ghost">{{ _("Open a trade account") }}</a>
+					{% else %}
+					<a href="/login" class="btn btn-hero-ghost">{{ _("Member login") }}</a>
+					{% endif %}
+				{% elif webstore_features.portal %}
 				<a href="/portal" class="btn btn-hero-ghost">{{ _("Go to your portal") }}</a>
 				{% endif %}
 			</div>
+			{% if webstore_features.hero_stats %}
 			<div class="ws-hero2-stats rv rv-3 in">
 				<div class="ws-hero2-stat"><b>40+</b><span>{{ _("partner growers") }}</span></div>
 				<div class="ws-hero2-stat"><b>24h</b><span>{{ _("quotation turnaround") }}</span></div>
 				<div class="ws-hero2-stat"><b>4°C</b><span>{{ _("cold chain, farm to door") }}</span></div>
 			</div>
+			{% endif %}
 		</div>
 	</div>
+	{% endif %}
 
+	{% if webstore_features.category_cards %}
 	<div class="ws-cats">
 		<span class="ws-eyebrow rv">{{ _("What we grow") }}</span>
 		<div class="row mt-3">
@@ -82,7 +92,9 @@
 			</div>
 		</div>
 	</div>
+	{% endif %}
 </div>
+{% endif %}
 {% endblock %}
 
 {% block page_content %}

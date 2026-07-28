@@ -16,7 +16,7 @@
 		<div class="ws-panel" style="margin-bottom:0">
 			<span class="ws-eyebrow">{{ item }}</span>
 			<h1 class="ws-pagehead-title" style="font-size:clamp(1.6rem,2.8vw,2.3rem);margin-top:.5rem">{{ web_title }}
-				<button class="ws-iconbtn" style="box-shadow:none;background:var(--ws-wash)" data-webstore-wishlist-toggle="{{ name }}" title="{{ _('Save to wishlist') }}" aria-label="{{ _('Save to wishlist') }}">♥</button>
+				{% if webstore_features.wishlist %}<button class="ws-iconbtn" style="box-shadow:none;background:var(--ws-wash)" data-webstore-wishlist-toggle="{{ name }}" title="{{ _('Save to wishlist') }}" aria-label="{{ _('Save to wishlist') }}">♥</button>{% endif %}
 			</h1>
 			<p class="text-muted">{{ short_description or "" }}</p>
 
@@ -32,7 +32,7 @@
 			{% endfor %}
 			<p id="webstore-variant-price" class="ws-price h4"></p>
 			<p id="webstore-variant-stock" class="ws-stock"></p>
-			<button class="btn btn-primary" id="webstore-variant-add" disabled>{{ _("Add to cart") }}</button>
+			{% if webstore_features.cart %}<button class="btn btn-primary" id="webstore-variant-add" disabled>{{ _("Add to cart") }}</button>{% endif %}
 			{% else %}
 			<p class="ws-price h3 mb-2" style="font-size:1.5rem">
 				{{ frappe.utils.fmt_money(price.rate, currency=price.currency) }}
@@ -40,13 +40,15 @@
 			</p>
 			{% if stock.in_stock %}
 			<p><span class="ws-stock in"><span class="ws-led"></span>{{ _("In stock") }}{% if stock.show_qty %} · {{ stock.qty | int }} {{ _("available") }}{% endif %}</span></p>
+			{% if webstore_features.cart %}
 			<div class="form-inline mb-3">
 				<input type="number" min="1" value="1" class="form-control mr-2" id="webstore-qty" style="width:90px" aria-label="{{ _('Quantity') }}">
 				<button class="btn btn-primary" data-webstore-add-to-cart="{{ item }}">{{ _("Add to cart") }}</button>
 			</div>
+			{% endif %}
 			{% else %}
 			<p><span class="ws-stock out"><span class="ws-led"></span>{{ _("Out of stock") }}</span></p>
-			<button class="btn btn-primary" disabled>{{ _("Out of stock") }}</button>
+			{% if webstore_features.cart %}<button class="btn btn-primary" disabled>{{ _("Out of stock") }}</button>{% endif %}
 			{% endif %}
 			{% endif %}
 

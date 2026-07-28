@@ -275,3 +275,68 @@ class TestApiEnforcement(IntegrationTestCase):
 		set_flag("enable_portal", 0)
 		with self.assertRaises(frappe.PermissionError):
 			accept_quotation("QTN-0001")
+
+
+class TestTemplateGating(IntegrationTestCase):
+	def setUp(self):
+		setup_webstore_settings()
+
+	def _render_store(self):
+		from frappe.website.serve import get_response_content
+
+		return get_response_content("/store")
+
+	def test_everything_present_by_default(self):
+		content = self._render_store()
+		self.assertIn("ws-hero2-inner", content)
+		self.assertIn("ws-catcard", content)
+		self.assertIn("ws-footer-grid", content)
+		self.assertIn("ws-search-trigger", content)
+
+	def test_hero_hidden_when_off(self):
+		set_flag("enable_hero", 0)
+		self.assertNotIn("ws-hero2-inner", self._render_store())
+
+	def test_hero_stats_hidden_when_off(self):
+		set_flag("enable_hero_stats", 0)
+		self.assertNotIn("ws-hero2-stats", self._render_store())
+
+	def test_category_cards_hidden_when_off(self):
+		set_flag("enable_category_cards", 0)
+		self.assertNotIn("ws-catcard", self._render_store())
+
+	def test_storefront_band_gone_when_both_hero_and_cards_off(self):
+		"""The band container must not render as an empty shell."""
+		settings = frappe.get_doc("Webstore Settings")
+		settings.enable_hero = 0
+		settings.enable_category_cards = 0
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		self.assertNotIn("ws-storefront-band", self._render_store())
+
+	def test_footer_hidden_when_off(self):
+		set_flag("enable_footer", 0)
+		self.assertNotIn("ws-footer-grid", self._render_store())
+
+	def test_search_palette_hidden_when_off(self):
+		set_flag("enable_search_palette", 0)
+		content = self._render_store()
+		self.assertNotIn("ws-search-trigger", content)
+		self.assertNotIn('id="ws-palette"', content)
+
+	def test_cart_drawer_gone_when_cart_off(self):
+		set_flag("enable_cart", 0)
+		content = self._render_store()
+		self.assertNotIn('id="ws-cart-drawer"', content)
+		self.assertNotIn("ws-cart-link", content)
+
+	def test_signup_cta_falls_back_to_login(self):
+		"""With signup off the hero must not link guests to a 404."""
+		set_flag("enable_signup", 0)
+		frappe.set_user("Guest")
+		try:
+			content = self._render_store()
+			self.assertNotIn('href="/signup"', content)
+			self.assertIn("Member login", content)
+		finally:
+			frappe.set_user("Administrator")

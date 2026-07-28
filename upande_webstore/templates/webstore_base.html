@@ -27,23 +27,35 @@
 			<span data-sub="{{ _('Store & Customer Portal') }}">upande<b>store</b></span>
 		</a>
 		<div class="ws-nav">
+			{% if webstore_features.search_palette %}
 			<button type="button" class="ws-search-trigger" data-ws-palette aria-label="{{ _('Search products') }}">
 				<span>{{ _("Search products…") }}</span><kbd>⌘K</kbd>
 			</button>
+			{% endif %}
 			<a href="/store" class="{{ 'active' if pathname and pathname.startswith('store') else '' }}">{{ _("Store") }}</a>
 			{% if frappe.session.user != "Guest" %}
+			{% if webstore_features.wishlist %}
 			<a href="/wishlist" class="{{ 'active' if pathname and pathname.startswith('wishlist') else '' }}">{{ _("Wishlist") }}</a>
+			{% endif %}
 			<a href="#" data-webstore-logout>{{ _("Log out") }}</a>
+			{% if webstore_features.cart %}
 			<a href="/cart" class="ws-cart-link" data-ws-cart-drawer>{{ _("Basket") }}<span id="webstore-cart-badge"></span></a>
+			{% endif %}
+			{% if webstore_features.portal %}
 			{% if path and path.startswith("portal") %}
 			<a href="/store" class="ws-member-btn">{{ _("Store") }}</a>
 			{% else %}
 			<a href="/portal" class="ws-member-btn">{{ _("My Portal") }}</a>
 			{% endif %}
+			{% if webstore_features.account %}
 			<a href="/portal/account" class="ws-avatar" title="{{ _('Account') }}">{{ (frappe.session.user or "U")[0] | upper }}</a>
+			{% endif %}
+			{% endif %}
 			{% else %}
+			{% if webstore_features.signup %}
 			<a href="/signup">{{ _("Sign up") }}</a>
-			<a href="/login?redirect-to=/portal" class="ws-member-btn">{{ _("Member login") }}</a>
+			{% endif %}
+			<a href="/login?redirect-to={{ '/portal' if webstore_features.portal else '/store' }}" class="ws-member-btn">{{ _("Member login") }}</a>
 			{% endif %}
 		</div>
 	</div>
@@ -51,6 +63,7 @@
 {% endblock %}
 
 {% block footer %}
+{% if webstore_features.cart and webstore_features.cart_drawer %}
 <dialog id="ws-cart-drawer" class="ws-drawer" aria-label="{{ _('Shopping basket') }}">
 	<div class="ws-drawer-panel">
 		<div class="ws-drawer-head">
@@ -61,7 +74,9 @@
 		<div id="ws-drawer-foot"></div>
 	</div>
 </dialog>
+{% endif %}
 
+{% if webstore_features.search_palette %}
 <dialog id="ws-palette" class="ws-palette" aria-label="{{ _('Product search') }}">
 	<div class="ws-palette-panel">
 		<div class="ws-palette-head">
@@ -73,7 +88,9 @@
 		</div>
 	</div>
 </dialog>
+{% endif %}
 
+{% if webstore_features.footer %}
 <footer class="ws-footer">
 	<div class="container">
 		<div class="ws-footer-grid">
@@ -90,15 +107,17 @@
 					<li><a href="/store?category=Fresh%20Produce">{{ _("Fresh Produce") }}</a></li>
 				</ul>
 			</div>
+			{% if webstore_features.portal %}
 			<div>
 				<h6>{{ _("Account") }}</h6>
 				<ul>
 					<li><a href="/portal">{{ _("Customer portal") }}</a></li>
-					<li><a href="/portal/quotations">{{ _("Quotations") }}</a></li>
-					<li><a href="/portal/claims">{{ _("Claims") }}</a></li>
+					{% if webstore_features.quotations %}<li><a href="/portal/quotations">{{ _("Quotations") }}</a></li>{% endif %}
+					{% if webstore_features.claims %}<li><a href="/portal/claims">{{ _("Claims") }}</a></li>{% endif %}
 					<li><a href="/app">{{ _("Team desk") }}</a></li>
 				</ul>
 			</div>
+			{% endif %}
 			<div>
 				<h6>{{ _("Contact") }}</h6>
 				<ul>
@@ -115,4 +134,5 @@
 		</div>
 	</div>
 </footer>
+{% endif %}
 {% endblock %}

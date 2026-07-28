@@ -34,7 +34,7 @@
 					{% if entry.has_variants %}
 					<a class="btn btn-sm btn-primary" href="/{{ entry.route }}">{{ _("Choose options") }}</a>
 					{% elif entry.stock and entry.stock.in_stock %}
-					<button class="btn btn-sm btn-primary" data-webstore-add-to-cart="{{ entry.item_code }}">{{ _("Add to cart") }}</button>
+					{% if webstore_features.cart %}<button class="btn btn-sm btn-primary" data-webstore-add-to-cart="{{ entry.item_code }}">{{ _("Add to cart") }}</button>{% endif %}
 					{% else %}
 					<button class="btn btn-sm btn-primary" disabled>{{ _("Out of stock") }}</button>
 					{% endif %}
