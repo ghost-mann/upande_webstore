@@ -14,19 +14,24 @@
 				<label>{{ _("What is the claim about?") }}</label>
 				<select class="form-control" id="claim-type">
 					<option value="">{{ _("Select…") }}</option>
-					<option>{{ _("Damaged goods") }}</option>
-					<option>{{ _("Short delivery") }}</option>
-					<option>{{ _("Quality below grade") }}</option>
-					<option>{{ _("Billing error") }}</option>
-					<option>{{ _("Other") }}</option>
+					{% for t in claim_types %}<option value="{{ t }}">{{ _(t) }}</option>{% endfor %}
 				</select>
 			</div>
-			<div class="col-md-7 form-group">
-				<label>{{ _("Related order / invoice (optional)") }}</label>
-				<input class="form-control" id="claim-reference" list="claim-refs" placeholder="{{ _('e.g. SAL-ORD-2026-00001') }}">
-				<datalist id="claim-refs">
-					{% for ref in reference_docs %}<option value="{{ ref }}">{% endfor %}
-				</datalist>
+			<div class="col-md-3 form-group">
+				<label>{{ _("Document type") }}</label>
+				<select class="form-control" id="claim-doctype">
+					<option value="">{{ _("None") }}</option>
+					{% for dt in claim_documents %}
+					{% if claim_documents[dt] %}<option value="{{ dt }}">{{ _(dt) }}</option>{% endif %}
+					{% endfor %}
+				</select>
+			</div>
+			<div class="col-md-4 form-group">
+				<label>{{ _("Document") }}</label>
+				<select class="form-control" id="claim-document" disabled>
+					<option value="">{{ _("Pick a type first") }}</option>
+				</select>
+				<small class="form-text text-muted">{{ _("Only your own documents are listed.") }}</small>
 			</div>
 		</div>
 		<div class="form-group">
@@ -45,30 +50,58 @@
 	{% else %}
 	<div class="ws-list">
 		{% for claim in claims %}
-		<a class="ws-list-row noicon" href="/portal/issue?name={{ claim.name | urlencode }}">
+		<a class="ws-list-row noicon" href="/portal/claim?name={{ claim.name | urlencode }}">
 			<span>
-				<span class="ws-list-name">{{ claim.subject }} {{ status_badge(claim.status) }}</span>
-				<span class="ws-list-meta d-block">{{ _("filed") }} {{ frappe.utils.formatdate(claim.creation) }}</span>
+				<span class="ws-list-name">{{ _(claim.claim_type) }} {{ status_badge(claim.status) }}</span>
+				<span class="ws-list-meta d-block">
+					{{ claim.name }} · {{ _("filed") }} {{ frappe.utils.formatdate(claim.posting_date) }}
+					{%- if claim.against_document %} · {{ _("against") }} {{ claim.against_document }}{% endif %}
+					{%- if claim.credit_note %} · {{ _("credit note") }} {{ claim.credit_note }}{% endif %}
+				</span>
 			</span>
-			<span class="ws-list-qty"><small>{{ _("open thread") }} →</small></span>
+			<span class="ws-list-qty"><small>{{ _("view") }} →</small></span>
 		</a>
 		{% endfor %}
 	</div>
 	{% endif %}
 </div>
 <script>
-document.getElementById("claim-submit").addEventListener("click", async () => {
+const claimDocuments = {{ claim_documents | tojson }};
+const doctypeSelect = document.getElementById("claim-doctype");
+const documentSelect = document.getElementById("claim-document");
+
+doctypeSelect.addEventListener("change", () => {
+	const names = claimDocuments[doctypeSelect.value] || [];
+	documentSelect.innerHTML = "";
+	if (!names.length) {
+		documentSelect.disabled = true;
+		documentSelect.innerHTML = `<option value="">{{ _("Pick a type first") }}</option>`;
+		return;
+	}
+	documentSelect.disabled = false;
+	documentSelect.insertAdjacentHTML("beforeend", `<option value="">{{ _("Select…") }}</option>`);
+	names.forEach((n) => {
+		const option = document.createElement("option");
+		option.value = n;
+		option.textContent = n;
+		documentSelect.appendChild(option);
+	});
+});
+
+document.getElementById("claim-submit").addEventListener("click", async (e) => {
+	e.target.disabled = true;
 	try {
-		const result = await window.webstore.call("upande_webstore.api.support.create_claim", {
+		const result = await window.webstore.call("upande_webstore.api.claims.create_claim", {
 			claim_type: document.getElementById("claim-type").value,
-			reference: document.getElementById("claim-reference").value,
 			description: document.getElementById("claim-description").value,
+			against_doctype: doctypeSelect.value || null,
+			against_document: documentSelect.value || null,
 		});
 		const file = document.getElementById("claim-attachment").files[0];
 		if (file) {
 			const form = new FormData();
 			form.append("file", file);
-			form.append("doctype", "Issue");
+			form.append("doctype", "Webstore Claim");
 			form.append("docname", result.name);
 			await fetch("/api/method/upload_file", {
 				method: "POST",
@@ -76,8 +109,11 @@ document.getElementById("claim-submit").addEventListener("click", async () => {
 				body: form,
 			});
 		}
-		window.location.href = "/portal/issue?name=" + encodeURIComponent(result.name);
-	} catch (err) { window.webstore.toast(err.message, true); }
+		window.location.href = "/portal/claim?name=" + encodeURIComponent(result.name);
+	} catch (err) {
+		window.webstore.toast(err.message, true);
+		e.target.disabled = false;
+	}
 });
 </script>
 {% endblock %}

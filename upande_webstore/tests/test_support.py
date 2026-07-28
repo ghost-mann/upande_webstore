@@ -41,23 +41,3 @@ class TestSupport(IntegrationTestCase):
 
 		frappe.set_user("sup.a@example.com")
 		self.assertRaises(frappe.ValidationError, create_issue, "", "no subject")
-
-	def test_claims_are_separate_from_issues(self):
-		from upande_webstore.api.support import create_claim, get_claims, get_issues
-
-		frappe.set_user("sup.a@example.com")
-		result = create_claim("Damaged goods", "SAL-ORD-TEST-01", "Two boxes crushed in transit.")
-		claim_names = [c["name"] for c in get_claims()]
-		issue_names = [i["name"] for i in get_issues()]
-		self.assertIn(result["name"], claim_names)
-		self.assertNotIn(result["name"], issue_names)
-		claim = frappe.get_doc("Issue", result["name"])
-		self.assertEqual(claim.issue_type, "Claim")
-		self.assertIn("Damaged goods", claim.subject)
-
-	def test_claim_requires_type_and_description(self):
-		from upande_webstore.api.support import create_claim
-
-		frappe.set_user("sup.a@example.com")
-		self.assertRaises(frappe.ValidationError, create_claim, "", "REF", "desc")
-		self.assertRaises(frappe.ValidationError, create_claim, "Other", "REF", "")

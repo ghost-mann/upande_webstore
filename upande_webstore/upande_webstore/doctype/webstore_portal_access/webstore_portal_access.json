@@ -1,0 +1,33 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Portal Access",
+ "module": "Upande Webstore",
+ "engine": "InnoDB",
+ "autoname": "field:email",
+ "creation": "2026-07-28 00:00:01.000000",
+ "modified": "2026-07-28 00:00:01.000000",
+ "owner": "Administrator",
+ "title_field": "full_name",
+ "track_changes": 1,
+ "field_order": ["customer", "full_name", "email", "phone", "cb_status", "status", "user", "contact", "granted_on", "help_section", "help"],
+ "fields": [
+  {"fieldname": "customer", "fieldtype": "Link", "label": "Customer", "options": "Customer", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1, "description": "The existing customer this person orders for."},
+  {"fieldname": "full_name", "fieldtype": "Data", "label": "Full Name", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "email", "fieldtype": "Data", "label": "Email", "options": "Email", "reqd": 1, "in_list_view": 1, "description": "Becomes their login. They set their own password from the welcome email."},
+  {"fieldname": "phone", "fieldtype": "Data", "label": "Phone"},
+  {"fieldname": "cb_status", "fieldtype": "Column Break"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Not Granted\nActive\nRevoked", "default": "Not Granted", "read_only": 1, "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "user", "fieldtype": "Link", "label": "Website User", "options": "User", "read_only": 1},
+  {"fieldname": "contact", "fieldtype": "Link", "label": "Contact", "options": "Contact", "read_only": 1},
+  {"fieldname": "granted_on", "fieldtype": "Datetime", "label": "Access Granted On", "read_only": 1},
+  {"fieldname": "help_section", "fieldtype": "Section Break", "label": "How this works", "collapsible": 1},
+  {"fieldname": "help", "fieldtype": "HTML", "options": "<p>Save the record, then press <b>Grant Access</b>. That creates a Website User with the <b>Customer</b> role, creates or reuses their Contact, and links it to the customer above.</p><p>They can then order from the store and see only their own quotations, orders, invoices, statement and claims. They never get desk access.</p><p><b>Revoke</b> disables the login but keeps the Contact and its customer link, so access can be restored without retyping anything.</p>"}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+  {"role": "Sales Manager", "read": 1, "write": 1, "create": 1, "report": 1},
+  {"role": "Sales User", "read": 1, "write": 1, "create": 1, "report": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

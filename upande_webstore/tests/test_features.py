@@ -242,11 +242,11 @@ class TestApiEnforcement(IntegrationTestCase):
 		self.assertIsNotNone(search_products("rose"))
 
 	def test_claim_api_gated(self):
-		from upande_webstore.api.support import create_claim
+		from upande_webstore.api.claims import create_claim
 
 		set_flag("enable_claims", 0)
 		with self.assertRaises(frappe.PermissionError):
-			create_claim("Quality", "SO-0001", "damaged")
+			create_claim("Quality below grade", "damaged")
 
 	def test_cart_api_gated(self):
 		from upande_webstore.api.cart import get_cart_count

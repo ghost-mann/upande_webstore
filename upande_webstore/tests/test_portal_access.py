@@ -1,0 +1,151 @@
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from upande_webstore.tests.utils import setup_webstore_settings
+
+EMAIL = "granted.buyer@example.com"
+CUSTOMER = "Granted Access Ltd"
+
+
+def make_customer(name):
+	if not frappe.db.exists("Customer", name):
+		frappe.get_doc(
+			{
+				"doctype": "Customer",
+				"customer_name": name,
+				"customer_type": "Company",
+				"customer_group": "Individual",
+				"territory": "All Territories",
+			}
+		).insert(ignore_permissions=True)
+	return name
+
+
+class TestPortalAccess(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_customer(CUSTOMER)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		for email in (EMAIL,):
+			frappe.db.delete("Webstore Portal Access", {"email": email})
+
+	def _record(self, email=EMAIL, customer=CUSTOMER, full_name="Granted Buyer"):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Webstore Portal Access",
+				"customer": customer,
+				"full_name": full_name,
+				"email": email,
+			}
+		)
+		doc.flags.ignore_permissions = True
+		doc.insert()
+		return doc
+
+	def test_starts_not_granted(self):
+		self.assertEqual(self._record().status, "Not Granted")
+
+	def test_grant_creates_a_website_user_with_the_customer_role(self):
+		doc = self._record()
+		doc.grant()
+		doc.reload()
+
+		self.assertEqual(doc.status, "Active")
+		self.assertTrue(doc.user)
+		user = frappe.get_doc("User", doc.user)
+		self.assertEqual(user.user_type, "Website User")
+		roles = [r.role for r in user.roles]
+		self.assertIn("Customer", roles)
+		self.assertNotIn("System Manager", roles)
+		self.assertNotIn("Sales User", roles)
+
+	def test_grant_links_the_contact_to_the_customer(self):
+		"""This chain is what get_customer() resolves, so the portal and the
+		store both depend on it."""
+		from upande_webstore.services.pricing import get_customer
+
+		doc = self._record()
+		doc.grant()
+		doc.reload()
+
+		self.assertTrue(doc.contact)
+		self.assertEqual(get_customer(doc.user), CUSTOMER)
+
+	def test_granted_user_can_resolve_their_customer_for_ordering(self):
+		doc = self._record()
+		doc.grant()
+		frappe.set_user(EMAIL)
+		try:
+			from upande_webstore.services.pricing import get_customer
+
+			self.assertEqual(get_customer(), CUSTOMER)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_grant_is_idempotent(self):
+		doc = self._record()
+		doc.grant()
+		doc.grant()
+		doc.reload()
+		contacts = frappe.get_all("Contact", filters={"user": EMAIL})
+		self.assertEqual(len(contacts), 1)
+		contact = frappe.get_doc("Contact", doc.contact)
+		customer_links = [
+			l for l in contact.links if l.link_doctype == "Customer" and l.link_name == CUSTOMER
+		]
+		self.assertEqual(len(customer_links), 1, "customer link must not be duplicated")
+
+	def test_works_for_a_customer_that_already_exists(self):
+		"""The whole point: granting access to an existing customer, not creating
+		a new one."""
+		before = frappe.db.count("Customer")
+		doc = self._record()
+		doc.grant()
+		self.assertEqual(frappe.db.count("Customer"), before)
+
+	def test_revoke_disables_the_login_but_keeps_the_link(self):
+		doc = self._record()
+		doc.grant()
+		doc.reload()
+		doc.revoke()
+		doc.reload()
+
+		self.assertEqual(doc.status, "Revoked")
+		self.assertFalse(frappe.db.get_value("User", doc.user, "enabled"))
+		self.assertTrue(frappe.db.exists("Contact", doc.contact))
+
+	def test_regrant_after_revoke_re_enables(self):
+		doc = self._record()
+		doc.grant()
+		doc.revoke()
+		doc.reload()
+		doc.grant()
+		doc.reload()
+		self.assertEqual(doc.status, "Active")
+		self.assertTrue(frappe.db.get_value("User", doc.user, "enabled"))
+
+	def test_revoke_before_grant_is_rejected(self):
+		doc = self._record()
+		with self.assertRaises(frappe.ValidationError):
+			doc.revoke()
+
+	def test_unknown_customer_rejected(self):
+		from upande_webstore.services.provisioning import grant_portal_access
+
+		with self.assertRaises(frappe.ValidationError):
+			grant_portal_access("No Such Customer Ltd", "Someone", "someone@example.com")
+
+	def test_invalid_email_rejected(self):
+		from upande_webstore.services.provisioning import grant_portal_access
+
+		with self.assertRaises(Exception):
+			grant_portal_access(CUSTOMER, "Someone", "not-an-email")
+
+	def test_email_is_lowercased(self):
+		doc = self._record(email="Mixed.Case@Example.com")
+		self.assertEqual(doc.email, "mixed.case@example.com")
+		frappe.db.delete("Webstore Portal Access", {"email": "mixed.case@example.com"})

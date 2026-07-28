@@ -1,0 +1,65 @@
+{% extends "templates/webstore_portal_base.html" %}
+{% block title %}{{ doc.name }}{% endblock %}
+
+{% block portal_back %}<a class="ws-backbtn" href="/portal/claims">← {{ _("All claims") }}</a>{% endblock %}
+{% block portal_title %}{{ _(doc.claim_type) }}{% endblock %}
+{% block portal_sub %}{{ doc.name }} · {{ _("filed") }} {{ frappe.utils.formatdate(doc.posting_date) }}{% endblock %}
+
+{% block portal_body %}
+{% from "templates/includes/webstore_macros.html" import status_badge %}
+
+<div class="ws-panel">
+	<div class="ws-panel-head">
+		<h3>{{ _("Claim detail") }}</h3>
+		<div class="meta">{{ status_badge(doc.status) }}</div>
+	</div>
+	<div class="ws-facts">
+		<div><small>{{ _("Type") }}</small><b>{{ _(doc.claim_type) }}</b></div>
+		{% if doc.against_document %}
+		<div><small>{{ _(doc.against_doctype) }}</small><b>{{ doc.against_document }}</b></div>
+		{% endif %}
+		<div><small>{{ _("Filed on") }}</small><b>{{ frappe.utils.formatdate(doc.posting_date) }}</b></div>
+	</div>
+
+	<h6 class="mt-4">{{ _("What happened") }}</h6>
+	<p style="white-space:pre-wrap">{{ doc.description }}</p>
+
+	{% if doc.related_documents %}
+	<h6 class="mt-4">{{ _("Other related documents") }}</h6>
+	<ul>
+		{% for row in doc.related_documents %}
+		<li>{{ _(row.reference_doctype) }} — {{ row.reference_name }}</li>
+		{% endfor %}
+	</ul>
+	{% endif %}
+
+	{% if attachments %}
+	<h6 class="mt-4">{{ _("Attachments") }}</h6>
+	<ul>
+		{% for f in attachments %}
+		<li><a href="{{ f.file_url }}" target="_blank" rel="noopener">{{ f.file_name }}</a></li>
+		{% endfor %}
+	</ul>
+	{% endif %}
+</div>
+
+{% if doc.credit_note or doc.resolution %}
+<div class="ws-panel">
+	<div class="ws-panel-head"><h3>{{ _("Outcome") }}</h3></div>
+	{% if doc.credit_note %}
+	<div class="ws-facts">
+		<div><small>{{ _("Credit note issued") }}</small><b>{{ doc.credit_note }}</b></div>
+	</div>
+	<p class="mt-3"><a class="btn btn-primary btn-sm" href="/portal/invoice?name={{ doc.credit_note | urlencode }}">{{ _("View credit note") }}</a></p>
+	{% endif %}
+	{% if doc.resolution %}
+	<h6 class="mt-3">{{ _("Note from our team") }}</h6>
+	<p style="white-space:pre-wrap">{{ doc.resolution }}</p>
+	{% endif %}
+</div>
+{% else %}
+<div class="ws-panel">
+	<div class="ws-empty">{{ _("Our team is reviewing this claim. Any credit note or note from us will appear here.") }}</div>
+</div>
+{% endif %}
+{% endblock %}

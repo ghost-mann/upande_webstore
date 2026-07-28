@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 upande_webstore.patches.move_category_images_to_table
 upande_webstore.patches.reset_webstore_settings_docstatus
+upande_webstore.patches.migrate_issue_claims_to_webstore_claim
