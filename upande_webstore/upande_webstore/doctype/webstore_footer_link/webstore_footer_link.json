@@ -1,0 +1,19 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Footer Link",
+ "module": "Upande Webstore",
+ "istable": 1,
+ "engine": "InnoDB",
+ "creation": "2026-07-28 00:00:01.000000",
+ "modified": "2026-07-28 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": ["column", "label", "url"],
+ "fields": [
+  {"fieldname": "column", "fieldtype": "Data", "label": "Column", "reqd": 1, "in_list_view": 1, "columns": 3, "description": "Column heading. Rows sharing a heading group together, in table order."},
+  {"fieldname": "label", "fieldtype": "Data", "label": "Label", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "url", "fieldtype": "Data", "label": "URL", "reqd": 1, "in_list_view": 1, "columns": 4}
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

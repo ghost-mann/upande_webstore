@@ -1,0 +1,21 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Category Card",
+ "module": "Upande Webstore",
+ "istable": 1,
+ "engine": "InnoDB",
+ "creation": "2026-07-28 00:00:01.000000",
+ "modified": "2026-07-28 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": ["label", "subtitle", "image", "category", "url"],
+ "fields": [
+  {"fieldname": "label", "fieldtype": "Data", "label": "Label", "reqd": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "subtitle", "fieldtype": "Data", "label": "Subtitle", "in_list_view": 1, "columns": 3},
+  {"fieldname": "image", "fieldtype": "Attach Image", "label": "Image", "in_list_view": 1, "columns": 2},
+  {"fieldname": "category", "fieldtype": "Data", "label": "Category", "in_list_view": 1, "columns": 2, "description": "Links to /store?category=<value>."},
+  {"fieldname": "url", "fieldtype": "Data", "label": "Custom URL", "description": "Overrides Category when set."}
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
