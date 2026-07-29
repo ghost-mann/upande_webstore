@@ -16,7 +16,18 @@
 			<p class="ws-card-desc">{{ p.short_description or "" }}</p>
 			<div class="ws-card-foot">
 				{% if p.has_variants %}
+				{%- if p.price_range %}
+				<span class="ws-price">
+					{%- if p.price_range.min == p.price_range.max %}
+					{{ frappe.utils.fmt_money(p.price_range.min, currency=p.price_range.currency) }}
+					{%- else %}
+					{{ _("from") }} {{ frappe.utils.fmt_money(p.price_range.min, currency=p.price_range.currency) }}
+					{%- endif %}
+					<span class="ws-price-note">{{ p.price_range.variants }} {{ _("options") }}</span>
+				</span>
+				{%- else %}
 				<span class="ws-price-note">{{ _("Multiple options") }}</span>
+				{%- endif %}
 				{% elif p.price %}
 				<span class="ws-price">{{ frappe.utils.fmt_money(p.price.rate, currency=p.price.currency) }}
 					{% if p.price.is_customer_price %}<span class="badge badge-accent">{{ _("Your price") }}</span>{% endif %}
@@ -120,27 +131,21 @@
 </div>
 </div>
 
+{% if webstore_branding.process_steps %}
 <div class="ws-process rv">
 	<div class="ws-process-inner">
-		<span class="ws-eyebrow on-dark">{{ _("How ordering works") }}</span>
-		<h3>{{ _("From your basket to a") }} <em>{{ _("confirmed quotation") }}</em> {{ _("in one working day") }}</h3>
+		<span class="ws-eyebrow on-dark">{{ webstore_branding.process_eyebrow }}</span>
+		<h3>{{ webstore_branding.process_heading }} <em>{{ webstore_branding.process_heading_em }}</em></h3>
 		<div class="row">
+			{% for step in webstore_branding.process_steps %}
 			<div class="col-md-4 mb-4"><div class="ws-step-card">
-				<span class="n">01</span>
-				<div class="t">{{ _("Build your basket") }}</div>
-				<p>{{ _("Browse live availability and wholesale pack sizes. Your prices appear automatically once your account is linked.") }}</p>
+				<span class="n">{{ "%02d" | format(loop.index) }}</span>
+				<div class="t">{{ step.title }}</div>
+				<p>{{ step.description }}</p>
 			</div></div>
-			<div class="col-md-4 mb-4"><div class="ws-step-card">
-				<span class="n">02</span>
-				<div class="t">{{ _("Request a quotation") }}</div>
-				<p>{{ _("Send your basket with a PO reference. Our team confirms pricing, availability and freight within 24 hours.") }}</p>
-			</div></div>
-			<div class="col-md-4 mb-4"><div class="ws-step-card">
-				<span class="n">03</span>
-				<div class="t">{{ _("Accept & receive") }}</div>
-				<p>{{ _("Accept online from your portal. We pack to order and ship cold chain, with documents in your portal.") }}</p>
-			</div></div>
+			{% endfor %}
 		</div>
 	</div>
 </div>
+{% endif %}
 {% endblock %}

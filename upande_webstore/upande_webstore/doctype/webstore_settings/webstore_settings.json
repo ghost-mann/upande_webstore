@@ -76,6 +76,11 @@
   "hero_stats",
   "category_cards_section",
   "category_cards",
+  "process_section",
+  "process_eyebrow",
+  "process_heading",
+  "process_heading_em",
+  "process_steps",
   "footer_section",
   "footer_tagline",
   "footer_links",
@@ -519,6 +524,35 @@
    "fieldtype": "Table",
    "label": "Category Cards",
    "options": "Webstore Category Card"
+  },
+  {
+   "fieldname": "process_section",
+   "fieldtype": "Section Break",
+   "label": "How Ordering Works",
+   "description": "The three-step explainer band beneath the catalogue on /store. Leave the table empty to hide the whole band."
+  },
+  {
+   "fieldname": "process_eyebrow",
+   "fieldtype": "Data",
+   "label": "Eyebrow"
+  },
+  {
+   "fieldname": "process_heading",
+   "fieldtype": "Data",
+   "label": "Heading"
+  },
+  {
+   "fieldname": "process_heading_em",
+   "fieldtype": "Data",
+   "label": "Heading (emphasis)",
+   "description": "Rendered italic in the display face, following the heading."
+  },
+  {
+   "fieldname": "process_steps",
+   "fieldtype": "Table",
+   "label": "Steps",
+   "options": "Webstore Process Step",
+   "description": "Numbered in table order — 01, 02, 03. Three fits the layout best."
   },
   {
    "fieldname": "footer_section",

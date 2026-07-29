@@ -62,3 +62,40 @@ def get_item_price(item_code, qty=1, user=None):
 		"price_list": price_list,
 		"is_customer_price": is_customer_price,
 	}
+
+
+def get_variant_price_range(template_item, user=None):
+	"""Cheapest and dearest published variant of a template.
+
+	A template has no price of its own, so a catalogue of templates showed no
+	price at all — useless for a grower whose whole range is graded varieties.
+	One query against the resolved price list rather than pricing each variant.
+	"""
+	variants = frappe.get_all(
+		"Item", filters={"variant_of": template_item, "disabled": 0}, pluck="name"
+	)
+	if not variants:
+		return None
+
+	price_list = get_price_list(user)
+	rates = frappe.get_all(
+		"Item Price",
+		filters={
+			"item_code": ["in", variants],
+			"price_list": price_list,
+			"selling": 1,
+		},
+		pluck="price_list_rate",
+		ignore_permissions=True,
+	)
+	rates = [rate for rate in rates if rate]
+	if not rates:
+		return None
+
+	return {
+		"min": min(rates),
+		"max": max(rates),
+		"currency": frappe.db.get_value("Price List", price_list, "currency"),
+		"price_list": price_list,
+		"variants": len(variants),
+	}

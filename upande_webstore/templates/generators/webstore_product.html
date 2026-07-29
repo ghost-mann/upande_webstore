@@ -22,6 +22,17 @@
 			<p class="text-muted">{{ short_description or "" }}</p>
 
 			{% if is_template %}
+			{% if price_range %}
+			<p class="ws-price h3 mb-2" style="font-size:1.5rem" id="webstore-variant-range">
+				{%- if price_range.min == price_range.max %}
+				{{ frappe.utils.fmt_money(price_range.min, currency=price_range.currency) }}
+				{%- else %}
+				{{ frappe.utils.fmt_money(price_range.min, currency=price_range.currency) }} –
+				{{ frappe.utils.fmt_money(price_range.max, currency=price_range.currency) }}
+				{%- endif %}
+				<span class="ws-price-note">{{ _("depending on stem length") if price_range.variants > 1 else "" }}</span>
+			</p>
+			{% endif %}
 			{% for attr in attributes %}
 			<div class="form-group" style="max-width: 340px;">
 				<label>{{ attr.attribute }}</label>

@@ -9,6 +9,22 @@ from urllib.parse import quote
 import frappe
 
 SHIPPED_LOGO = "/assets/upande_webstore/images/upande-logo.png"
+
+# the three steps the storefront used to hardcode
+SHIPPED_PROCESS_STEPS = (
+	{
+		"title": "Build your basket",
+		"description": "Browse live availability and wholesale pack sizes. Your prices appear automatically once your account is linked.",
+	},
+	{
+		"title": "Ask for a quotation",
+		"description": "Send your basket with a PO reference. Our team confirms pricing, availability and freight within 24 hours.",
+	},
+	{
+		"title": "Accept & receive",
+		"description": "Accept online from your portal. We pack to order and ship cold chain, with documents in your portal.",
+	},
+)
 SHIPPED_HERO = "/assets/upande_webstore/images/site/hero.jpg"
 
 DEFAULTS = {
@@ -39,6 +55,10 @@ DEFAULTS = {
 	"footer_website": "https://upande.com",
 	"footer_copyright": "Upande Ltd.",
 	"footer_note": "Quotation-first ordering · No payment taken online",
+	# how ordering works
+	"process_eyebrow": "How ordering works",
+	"process_heading": "From your basket to a",
+	"process_heading_em": "confirmed quotation in one working day",
 	# portal
 	"portal_eyebrow": "Upande Store · Customer Portal",
 }
@@ -102,5 +122,14 @@ def get_branding(settings=None):
 			columns.append({"heading": row.column, "links": []})
 		columns[index[row.column]]["links"].append({"label": row.label, "url": row.url})
 	resolved.footer_columns = columns
+
+	# empty table = the shipped three steps, so an unconfigured site keeps the
+	# band it has always had; clearing it deliberately is done with the flag
+	steps = [
+		{"title": row.title, "description": row.description}
+		for row in (settings.get("process_steps") or [])
+		if (row.title or "").strip()
+	]
+	resolved.process_steps = steps or [dict(step) for step in SHIPPED_PROCESS_STEPS]
 
 	return resolved

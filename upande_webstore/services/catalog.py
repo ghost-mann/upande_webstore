@@ -1,6 +1,6 @@
 import frappe
 
-from upande_webstore.services.pricing import get_item_price
+from upande_webstore.services.pricing import get_item_price, get_variant_price_range
 from upande_webstore.services.stock import get_stock_info
 
 
@@ -42,6 +42,10 @@ def get_products(search=None, category=None, featured_only=False, start=0, page_
 		if not product.get("image"):
 			product["image"] = frappe.get_cached_value("Item", product["item"], "image")
 		product["price"] = None if has_variants else get_item_price(product["item"])
+		# a template has no price of its own; show the range across its variants
+		product["price_range"] = (
+			get_variant_price_range(product["item"]) if has_variants else None
+		)
 		product["stock"] = None if has_variants else get_stock_info(product["item"])
 	return {"products": products, "total": total}
 

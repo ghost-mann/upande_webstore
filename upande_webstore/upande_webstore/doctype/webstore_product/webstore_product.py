@@ -29,11 +29,16 @@ class WebstoreProduct(WebsiteGenerator):
 		context.image = self.image or item_doc.image
 		context.is_template = bool(item_doc.has_variants)
 		if context.is_template:
+			from upande_webstore.services.pricing import get_variant_price_range
+
 			context.attributes = get_attributes(self.item)
 			context.price = None
 			context.stock = None
+			# so the page is not priceless before a length is chosen
+			context.price_range = get_variant_price_range(self.item)
 		else:
 			context.attributes = []
+			context.price_range = None
 			context.price = get_item_price(self.item)
 			context.stock = get_stock_info(self.item)
 		return context
