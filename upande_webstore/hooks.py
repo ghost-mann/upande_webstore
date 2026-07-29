@@ -16,7 +16,10 @@ add_to_apps_screen = [
 		"name": "upande_webstore",
 		"logo": "/assets/upande_webstore/images/upande-logo.png",
 		"title": "Upande Webstore",
-		"route": "/app/upande-webstore",
+		# /desk, not /app: this is the route the deployed sites serve the desk on
+		# (e.g. https://mona-flowers.upande.com/desk/upande-webstore), and it is
+		# where ERPNext's own apps-screen entry points too
+		"route": "/desk/upande-webstore",
 	}
 ]
 
