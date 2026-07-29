@@ -77,18 +77,29 @@ def get_variant_price_range(template_item, user=None):
 	if not variants:
 		return None
 
+	def rates_in(price_list):
+		# deliberately not filtering on `selling`: the flag is derived from the
+		# price list when ERPNext creates the row, but an imported or
+		# scripted Item Price can arrive without it, and excluding those made
+		# templates look priceless
+		found = frappe.get_all(
+			"Item Price",
+			filters={"item_code": ["in", variants], "price_list": price_list},
+			pluck="price_list_rate",
+			ignore_permissions=True,
+		)
+		return [rate for rate in found if rate]
+
 	price_list = get_price_list(user)
-	rates = frappe.get_all(
-		"Item Price",
-		filters={
-			"item_code": ["in", variants],
-			"price_list": price_list,
-			"selling": 1,
-		},
-		pluck="price_list_rate",
-		ignore_permissions=True,
-	)
-	rates = [rate for rate in rates if rate]
+	rates = rates_in(price_list)
+	if not rates:
+		# a customer price list may cover only some items; showing the public
+		# price beats showing none at all
+		fallback = get_settings().guest_price_list
+		if fallback and fallback != price_list:
+			rates = rates_in(fallback)
+			if rates:
+				price_list = fallback
 	if not rates:
 		return None
 
