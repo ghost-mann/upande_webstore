@@ -4,6 +4,11 @@ frappe.ui.form.on("Webstore Settings", {
 			frm.set_df_property("preset", "options", [""].concat(r.message || []).join("\n"));
 		});
 
+		frappe.call("upande_webstore.theme.occasion.list_occasions").then((r) => {
+			frm.set_df_property("occasion", "options", r.message || []);
+		});
+		frm.__ws_last_occasion = frm.doc.occasion;
+
 		frm.add_custom_button(
 			__("Export Theme"),
 			() => {
@@ -78,6 +83,19 @@ frappe.ui.form.on("Webstore Settings", {
 			},
 			__("Theme")
 		);
+	},
+
+	occasion(frm) {
+		// Clear the previous campaign's wording and cutoff date — otherwise last
+		// year's "book by 20 January" rides along into the next occasion.
+		if (frm.doc.occasion === frm.__ws_last_occasion) return;
+		frm.__ws_last_occasion = frm.doc.occasion;
+		[
+			"occasion_banner_text",
+			"occasion_banner_cta_label",
+			"occasion_banner_cta_url",
+			"occasion_runs_until",
+		].forEach((field) => frm.set_value(field, ""));
 	},
 });
 

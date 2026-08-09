@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Valentine's Day",
+  "seeds": {
+    "accent": "#b3122d",
+    "accent_dark": "#7d0c1f",
+    "accent_soft": "#fdeef0"
+  },
+  "banner": {
+    "text": "Valentine's — book your February allocation early",
+    "cta_label": "Talk to us",
+    "cta_url": "/portal/quotations"
+  },
+  "hero": {
+    "eyebrow": "Valentine's · February allocation",
+    "heading": "Red Naomi, graded and",
+    "heading_em": "booked for February",
+    "cta_primary": "Reserve stems"
+  }
+}

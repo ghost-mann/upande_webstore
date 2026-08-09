@@ -341,9 +341,34 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 		window.setTimeout(() => nodes.forEach((n) => n.classList.add("in")), 1600);
 	}
 
+	// Dismissal is keyed by occasion, so closing Valentine's does not
+	// pre-dismiss Mother's Day nine weeks later.
+	function initOccasionBar(): void {
+		const bar = document.querySelector<HTMLElement>(".ws-occasion-bar");
+		if (!bar) return;
+		const key = `ws-occasion-dismissed:${bar.dataset.wsOccasion || ""}`;
+		try {
+			if (localStorage.getItem(key)) {
+				bar.remove();
+				return;
+			}
+		} catch {
+			// private browsing or storage disabled — show the banner rather than hide it
+		}
+		bar.querySelector("[data-ws-occasion-close]")?.addEventListener("click", () => {
+			bar.remove();
+			try {
+				localStorage.setItem(key, "1");
+			} catch {
+				/* nothing to do; it reappears next load */
+			}
+		});
+	}
+
 	document.addEventListener("DOMContentLoaded", () => {
 		refreshCartBadge();
 		initReveals();
+		initOccasionBar();
 	});
 	window.webstore = { addToCart, toggleWishlist, refreshCartBadge, openCart, openPalette, call, toast };
 })();

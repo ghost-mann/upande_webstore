@@ -33,6 +33,16 @@ def setup_webstore_settings():
 		settings.set(field, "")
 	for feature in FEATURES:
 		settings.set(feature.fieldname, 1)
+	# occasion state is deliberately outside THEME_FIELDS, so it needs its own
+	# reset or a campaign set by one test module leaks into the next
+	for field in (
+		"occasion",
+		"occasion_banner_text",
+		"occasion_banner_cta_label",
+		"occasion_banner_cta_url",
+	):
+		settings.set(field, "")
+	settings.set("occasion_runs_until", None)
 	for table in ("hero_stats", "category_cards", "footer_links"):
 		settings.set(table, [])
 	settings.set("warehouses", [])

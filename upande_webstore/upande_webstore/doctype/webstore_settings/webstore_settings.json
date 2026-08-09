@@ -50,6 +50,13 @@
   "radius",
   "radius_card",
   "radius_panel",
+  "occasion_section",
+  "occasion",
+  "occasion_runs_until",
+  "occasion_cb",
+  "occasion_banner_text",
+  "occasion_banner_cta_label",
+  "occasion_banner_cta_url",
   "advanced_section",
   "custom_css",
   "primary_color",
@@ -378,6 +385,43 @@
    "fieldtype": "Data",
    "label": "Panel Radius",
    "description": "Large panels, the portal sidebar card, dialogs and drawers. Blank = 24px."
+  },
+  {
+   "fieldname": "occasion_section",
+   "fieldtype": "Section Break",
+   "label": "Occasion"
+  },
+  {
+   "fieldname": "occasion",
+   "fieldtype": "Autocomplete",
+   "label": "Active Occasion",
+   "description": "Seasonal overlay applied on top of the theme above. Blank means none. Nothing is written to the settings — clearing this restores the base theme exactly."
+  },
+  {
+   "fieldname": "occasion_runs_until",
+   "fieldtype": "Date",
+   "label": "Runs Until",
+   "description": "After this date the overlay stops applying. Leave blank to run until you clear it."
+  },
+  {
+   "fieldname": "occasion_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "occasion_banner_text",
+   "fieldtype": "Data",
+   "label": "Banner Text",
+   "description": "Overrides the occasion's own wording — put your order cutoff date here."
+  },
+  {
+   "fieldname": "occasion_banner_cta_label",
+   "fieldtype": "Data",
+   "label": "Banner CTA Label"
+  },
+  {
+   "fieldname": "occasion_banner_cta_url",
+   "fieldtype": "Data",
+   "label": "Banner CTA Link"
   },
   {
    "fieldname": "advanced_section",

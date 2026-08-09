@@ -23,6 +23,21 @@
 {% endblock %}
 
 {% block navbar %}
+{#- The occasion banner rides in the navbar block rather than one of its own:
+    web.html defines no sibling slot here, and a block the parent never declares
+    is silently dropped. Sits above the nav so the sticky bar still pins to the
+    top once the banner scrolls away. -#}
+{%- if webstore_occasion and webstore_occasion.banner %}
+<div class="ws-occasion-bar" data-ws-occasion="{{ webstore_occasion.name }}">
+	<div class="container">
+		<p>{{ webstore_occasion.banner.text }}</p>
+		{%- if webstore_occasion.banner.cta_url %}
+		<a href="{{ webstore_occasion.banner.cta_url }}">{{ webstore_occasion.banner.cta_label }}</a>
+		{%- endif %}
+		<button type="button" data-ws-occasion-close aria-label="{{ _('Dismiss') }}">✕</button>
+	</div>
+</div>
+{%- endif %}
 <nav class="ws-navbar">
 	<div class="container">
 		<a class="ws-brand" href="/store" title="{{ webstore_branding.site_name }}">

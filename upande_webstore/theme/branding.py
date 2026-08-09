@@ -87,7 +87,7 @@ def _card_href(row):
 	return f"/store?category={quote(category)}" if category else "/store"
 
 
-def get_branding(settings=None):
+def get_branding(settings=None, occasion=None):
 	if settings is None:
 		from upande_webstore.services.settings import get_settings
 
@@ -131,5 +131,15 @@ def get_branding(settings=None):
 		if (row.title or "").strip()
 	]
 	resolved.process_steps = steps or [dict(step) for step in SHIPPED_PROCESS_STEPS]
+
+	# the occasion speaks last: an overlay whose whole purpose is seasonal copy
+	# has to beat the evergreen hero a farm keeps the rest of the year
+	if occasion:
+		from upande_webstore.theme.occasion import HERO_FIELDS
+
+		hero = occasion.get("hero") or {}
+		for key, field in HERO_FIELDS.items():
+			if hero.get(key):
+				resolved[field] = hero[key]
 
 	return resolved

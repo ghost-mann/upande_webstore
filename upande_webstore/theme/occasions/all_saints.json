@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "All Saints / Toussaint",
+  "seeds": {
+    "accent": "#5c4c72",
+    "accent_dark": "#3f3450",
+    "accent_soft": "#f1eef6"
+  },
+  "banner": {
+    "text": "All Saints — 1 November. Book your Toussaint volumes with us.",
+    "cta_label": "Request a quotation",
+    "cta_url": "/portal/quotations"
+  },
+  "hero": {
+    "eyebrow": "All Saints · 1 November",
+    "heading": "Muted tones and whites,",
+    "heading_em": "shipped for Toussaint",
+    "cta_primary": "Browse varieties"
+  }
+}
