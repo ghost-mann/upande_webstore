@@ -5,7 +5,15 @@ frappe.ui.form.on("Webstore Settings", {
 		});
 
 		frappe.call("upande_webstore.theme.occasion.list_occasions").then((r) => {
-			frm.set_df_property("occasion", "options", r.message || []);
+			const options = r.message || [];
+			// set_data, not set_df_property: an Autocomplete reads df.options only
+			// in make_input(), which has already run by the time this resolves, so
+			// setting the property alone leaves the control empty and it renders as
+			// a plain text box. set_data fills awesomplete directly — the same call
+			// frappe's own async-loaded autocompletes use. df.options is set too so
+			// the list survives if the control is ever rebuilt.
+			frm.set_df_property("occasion", "options", options);
+			frm.fields_dict.occasion?.set_data(options);
 		});
 		frm.__ws_last_occasion = frm.doc.occasion;
 
