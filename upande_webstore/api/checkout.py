@@ -3,6 +3,7 @@ from frappe import _
 from frappe.utils import add_days, flt, formatdate, get_url_to_form, getdate, nowdate
 
 from upande_webstore.api.cart import _get_open_cart, _require_login
+from upande_webstore.services import dropoff
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
 from upande_webstore.services.settings import get_settings
 from upande_webstore.services.stock import get_source_warehouse, get_stock_qty
@@ -26,6 +27,7 @@ def place_order(
 	mode=QUOTATION,
 	shipping_date=None,
 	dropoff_points=None,
+	delivery_point=None,
 ):
 	"""Turn the open cart into a Quotation (price confirmation first) or a
 	Sales Order (commit now). Sales Orders are left as drafts for the sales
@@ -61,7 +63,7 @@ def place_order(
 	try:
 		doc = build(
 			cart, customer, settings, price_list, contact_name, address_name,
-			po_reference, notes, shipping_date, dropoff_points,
+			po_reference, notes, shipping_date, dropoff_points, delivery_point,
 		)
 	finally:
 		frappe.set_user(session_user)
@@ -149,6 +151,21 @@ def _assert_shipping_date(shipping_date):
 		)
 
 
+def _store_delivery_point(doc, delivery_point):
+	"""Written after insert, and only where it can be stored.
+
+	The field is another app's, and on Mona live it Links to a Delivery Point
+	doctype that is not installed — writing to it there would fail validation.
+	"""
+	stored = dropoff.resolve(delivery_point)
+	if stored and _present(doc.doctype, "custom_delivery_point"):
+		doc.db_set("custom_delivery_point", stored)
+
+
+def _present(doctype, fieldname):
+	return bool(frappe.get_meta(doctype).get_field(fieldname))
+
+
 def _cart_items(cart):
 	from upande_webstore.services import packing
 
@@ -187,6 +204,7 @@ def _has_mixed_boxes(cart):
 def _create_quotation(
 	cart, customer, settings, price_list, contact_name, address_name,
 	po_reference, notes, shipping_date=None, dropoff_points=None,
+	delivery_point=None,
 ):
 	quotation = frappe.get_doc({
 		"doctype": "Quotation",
@@ -208,12 +226,14 @@ def _create_quotation(
 	quotation.flags.ignore_permissions = True
 	quotation.insert()
 	quotation.submit()
+	_store_delivery_point(quotation, delivery_point)
 	return quotation
 
 
 def _create_sales_order(
 	cart, customer, settings, price_list, contact_name, address_name,
 	po_reference, notes, shipping_date=None, dropoff_points=None,
+	delivery_point=None,
 ):
 	"""Left as a draft on purpose: the customer has committed, but the sales
 	team confirms freight and stock before it is submitted."""
@@ -246,6 +266,7 @@ def _create_sales_order(
 	})
 	order.flags.ignore_permissions = True
 	order.insert()
+	_store_delivery_point(order, delivery_point)
 	return order
 
 
