@@ -63,7 +63,8 @@
    "fieldtype": "Link",
    "label": "Box Type",
    "options": "Item",
-   "description": "The box this product ships in. Must be an Item flagged Is Box. Falls back to the farm default when blank."
+   "link_filters": "[[\"Item\",\"custom_is_box\",\"=\",1],[\"Item\",\"disabled\",\"=\",0]]",
+   "description": "The box this product ships in. Blank falls back to the farm default. Only Items flagged Is Box are offered."
   },
   {
    "fieldname": "route",

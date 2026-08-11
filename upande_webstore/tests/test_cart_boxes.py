@@ -156,6 +156,15 @@ class TestCartBoxes(IntegrationTestCase):
 		self.assertEqual(result["items"][0]["box_type"], self.zim)
 		self.assertEqual(result["items"][0]["number_of_boxes"], 2)
 
+	def test_product_rejects_an_item_that_is_not_a_box(self):
+		"""Silently falling back to the default looks like the setting being
+		ignored, so a bad pick is refused on save."""
+		frappe.set_user("Administrator")
+		name = frappe.db.get_value("Webstore Product", {"item": "WS-BOX-ITEM"})
+		product = frappe.get_doc("Webstore Product", name)
+		product.box_type = "WS-BOX-ITEM"  # a rose, not a box
+		self.assertRaises(frappe.ValidationError, product.save)
+
 	def test_get_box_types_excludes_unrated_boxes(self):
 		from upande_webstore.services.packing import get_box_types
 

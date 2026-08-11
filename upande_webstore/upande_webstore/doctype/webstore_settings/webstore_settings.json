@@ -214,6 +214,7 @@
    "fieldtype": "Link",
    "label": "Default Box Type",
    "options": "Item",
+   "link_filters": "[[\"Item\",\"custom_is_box\",\"=\",1],[\"Item\",\"disabled\",\"=\",0]]",
    "description": "Seeds each new cart line. Must be an Item flagged Is Box with a pack rate."
   },
   {
