@@ -70,6 +70,21 @@ class TestCartPageBoxes(IntegrationTestCase):
 		frappe.clear_cache()
 		frappe.set_user("page.box@example.com")
 
+	def test_page_seeds_box_type_on_a_pre_existing_cart(self):
+		"""A cart created before packing was switched on has no box type. The page
+		has to seed it, or the checkout picker opens on nothing selected."""
+		from upande_webstore.api.cart import _get_open_cart
+		from upande_webstore.api import cart as cart_api
+		from upande_webstore.www.cart import get_context
+
+		cart_api.add_item("WS-PAGE-BOX", 600)
+		doc = _get_open_cart()
+		doc.db_set("box_type", None)
+		context = frappe._dict()
+		get_context(context)
+		self.assertEqual(context.cart["boxes"]["box_type"], self.zim)
+		self.assertEqual(context.cart["boxes"]["boxes"], 2)
+
 	def test_context_carries_box_types_and_dropoff_mode(self):
 		from upande_webstore.www.cart import get_context
 
@@ -78,15 +93,19 @@ class TestCartPageBoxes(IntegrationTestCase):
 		self.assertIn(self.zim, [box["item_code"] for box in context.box_types])
 		self.assertIn("delivery_points_available", context)
 
-	def test_page_shows_box_select_and_the_block_reason(self):
+	def test_checkout_panel_shows_box_select_and_the_block_reason(self):
+		"""The box belongs to the order, so its picker lives in the checkout
+		panel rather than on every basket row."""
 		from frappe.utils import get_html_for_route
 
 		from upande_webstore.api import cart
 
 		cart.add_item("WS-PAGE-BOX", 1750)
 		html = get_html_for_route("cart")
-		self.assertIn('webstore-cart-box" data-item', html)
+		self.assertIn('id="webstore-box-type"', html)
 		self.assertIn("whole boxes", html)
+		# no per-row box column any more
+		self.assertNotIn(">Box</th>", html)
 
 	def test_box_column_absent_when_packing_off(self):
 		from frappe.utils import get_html_for_route
@@ -99,6 +118,4 @@ class TestCartPageBoxes(IntegrationTestCase):
 		frappe.clear_cache()
 		frappe.set_user("page.box@example.com")
 		html = get_html_for_route("cart")
-		# the class name still appears in the page's static JS; the column must not
-		self.assertNotIn('webstore-cart-box" data-item', html)
-		self.assertNotIn(">Box</th>", html)
+		self.assertNotIn('id="webstore-box-type"', html)

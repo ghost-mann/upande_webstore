@@ -70,8 +70,8 @@ Length` attribute holds `40cm … 120cm`. This app already renders variants
 |---|---|
 | Unit of sale | **Stems**, unchanged; box count is derived |
 | Pack rate source | **Items** with `custom_is_box=1` and `custom_pack_rate` |
-| Box type scope | **Per cart line**, seeded from a farm default |
-| Whole-box check | Per **box-type group**, not per line |
+| Box type scope | **One per order, chosen at checkout**, seeded from a farm default |
+| Whole-box check | On the **cart total**, not per line |
 | Minimum order | **Order total in stems**, configurable |
 | Bunches | **Out of scope** for v1 |
 | Dropoff | Consume `Delivery Point` **if present**, else free text |
@@ -96,7 +96,7 @@ alongside the fields it already ensures on Quotation and Sales Order.
 `create_custom_fields` skips fields that already exist, so this is a no-op on
 live and does not take ownership of them.
 
-### Why the whole-box check is per group
+### Why the whole-box check is not per line
 
 Real line quantities are small. A sample of 40 recent orders / 309 lines:
 
@@ -111,8 +111,17 @@ The commonest line quantities are 20, 50, 100, 200, 250 and 300. A 50-stem line
 is not a partial box — it shares a box with other varieties, which is what
 `custom_has_mixed_boxes` and `Sales Order Mixed Box Group` exist for. Checking
 per line would reject 79% of realistic lines and force every variety to
-300/600/900. Summing each box-type group and checking *that* total honours
-mixed boxes while still refusing genuinely unpackable orders.
+300/600/900. Checking the **cart total** honours mixed boxes while still
+refusing genuinely unpackable orders, and 19 of 40 sampled order totals were
+already whole multiples of 300 against only 21% of individual lines.
+
+**Amended after review.** This started as a per-line box choice with the check
+applied per box-type group. Once rendered it was clear the basket table was the
+wrong home for it: the box is a property of the shipment, not of a variety. The
+picker moved into the checkout panel as a single choice for the order, which
+collapses the grouping to one group and puts the check on the cart total. The
+grouping helper stayed — it is what keeps the arithmetic honest if a second box
+axis is ever reintroduced.
 
 ### Rejected alternatives
 
@@ -124,6 +133,10 @@ mixed boxes while still refusing genuinely unpackable orders.
   `upande_harvest` and breaks the standalone requirement.
 - **Boxes as the unit of sale.** "6 boxes of Athena" cannot express a mixed box
   holding three varieties, and would need a separate mixed-box builder.
+- **A box type per cart line.** Built first, then reverted. The ERP models box
+  type at line level, so it mapped cleanly, but it put a dropdown on every
+  basket row for a decision that is made once per shipment — and it invited
+  buyers to mix box sizes in one order, which the packing floor does not do.
 - **Auto-snapping quantities.** Silently changing a buyer's typed number on a
   priced order is a trust problem.
 - **Modelling bunches now.** Live has 0 `Bunch QR Code` records, no bunch UOM
@@ -208,9 +221,10 @@ Because a line sharing a mixed box has no whole-box count of its own:
 - `custom_pack_rate` — the line's box type rate. Always well-defined.
 - `custom_number_of_boxes` — the line's own whole boxes when
   `qty % pack_rate == 0`, otherwise `0`.
-- `Sales Order.custom_has_mixed_boxes` — `1` when any box-type group holds more
-  than one line, which tells the desk this order needs mixed-box handling
-  without this app composing recipes.
+- `Sales Order.custom_has_mixed_boxes` — `1` when some line must share a box.
+  A line whose quantity is a whole number of boxes packs on its own, so two
+  lines of 600 at 300/box are *not* mixed while 150 + 150 are. This tells the
+  desk an order needs mixed-box handling without this app composing recipes.
 
 ## Box grouping
 
@@ -218,17 +232,14 @@ Lines are grouped by their box type; each group's stem total must be a whole
 multiple of that box's pack rate.
 
 ```
-CART
-  Athena 60cm    50   ZIM
-  Reflex 60cm   250   ZIM
-  Alicia 60cm   300   ZIM
-  Snow Flakes   500   JUMBO
-
-GROUPS
-  ZIM     600 stems / 300 = 2 boxes   full
-  JUMBO   500 stems / 500 = 1 box     full
-  order total 1,100 stems >= 1,000    ok
-  -> checkout enabled
+BASKET                      CHECKOUT PANEL
+  Athena 60cm     50          Box type  [ ZIM (300 stems) v ]
+  Reflex 60cm    250
+  Alicia 60cm    300
+  Snow Flakes    600
+  ----------------            1,200 stems / 300 = 4 boxes, all full
+  total        1,200          1,200 >= 1,000 minimum
+                              -> checkout enabled
 ```
 
 A group that does not divide cleanly blocks checkout and names both neighbours:

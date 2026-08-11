@@ -54,22 +54,24 @@ class TestCartBoxes(IntegrationTestCase):
 	def tearDown(self):
 		frappe.set_user("Administrator")
 
-	def test_new_line_is_seeded_with_the_default_box(self):
+	def test_cart_is_seeded_with_the_default_box(self):
 		from upande_webstore.api import cart
 
 		result = cart.add_item("WS-BOX-ITEM", 600)
-		self.assertEqual(result["items"][0]["box"]["box_type"], self.zim)
-		self.assertEqual(result["items"][0]["box"]["number_of_boxes"], 2)
+		self.assertEqual(result["boxes"]["box_type"], self.zim)
+		self.assertEqual(result["boxes"]["boxes"], 2)
+		self.assertEqual(result["items"][0]["number_of_boxes"], 2)
 
-	def test_partial_line_reports_zero_boxes_but_no_problem_alone(self):
-		"""A 50-stem line shares a box; the group total is what matters."""
+	def test_partial_line_reports_zero_boxes(self):
+		"""A 50-stem line shares a box, so it has no whole-box count of its own;
+		the cart total is what gets validated."""
 		from upande_webstore.api import cart
 
 		result = cart.add_item("WS-BOX-ITEM", 50)
-		self.assertEqual(result["items"][0]["box"]["number_of_boxes"], 0)
+		self.assertEqual(result["items"][0]["number_of_boxes"], 0)
 		self.assertFalse(result["boxes"]["packable"])
 
-	def test_group_of_two_lines_fills_whole_boxes(self):
+	def test_two_lines_together_fill_whole_boxes(self):
 		from upande_webstore.api import cart
 
 		frappe.set_user("Administrator")
@@ -103,16 +105,26 @@ class TestCartBoxes(IntegrationTestCase):
 		result = cart.add_item("WS-BOX-ITEM", 1750)
 		self.assertTrue(result["boxes"]["packable"])
 
-	def test_set_box_type_regroups(self):
+	def test_set_box_type_applies_to_the_whole_order(self):
 		from upande_webstore.api import cart
 
 		frappe.set_user("Administrator")
 		jumbo = make_box_item("WS-BOX-JUMBO", 500)
 		frappe.set_user("box.buyer@example.com")
 		cart.add_item("WS-BOX-ITEM", 500)
-		result = cart.set_box_type("WS-BOX-ITEM", jumbo)
-		self.assertEqual(result["items"][0]["box"]["box_type"], jumbo)
+		result = cart.set_box_type(jumbo)
+		self.assertEqual(result["boxes"]["box_type"], jumbo)
+		self.assertEqual(result["boxes"]["pack_rate"], 500)
 		self.assertTrue(result["boxes"]["packable"])
+
+	def test_unusable_box_type_is_rejected(self):
+		from upande_webstore.api import cart
+
+		frappe.set_user("Administrator")
+		unrated = make_box_item("WS-BOX-REJECT", 0)
+		frappe.set_user("box.buyer@example.com")
+		cart.add_item("WS-BOX-ITEM", 300)
+		self.assertRaises(frappe.ValidationError, cart.set_box_type, unrated)
 
 	def test_disabled_box_falls_back_to_the_default(self):
 		"""A farm disabling a box Item must not brick carts already holding it."""
@@ -121,15 +133,16 @@ class TestCartBoxes(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		retired = make_box_item("WS-BOX-RETIRED", 400)
 		frappe.set_user("box.buyer@example.com")
-		cart.add_item("WS-BOX-ITEM", 600, box_type=retired)
+		cart.add_item("WS-BOX-ITEM", 600)
+		cart.set_box_type(retired)
 		frappe.set_user("Administrator")
 		frappe.db.set_value("Item", retired, "disabled", 1)
 		frappe.clear_cache(doctype="Item")
 		enable_packing(self.zim)
 		frappe.set_user("box.buyer@example.com")
 		result = cart.get_cart()
-		self.assertEqual(result["items"][0]["box"]["box_type"], self.zim)
-		self.assertEqual(result["items"][0]["box"]["number_of_boxes"], 2)
+		self.assertEqual(result["boxes"]["box_type"], self.zim)
+		self.assertEqual(result["boxes"]["boxes"], 2)
 
 	def test_get_box_types_excludes_unrated_boxes(self):
 		from upande_webstore.api import cart

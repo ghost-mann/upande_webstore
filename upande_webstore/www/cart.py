@@ -11,12 +11,20 @@ def get_context(context):
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/cart"
 		raise frappe.Redirect
-	from upande_webstore.api.cart import _get_open_cart, _reprice, serialize_cart
+	from upande_webstore.api.cart import (
+		_get_open_cart,
+		_recompute_boxes,
+		_reprice,
+		serialize_cart,
+	)
 
 	context.no_cache = 1
 	cart = _get_open_cart()
 	if cart:
 		_reprice(cart)
+		# also seeds the box type on a cart that predates the packing feature,
+		# so the checkout picker opens on the farm default rather than blank
+		_recompute_boxes(cart)
 		cart.save(ignore_permissions=True)
 	context.cart = serialize_cart(cart)
 	customer = get_customer()

@@ -22,40 +22,28 @@
 	<div class="ws-panel">
 		<div class="ws-panel-head"><h3>{{ _("Items") }}</h3><div class="meta">{{ cart["items"] | length }}</div></div>
 		<table class="table">
-			<thead><tr><th>{{ _("Item") }}</th><th style="width:110px">{{ _("Qty") }}</th>{% if cart.boxes %}<th style="width:170px">{{ _("Box") }}</th>{% endif %}<th class="text-right">{{ _("Rate") }}</th><th class="text-right">{{ _("Amount") }}</th><th></th></tr></thead>
+			<thead><tr><th>{{ _("Item") }}</th><th style="width:110px">{{ _("Qty") }}</th><th class="text-right">{{ _("Rate") }}</th><th class="text-right">{{ _("Amount") }}</th><th></th></tr></thead>
 			<tbody>
 			{% for row in cart["items"] %}
 			<tr data-cart-row="{{ row.item_code }}">
 				<td>{% if row.route %}<a href="/{{ row.route }}">{{ row.web_title }}</a>{% else %}{{ row.item_name }}{% endif %}</td>
 				<td><input type="number" min="0" class="form-control form-control-sm webstore-cart-qty" data-item="{{ row.item_code }}" value="{{ row.qty }}"></td>
-				{% if cart.boxes %}
-				<td>
-					<select class="form-control form-control-sm webstore-cart-box" data-item="{{ row.item_code }}">
-						{% for box in box_types %}
-						<option value="{{ box.item_code }}" {% if box.item_code == row.box.box_type %}selected{% endif %}>{{ box.item_name }} ({{ box.pack_rate }})</option>
-						{% endfor %}
-					</select>
-					{% if row.box.number_of_boxes %}<small class="text-muted">{{ row.box.number_of_boxes }} {{ _("boxes") }}</small>{% endif %}
-				</td>
-				{% endif %}
 				<td class="text-right">{{ frappe.utils.fmt_money(row.rate, currency=cart.currency) }}</td>
 				<td class="text-right">{{ frappe.utils.fmt_money(row.amount, currency=cart.currency) }}</td>
 				<td class="text-right"><button class="btn btn-sm btn-link text-danger webstore-cart-remove" data-item="{{ row.item_code }}" aria-label="{{ _('Remove') }}">✕</button></td>
 			</tr>
 			{% endfor %}
 			</tbody>
-			<tfoot><tr><th colspan="{{ 4 if cart.boxes else 3 }}" class="text-right">{{ _("Total") }}</th><th class="text-right">{{ frappe.utils.fmt_money(cart.total, currency=cart.currency) }}</th><th></th></tr></tfoot>
+			<tfoot><tr><th colspan="3" class="text-right">{{ _("Total") }}</th><th class="text-right">{{ frappe.utils.fmt_money(cart.total, currency=cart.currency) }}</th><th></th></tr></tfoot>
 		</table>
 		{% if cart.boxes %}
 		<div class="ws-box-summary" style="margin-top:1rem">
-			{% for group in cart.boxes.groups %}
-			{% if group.pack_rate %}
+			{% if cart.boxes.pack_rate %}
 			<div class="text-muted" style="font-size:.8rem">
-				{{ group.box_name }}: {{ group.stems | int }} {{ _("stems") }} —
-				{% if group.is_full %}{{ group.boxes }} {{ _("boxes, all full") }}{% else %}{{ _("does not fill whole boxes") }}{% endif %}
+				{{ cart.boxes.box_name }}: {{ cart.boxes.total_stems | int }} {{ _("stems") }} —
+				{% if cart.boxes.is_full %}{{ cart.boxes.boxes }} {{ _("boxes, all full") }}{% else %}{{ _("does not fill whole boxes") }}{% endif %}
 			</div>
 			{% endif %}
-			{% endfor %}
 			{% if cart.boxes.problems %}
 			<div class="alert alert-warning" style="margin-top:.6rem;font-size:.8rem">
 				{% for problem in cart.boxes.problems %}<div>{{ problem }}</div>{% endfor %}
@@ -79,6 +67,17 @@
 					</select>
 					<small class="form-text text-muted">{{ _("Manage addresses in") }} <a href="/portal/account">{{ _("your account") }}</a>.</small>
 				</div>
+				{% if cart.boxes and box_types %}
+				<div class="form-group">
+					<label>{{ _("Box type") }}</label>
+					<select class="form-control" id="webstore-box-type">
+						{% for box in box_types %}
+						<option value="{{ box.item_code }}" {% if box.item_code == cart.boxes.box_type %}selected{% endif %}>{{ box.item_name }} ({{ box.pack_rate }} {{ _("stems") }})</option>
+						{% endfor %}
+					</select>
+					<small class="form-text text-muted">{{ _("One box type per order. Your whole basket has to fill these evenly.") }}</small>
+				</div>
+				{% endif %}
 				<div class="form-group">
 					<label>{{ _("Dropoff points (optional)") }}</label>
 					{% if delivery_points_available %}
@@ -122,10 +121,10 @@ document.addEventListener("change", async (e) => {
 	} catch (err) { window.webstore.toast(err.message, true); }
 });
 document.addEventListener("change", async (e) => {
-	if (!e.target.matches(".webstore-cart-box")) return;
+	if (e.target.id !== "webstore-box-type") return;
 	try {
 		await window.webstore.call("upande_webstore.api.cart.set_box_type",
-			{ item_code: e.target.dataset.item, box_type: e.target.value });
+			{ box_type: e.target.value });
 		window.location.reload();
 	} catch (err) { window.webstore.toast(err.message, true); }
 });
@@ -146,6 +145,7 @@ document.addEventListener("click", async (e) => {
 				shipping_date: document.getElementById("webstore-shipping-date").value || null,
 				dropoff_points: (document.getElementById("webstore-dropoff") || {}).value || null,
 				delivery_point: (document.getElementById("webstore-delivery-point") || {}).value || null,
+				box_type: (document.getElementById("webstore-box-type") || {}).value || null,
 			});
 			const ordered = result.doctype === "Sales Order";
 			document.getElementById("webstore-checkout-message").textContent = ordered

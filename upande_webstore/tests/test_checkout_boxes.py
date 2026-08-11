@@ -142,6 +142,7 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		self.assertEqual([r.custom_number_of_boxes for r in rows], [0, 0])
 
 	def test_sales_order_flags_mixed_boxes(self):
+		"""50 + 250 share one ZIM box, so the desk needs to know."""
 		from upande_webstore.api import cart, checkout
 
 		cart.add_item("WS-MAP-A", 50)
@@ -150,10 +151,34 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		order = frappe.get_doc("Sales Order", result["sales_order"])
 		self.assertEqual(int(order.custom_has_mixed_boxes), 1)
 
-	def test_single_line_group_is_not_mixed(self):
+	def test_single_line_is_not_mixed(self):
 		from upande_webstore.api import cart, checkout
 
 		cart.add_item("WS-MAP-A", 300)
 		result = checkout.place_order(mode="order")
 		order = frappe.get_doc("Sales Order", result["sales_order"])
 		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
+
+	def test_two_whole_box_lines_are_not_mixed(self):
+		"""600 and 600 at 300/box each pack alone; nothing shares."""
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-MAP-A", 600)
+		cart.add_item("WS-MAP-B", 600)
+		result = checkout.place_order(mode="order")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
+
+	def test_box_type_posted_at_checkout_wins(self):
+		from upande_webstore.api import cart, checkout
+		from upande_webstore.tests.test_cart_boxes import make_box_item
+
+		frappe.set_user("Administrator")
+		jumbo = make_box_item("WS-MAP-JUMBO", 500)
+		frappe.set_user("map.buyer@example.com")
+		cart.add_item("WS-MAP-A", 1000)
+		result = checkout.place_order(box_type=jumbo)
+		row = frappe.get_doc("Quotation", result["quotation"]).items[0]
+		self.assertEqual(row.custom_box_type, jumbo)
+		self.assertEqual(int(row.custom_pack_rate), 500)
+		self.assertEqual(row.custom_number_of_boxes, 2)

@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, formatdate, get_url_to_form, getdate, nowdate
 
-from upande_webstore.api.cart import _get_open_cart, _require_login
+from upande_webstore.api.cart import _get_open_cart, _recompute_boxes, _require_login
 from upande_webstore.services import dropoff
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
 from upande_webstore.services.settings import get_settings
@@ -28,6 +28,7 @@ def place_order(
 	shipping_date=None,
 	dropoff_points=None,
 	delivery_point=None,
+	box_type=None,
 ):
 	"""Turn the open cart into a Quotation (price confirmation first) or a
 	Sales Order (commit now). Sales Orders are left as drafts for the sales
@@ -46,6 +47,7 @@ def place_order(
 	if not cart or not cart.items:
 		frappe.throw(_("Your cart is empty."), frappe.ValidationError)
 
+	_apply_box_type(cart, box_type)
 	_assert_available(cart)
 	_assert_packable(cart)
 	_assert_shipping_date(shipping_date)
@@ -96,6 +98,29 @@ def _assert_available(cart):
 		)
 
 
+def _apply_box_type(cart, box_type):
+	"""The box chosen in the checkout form wins.
+
+	One box type per order, so this lands on the cart rather than per line. The
+	cart may already carry a choice made earlier on the basket page; a value
+	posted with the order overrides it.
+	"""
+	from upande_webstore.services import packing
+
+	if not packing.packing_enabled():
+		return
+	if box_type:
+		if not packing.is_usable_box(box_type):
+			frappe.throw(_("That box type is not available."), frappe.ValidationError)
+		cart.box_type = box_type
+	if not cart.box_type or not packing.is_usable_box(cart.box_type):
+		cart.box_type = packing.get_default_box_type() or None
+	# the per-line box counts were derived against whatever box was set before,
+	# so they have to be re-derived against this one
+	_recompute_boxes(cart)
+	cart.save(ignore_permissions=True)
+
+
 def _assert_packable(cart):
 	"""Whole-box fill per box-type group, and the order minimum.
 
@@ -106,11 +131,9 @@ def _assert_packable(cart):
 
 	if not packing.packing_enabled():
 		return
-	lines = [
-		{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type}
-		for row in cart.items
-	]
-	groups = packing.group_by_box_type(lines)
+	groups = packing.group_by_box_type(
+		[{"item_code": row.item_code, "qty": row.qty, "box_type": cart.box_type} for row in cart.items]
+	)
 	total_stems = sum(flt(row.qty) for row in cart.items)
 	problems = packing.find_problems(
 		groups, total_stems, packing.get_minimum_order_stems()
@@ -177,9 +200,9 @@ def _cart_items(cart):
 			"qty": row.qty,
 			"rate": get_item_price(row.item_code, qty=row.qty)["rate"],
 		}
-		if include_boxes and row.box_type:
-			line["custom_box_type"] = row.box_type
-			line["custom_pack_rate"] = packing.get_pack_rate(row.box_type)
+		if include_boxes and cart.box_type:
+			line["custom_box_type"] = cart.box_type
+			line["custom_pack_rate"] = packing.get_pack_rate(cart.box_type)
 			# a line sharing a mixed box has no whole-box count of its own
 			line["custom_number_of_boxes"] = row.number_of_boxes or 0
 		rows.append(line)
@@ -187,18 +210,20 @@ def _cart_items(cart):
 
 
 def _has_mixed_boxes(cart):
-	"""True when any box type carries more than one line, which is what tells the
-	desk this order needs mixed-box handling."""
+	"""True when some line has to share a box with another.
+
+	A line whose quantity is a whole number of boxes packs on its own; anything
+	else must share, which is what tells the desk this order needs mixed-box
+	handling. Two lines of 600 at 300/box are not mixed; 150 + 150 are.
+	"""
 	from upande_webstore.services import packing
 
 	if not packing.packing_enabled():
 		return 0
-	lines = [
-		{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type}
-		for row in cart.items
-	]
-	groups = packing.group_by_box_type(lines)
-	return int(any(len(group["item_codes"]) > 1 for group in groups.values()))
+	pack_rate = packing.get_pack_rate(cart.box_type)
+	if not pack_rate or len(cart.items) < 2:
+		return 0
+	return int(any(flt(row.qty) % pack_rate for row in cart.items))
 
 
 def _create_quotation(
