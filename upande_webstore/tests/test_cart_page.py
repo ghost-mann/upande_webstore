@@ -103,8 +103,9 @@ class TestCartPageBoxes(IntegrationTestCase):
 		html = get_html_for_route("cart")
 		self.assertIn(">Box</th>", html)
 		self.assertIn("whole boxes", html)
-		# the buyer never picks one
-		self.assertNotIn('id="webstore-box-type"', html)
+		# the buyer can change it, and the column has room for the control
+		self.assertIn('webstore-cart-box" data-item', html)
+		self.assertIn('width:240px', html)
 
 	def test_box_column_absent_when_packing_off(self):
 		from frappe.utils import get_html_for_route

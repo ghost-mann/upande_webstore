@@ -31,7 +31,9 @@ def get_context(context):
 	context.addresses = get_customer_addresses(customer) if customer else []
 
 	from upande_webstore.services import dropoff
+	from upande_webstore.services.packing import get_box_types, packing_enabled
 
+	context.box_types = get_box_types() if packing_enabled() else []
 	context.delivery_points_available = dropoff.delivery_points_available()
 	context.delivery_points = dropoff.get_delivery_points()
 	return context

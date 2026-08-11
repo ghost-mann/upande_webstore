@@ -21,17 +21,22 @@
 <div class="ws-row-2">
 	<div class="ws-panel">
 		<div class="ws-panel-head"><h3>{{ _("Items") }}</h3><div class="meta">{{ cart["items"] | length }}</div></div>
-		<table class="table">
-			<thead><tr><th>{{ _("Item") }}</th><th style="width:110px">{{ _("Qty") }}</th>{% if cart.boxes %}<th>{{ _("Box") }}</th>{% endif %}<th class="text-right">{{ _("Rate") }}</th><th class="text-right">{{ _("Amount") }}</th><th></th></tr></thead>
+		<div style="overflow-x:auto">
+		<table class="table" style="min-width:640px">
+			<thead><tr><th>{{ _("Item") }}</th><th style="width:96px">{{ _("Qty") }}</th>{% if cart.boxes %}<th style="width:240px">{{ _("Box") }}</th>{% endif %}<th class="text-right">{{ _("Rate") }}</th><th class="text-right">{{ _("Amount") }}</th><th></th></tr></thead>
 			<tbody>
 			{% for row in cart["items"] %}
 			<tr data-cart-row="{{ row.item_code }}">
 				<td>{% if row.route %}<a href="/{{ row.route }}">{{ row.web_title }}</a>{% else %}{{ row.item_name }}{% endif %}</td>
 				<td><input type="number" min="0" class="form-control form-control-sm webstore-cart-qty" data-item="{{ row.item_code }}" value="{{ row.qty }}"></td>
 				{% if cart.boxes %}
-				<td class="text-muted" style="font-size:.85rem">
-					{{ row.box_name or "—" }}
-					{% if row.number_of_boxes %}<br><small>{{ row.number_of_boxes }} {{ _("boxes") }}</small>{% endif %}
+				<td>
+					<select class="form-control form-control-sm webstore-cart-box" data-item="{{ row.item_code }}" style="width:100%;min-width:200px">
+						{% for box in box_types %}
+						<option value="{{ box.item_code }}" {% if box.item_code == row.box_type %}selected{% endif %}>{{ box.item_name }} ({{ box.pack_rate }})</option>
+						{% endfor %}
+					</select>
+					{% if row.number_of_boxes %}<small class="text-muted">{{ row.number_of_boxes }} {{ _("boxes") }}</small>{% endif %}
 				</td>
 				{% endif %}
 				<td class="text-right">{{ frappe.utils.fmt_money(row.rate, currency=cart.currency) }}</td>
@@ -42,6 +47,7 @@
 			</tbody>
 			<tfoot><tr><th colspan="{{ 4 if cart.boxes else 3 }}" class="text-right">{{ _("Total") }}</th><th class="text-right">{{ frappe.utils.fmt_money(cart.total, currency=cart.currency) }}</th><th></th></tr></tfoot>
 		</table>
+		</div>
 		{% if cart.boxes %}
 		<div class="ws-box-summary" style="margin-top:1rem">
 			{% for group in cart.boxes.groups %}
@@ -114,6 +120,14 @@ document.addEventListener("change", async (e) => {
 	try {
 		await window.webstore.call("upande_webstore.api.cart.update_qty",
 			{ item_code: e.target.dataset.item, qty: parseFloat(e.target.value || "0") });
+		window.location.reload();
+	} catch (err) { window.webstore.toast(err.message, true); }
+});
+document.addEventListener("change", async (e) => {
+	if (!e.target.matches(".webstore-cart-box")) return;
+	try {
+		await window.webstore.call("upande_webstore.api.cart.set_box_type",
+			{ item_code: e.target.dataset.item, box_type: e.target.value });
 		window.location.reload();
 	} catch (err) { window.webstore.toast(err.message, true); }
 });

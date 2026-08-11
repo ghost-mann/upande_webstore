@@ -70,7 +70,7 @@ Length` attribute holds `40cm … 120cm`. This app already renders variants
 |---|---|
 | Unit of sale | **Stems**, unchanged; box count is derived |
 | Pack rate source | **Items** with `custom_is_box=1` and `custom_pack_rate` |
-| Box type source | **The product** (`Webstore Product.box_type`), farm default as fallback |
+| Box type | **Product supplies the default; buyer may override per line** |
 | Whole-box check | Per **box-type group**, not per line |
 | Minimum order | **Order total in stems**, configurable |
 | Bunches | **Out of scope** for v1 |
@@ -121,10 +121,16 @@ same reason: **the buyer should not be choosing at all.** A 120cm stem physicall
 will not fit a 100x33x20 box, so the box is determined by the product. Mona
 already models exactly this as `Website Item.custom_box_type`.
 
-So the box is now read from `Webstore Product.box_type`, falling back to the farm
-default when blank, and the basket *reports* it rather than offering it. An order
-therefore spans as many box types as its products call for, and whole-box fill is
-checked per box-type group — which is what the grouping helper was built for.
+**Settled shape.** The product supplies the default via
+`Webstore Product.box_type` — it knows a 120cm stem needs a tall box — and the
+buyer may override it per basket line. Removing the choice entirely went too far:
+a customer who wants everything in jumbos for their own handling has a legitimate
+reason to say so. An order therefore spans as many box types as its lines call
+for, and whole-box fill is checked per box-type group.
+
+Only the box *count* is never a client input. A buyer's override survives
+quantity changes; recompute reseeds from the product only when a line has no
+usable box.
 
 ### Rejected alternatives
 
@@ -136,9 +142,9 @@ checked per box-type group — which is what the grouping helper was built for.
   `upande_harvest` and breaks the standalone requirement.
 - **Boxes as the unit of sale.** "6 boxes of Athena" cannot express a mixed box
   holding three varieties, and would need a separate mixed-box builder.
-- **Letting the buyer choose the box at all** — per line, then once at checkout.
-  Both shipped and both were removed. Buyers cannot know which box a 120cm stem
-  needs, and offering the choice invited
+- **A single order-level box chosen at checkout.** Tried and removed: it cannot
+  express an order whose long-stem lines need a taller box than the rest, and it
+  invited
   buyers to mix box sizes in one order, which the packing floor does not do.
 - **Auto-snapping quantities.** Silently changing a buyer's typed number on a
   priced order is a trust problem.

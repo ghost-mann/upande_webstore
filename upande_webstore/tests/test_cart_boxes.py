@@ -156,6 +156,32 @@ class TestCartBoxes(IntegrationTestCase):
 		self.assertEqual(result["items"][0]["box_type"], self.zim)
 		self.assertEqual(result["items"][0]["number_of_boxes"], 2)
 
+	def test_buyer_can_override_the_product_box(self):
+		from upande_webstore.api import cart
+
+		frappe.set_user("Administrator")
+		jumbo = make_box_item("WS-BOX-OVERRIDE", 500)
+		set_product_box("WS-BOX-ITEM", self.zim)
+		frappe.set_user("box.buyer@example.com")
+		cart.add_item("WS-BOX-ITEM", 1000)
+		result = cart.set_box_type("WS-BOX-ITEM", jumbo)
+		self.assertEqual(result["items"][0]["box_type"], jumbo)
+		self.assertEqual(result["items"][0]["number_of_boxes"], 2)
+
+	def test_override_survives_a_quantity_change(self):
+		"""Recompute must not stamp the product's box back over the buyer's."""
+		from upande_webstore.api import cart
+
+		frappe.set_user("Administrator")
+		jumbo = make_box_item("WS-BOX-KEEP", 500)
+		set_product_box("WS-BOX-ITEM", self.zim)
+		frappe.set_user("box.buyer@example.com")
+		cart.add_item("WS-BOX-ITEM", 500)
+		cart.set_box_type("WS-BOX-ITEM", jumbo)
+		result = cart.update_qty("WS-BOX-ITEM", 1500)
+		self.assertEqual(result["items"][0]["box_type"], jumbo)
+		self.assertEqual(result["items"][0]["number_of_boxes"], 3)
+
 	def test_product_rejects_an_item_that_is_not_a_box(self):
 		"""Silently falling back to the default looks like the setting being
 		ignored, so a bad pick is refused on save."""

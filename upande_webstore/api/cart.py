@@ -46,17 +46,20 @@ def _reprice(cart):
 
 
 def _recompute_boxes(cart):
-	"""Resolve each line's box from its product and derive its box count.
+	"""Keep each line's box choice honest and derive its box count.
 
-	The box belongs to the product, so this is never a client input — same
-	reasoning as _reprice re-resolving every rate.
+	The product supplies the default — it knows a 120cm stem needs a tall box —
+	but the buyer may override it per line, so a usable existing choice is left
+	alone. Only the box *count* is never a client input, same as _reprice and
+	rates.
 	"""
 	from upande_webstore.services import packing
 
 	if not packing.packing_enabled():
 		return
 	for row in cart.items:
-		row.box_type = packing.get_product_box_type(row.item_code)
+		if not row.box_type or not packing.is_usable_box(row.box_type):
+			row.box_type = packing.get_product_box_type(row.item_code)
 		info = packing.compute_boxes(row.qty, packing.get_pack_rate(row.box_type))
 		# a line that shares a box with others has no whole-box count of its own
 		row.number_of_boxes = info["boxes"] if info["pack_rate"] and info["is_full"] else 0
@@ -222,3 +225,31 @@ def remove_item(item_code):
 	return serialize_cart(cart)
 
 
+@frappe.whitelist()
+@guard("cart")
+def get_box_types():
+	from upande_webstore.services.packing import get_box_types as _box_types
+
+	return _box_types()
+
+
+@frappe.whitelist()
+@guard("cart")
+def set_box_type(item_code, box_type):
+	"""Override one line's box. Blank falls back to the product's own box."""
+	from upande_webstore.services import packing
+
+	_require_login()
+	cart = _get_open_cart()
+	if not cart:
+		frappe.throw(_("Cart is empty."), frappe.ValidationError)
+	row = next((r for r in cart.items if r.item_code == item_code), None)
+	if not row:
+		frappe.throw(_("Item not in cart."), frappe.ValidationError)
+	if box_type and not packing.is_usable_box(box_type):
+		frappe.throw(_("That box type is not available."), frappe.ValidationError)
+	row.box_type = box_type or None
+	_reprice(cart)
+	_recompute_boxes(cart)
+	cart.save(ignore_permissions=True)
+	return serialize_cart(cart)
