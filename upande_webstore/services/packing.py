@@ -72,6 +72,20 @@ def get_pack_rate(box_item):
 	return int(rate) if rate > 0 else 0
 
 
+def get_product_box_type(item_code):
+	"""The box a product ships in, falling back to the farm default.
+
+	Box type belongs to the product, not the order: a 120cm stem physically will
+	not fit a 100x33x20 box, so the buyer never chooses it. Mirrors
+	`Website Item.custom_box_type`, which is how Mona already models this.
+	"""
+	box = frappe.db.get_value("Webstore Product", {"item": item_code}, "box_type")
+	if box and is_usable_box(box):
+		return box
+	default = get_default_box_type()
+	return default if default and is_usable_box(default) else None
+
+
 def is_usable_box(box_item):
 	return get_pack_rate(box_item) > 0
 
@@ -150,16 +164,23 @@ def find_problems(groups, total_stems, minimum_stems):
 				)
 			)
 		else:
+			lines = len(group["item_codes"])
+			where = (
+				_("{0} stems across {1} lines").format(int(group["stems"]), lines)
+				if lines > 1
+				else _("{0} stems").format(int(group["stems"]))
+			)
 			problems.append(
-				_("{0}: {1} stems across {2} lines does not fill whole boxes ({3} per box). Use {4} ({5} boxes) or {6} ({7} boxes).").format(
+				_("{0}: {1} does not fill whole boxes ({2} per box). Use {3} or {4}.").format(
 					label,
-					int(group["stems"]),
-					len(group["item_codes"]),
+					where,
 					group["pack_rate"],
-					int(group["nearest_down"]),
-					group["boxes"],
-					int(group["nearest_up"]),
-					group["boxes"] + 1,
+					_("{0} ({1} boxes)").format(int(group["nearest_down"]), group["boxes"])
+					if group["boxes"] != 1
+					else _("{0} (1 box)").format(int(group["nearest_down"])),
+					_("{0} ({1} boxes)").format(int(group["nearest_up"]), group["boxes"] + 1)
+					if group["boxes"] + 1 != 1
+					else _("{0} (1 box)").format(int(group["nearest_up"])),
 				)
 			)
 	if minimum_stems and flt(total_stems) < minimum_stems:

@@ -22,8 +22,8 @@ def get_context(context):
 	cart = _get_open_cart()
 	if cart:
 		_reprice(cart)
-		# also seeds the box type on a cart that predates the packing feature,
-		# so the checkout picker opens on the farm default rather than blank
+		# also resolves each line's box from its product, so a cart that predates
+		# the packing feature shows boxes on the next page load
 		_recompute_boxes(cart)
 		cart.save(ignore_permissions=True)
 	context.cart = serialize_cart(cart)
@@ -31,9 +31,7 @@ def get_context(context):
 	context.addresses = get_customer_addresses(customer) if customer else []
 
 	from upande_webstore.services import dropoff
-	from upande_webstore.services.packing import get_box_types, packing_enabled
 
 	context.delivery_points_available = dropoff.delivery_points_available()
 	context.delivery_points = dropoff.get_delivery_points()
-	context.box_types = get_box_types() if packing_enabled() else []
 	return context

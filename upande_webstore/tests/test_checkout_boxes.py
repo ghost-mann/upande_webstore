@@ -61,6 +61,8 @@ class TestCheckoutBoxes(IntegrationTestCase):
 		message = str(caught.exception)
 		self.assertIn("whole boxes", message)
 		self.assertIn("Minimum order", message)
+		# singular/plural box counts read properly
+		self.assertNotIn("(1 boxes)", message)
 
 	def test_whole_boxes_above_minimum_passes(self):
 		from upande_webstore.api import cart, checkout
@@ -116,6 +118,11 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		frappe.db.set_single_value("Webstore Settings", "default_box_type", self.zim)
 		frappe.db.set_single_value("Webstore Settings", "minimum_order_stems", 0)
 		frappe.clear_cache()
+		# product boxes persist across tests in this framework; reset them
+		from upande_webstore.tests.test_cart_boxes import set_product_box
+
+		set_product_box("WS-MAP-A", None)
+		set_product_box("WS-MAP-B", None)
 		frappe.set_user("map.buyer@example.com")
 
 	def tearDown(self):
@@ -159,6 +166,21 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		order = frappe.get_doc("Sales Order", result["sales_order"])
 		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
 
+	def test_product_box_lands_on_the_document(self):
+		from upande_webstore.api import cart, checkout
+		from upande_webstore.tests.test_cart_boxes import make_box_item, set_product_box
+
+		frappe.set_user("Administrator")
+		jumbo = make_box_item("WS-MAP-JUMBO", 500)
+		set_product_box("WS-MAP-A", jumbo)
+		frappe.set_user("map.buyer@example.com")
+		cart.add_item("WS-MAP-A", 1000)
+		result = checkout.place_order()
+		row = frappe.get_doc("Quotation", result["quotation"]).items[0]
+		self.assertEqual(row.custom_box_type, jumbo)
+		self.assertEqual(int(row.custom_pack_rate), 500)
+		self.assertEqual(row.custom_number_of_boxes, 2)
+
 	def test_two_whole_box_lines_are_not_mixed(self):
 		"""600 and 600 at 300/box each pack alone; nothing shares."""
 		from upande_webstore.api import cart, checkout
@@ -169,16 +191,3 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		order = frappe.get_doc("Sales Order", result["sales_order"])
 		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
 
-	def test_box_type_posted_at_checkout_wins(self):
-		from upande_webstore.api import cart, checkout
-		from upande_webstore.tests.test_cart_boxes import make_box_item
-
-		frappe.set_user("Administrator")
-		jumbo = make_box_item("WS-MAP-JUMBO", 500)
-		frappe.set_user("map.buyer@example.com")
-		cart.add_item("WS-MAP-A", 1000)
-		result = checkout.place_order(box_type=jumbo)
-		row = frappe.get_doc("Quotation", result["quotation"]).items[0]
-		self.assertEqual(row.custom_box_type, jumbo)
-		self.assertEqual(int(row.custom_pack_rate), 500)
-		self.assertEqual(row.custom_number_of_boxes, 2)

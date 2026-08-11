@@ -70,8 +70,8 @@ Length` attribute holds `40cm … 120cm`. This app already renders variants
 |---|---|
 | Unit of sale | **Stems**, unchanged; box count is derived |
 | Pack rate source | **Items** with `custom_is_box=1` and `custom_pack_rate` |
-| Box type scope | **One per order, chosen at checkout**, seeded from a farm default |
-| Whole-box check | On the **cart total**, not per line |
+| Box type source | **The product** (`Webstore Product.box_type`), farm default as fallback |
+| Whole-box check | Per **box-type group**, not per line |
 | Minimum order | **Order total in stems**, configurable |
 | Bunches | **Out of scope** for v1 |
 | Dropoff | Consume `Delivery Point` **if present**, else free text |
@@ -115,13 +115,16 @@ per line would reject 79% of realistic lines and force every variety to
 refusing genuinely unpackable orders, and 19 of 40 sampled order totals were
 already whole multiples of 300 against only 21% of individual lines.
 
-**Amended after review.** This started as a per-line box choice with the check
-applied per box-type group. Once rendered it was clear the basket table was the
-wrong home for it: the box is a property of the shipment, not of a variety. The
-picker moved into the checkout panel as a single choice for the order, which
-collapses the grouping to one group and puts the check on the cart total. The
-grouping helper stayed — it is what keeps the arithmetic honest if a second box
-axis is ever reintroduced.
+**Amended twice after review.** This began as a per-line box *choice*, then
+briefly became a single order-level choice at checkout. Both were wrong for the
+same reason: **the buyer should not be choosing at all.** A 120cm stem physically
+will not fit a 100x33x20 box, so the box is determined by the product. Mona
+already models exactly this as `Website Item.custom_box_type`.
+
+So the box is now read from `Webstore Product.box_type`, falling back to the farm
+default when blank, and the basket *reports* it rather than offering it. An order
+therefore spans as many box types as its products call for, and whole-box fill is
+checked per box-type group — which is what the grouping helper was built for.
 
 ### Rejected alternatives
 
@@ -133,9 +136,9 @@ axis is ever reintroduced.
   `upande_harvest` and breaks the standalone requirement.
 - **Boxes as the unit of sale.** "6 boxes of Athena" cannot express a mixed box
   holding three varieties, and would need a separate mixed-box builder.
-- **A box type per cart line.** Built first, then reverted. The ERP models box
-  type at line level, so it mapped cleanly, but it put a dropdown on every
-  basket row for a decision that is made once per shipment — and it invited
+- **Letting the buyer choose the box at all** — per line, then once at checkout.
+  Both shipped and both were removed. Buyers cannot know which box a 120cm stem
+  needs, and offering the choice invited
   buyers to mix box sizes in one order, which the packing floor does not do.
 - **Auto-snapping quantities.** Silently changing a buyer's typed number on a
   priced order is a trust problem.

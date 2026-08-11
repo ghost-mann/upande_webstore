@@ -46,24 +46,18 @@ def _reprice(cart):
 
 
 def _recompute_boxes(cart):
-	"""Resolve the cart's box type and derive each line's box count.
+	"""Resolve each line's box from its product and derive its box count.
 
-	One box type per order, chosen at checkout — so whole-box fill is a property
-	of the cart total, not of any single line. Derived server-side on every
-	mutation, exactly as _reprice re-resolves rates.
+	The box belongs to the product, so this is never a client input — same
+	reasoning as _reprice re-resolving every rate.
 	"""
 	from upande_webstore.services import packing
 
 	if not packing.packing_enabled():
 		return
-	# a box that was disabled or had its rate cleared falls back to the default
-	if cart.box_type and not packing.is_usable_box(cart.box_type):
-		cart.box_type = None
-	if not cart.box_type:
-		cart.box_type = packing.get_default_box_type() or None
-	pack_rate = packing.get_pack_rate(cart.box_type)
 	for row in cart.items:
-		info = packing.compute_boxes(row.qty, pack_rate)
+		row.box_type = packing.get_product_box_type(row.item_code)
+		info = packing.compute_boxes(row.qty, packing.get_pack_rate(row.box_type))
 		# a line that shares a box with others has no whole-box count of its own
 		row.number_of_boxes = info["boxes"] if info["pack_rate"] and info["is_full"] else 0
 
@@ -76,20 +70,26 @@ def _box_view(cart):
 		return None
 	total_stems = sum(frappe.utils.flt(row.qty) for row in cart.items)
 	groups = packing.group_by_box_type(
-		[{"item_code": row.item_code, "qty": row.qty, "box_type": cart.box_type} for row in cart.items]
+		[{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type} for row in cart.items]
 	)
 	problems = packing.find_problems(
 		groups, total_stems, packing.get_minimum_order_stems()
 	)
-	summary = packing.compute_boxes(total_stems, packing.get_pack_rate(cart.box_type))
 	return {
-		"box_type": cart.box_type,
-		"box_name": packing.box_label(cart.box_type),
-		"pack_rate": summary["pack_rate"],
-		"boxes": summary["boxes"],
-		"is_full": summary["is_full"],
-		"nearest_down": summary["nearest_down"],
-		"nearest_up": summary["nearest_up"],
+		"groups": [
+			{
+				"box_type": g["box_type"],
+				"box_name": packing.box_label(g["box_type"]),
+				"pack_rate": g["pack_rate"],
+				"stems": g["stems"],
+				"boxes": g["boxes"],
+				"is_full": g["is_full"],
+				"nearest_down": g["nearest_down"],
+				"nearest_up": g["nearest_up"],
+				"lines": len(g["item_codes"]),
+			}
+			for g in sorted(groups.values(), key=lambda g: (g["box_type"] or ""))
+		],
 		"problems": problems,
 		"packable": not problems,
 		"total_stems": total_stems,
@@ -128,6 +128,11 @@ def serialize_cart(cart):
 				"qty": row.qty,
 				"rate": row.rate,
 				"amount": row.amount,
+				"box_type": row.get("box_type"),
+				"box_name": (
+					frappe.db.get_value("Item", row.box_type, "item_name") or row.box_type
+					if row.get("box_type") else None
+				),
 				"number_of_boxes": row.get("number_of_boxes") or 0,
 			}
 			for row in cart.items
@@ -217,29 +222,3 @@ def remove_item(item_code):
 	return serialize_cart(cart)
 
 
-@frappe.whitelist()
-@guard("cart")
-def get_box_types():
-	from upande_webstore.services.packing import get_box_types as _box_types
-
-	return _box_types()
-
-
-@frappe.whitelist()
-@guard("cart")
-def set_box_type(box_type):
-	"""One box type for the whole order. Chosen at checkout, stored on the cart so
-	the basket summary can reflect it before the order is placed."""
-	from upande_webstore.services import packing
-
-	_require_login()
-	cart = _get_open_cart()
-	if not cart:
-		frappe.throw(_("Cart is empty."), frappe.ValidationError)
-	if box_type and not packing.is_usable_box(box_type):
-		frappe.throw(_("That box type is not available."), frappe.ValidationError)
-	cart.box_type = box_type or None
-	_reprice(cart)
-	_recompute_boxes(cart)
-	cart.save(ignore_permissions=True)
-	return serialize_cart(cart)

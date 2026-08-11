@@ -82,30 +82,29 @@ class TestCartPageBoxes(IntegrationTestCase):
 		doc.db_set("box_type", None)
 		context = frappe._dict()
 		get_context(context)
-		self.assertEqual(context.cart["boxes"]["box_type"], self.zim)
-		self.assertEqual(context.cart["boxes"]["boxes"], 2)
+		self.assertEqual(context.cart["items"][0]["box_type"], self.zim)
+		self.assertEqual(context.cart["items"][0]["number_of_boxes"], 2)
 
-	def test_context_carries_box_types_and_dropoff_mode(self):
+	def test_context_carries_dropoff_mode(self):
 		from upande_webstore.www.cart import get_context
 
 		context = frappe._dict()
 		get_context(context)
-		self.assertIn(self.zim, [box["item_code"] for box in context.box_types])
 		self.assertIn("delivery_points_available", context)
 
-	def test_checkout_panel_shows_box_select_and_the_block_reason(self):
-		"""The box belongs to the order, so its picker lives in the checkout
-		panel rather than on every basket row."""
+	def test_basket_shows_the_box_and_the_block_reason(self):
+		"""The box comes from the product, so the basket reports it rather than
+		offering a choice."""
 		from frappe.utils import get_html_for_route
 
 		from upande_webstore.api import cart
 
 		cart.add_item("WS-PAGE-BOX", 1750)
 		html = get_html_for_route("cart")
-		self.assertIn('id="webstore-box-type"', html)
+		self.assertIn(">Box</th>", html)
 		self.assertIn("whole boxes", html)
-		# no per-row box column any more
-		self.assertNotIn(">Box</th>", html)
+		# the buyer never picks one
+		self.assertNotIn('id="webstore-box-type"', html)
 
 	def test_box_column_absent_when_packing_off(self):
 		from frappe.utils import get_html_for_route
@@ -118,4 +117,4 @@ class TestCartPageBoxes(IntegrationTestCase):
 		frappe.clear_cache()
 		frappe.set_user("page.box@example.com")
 		html = get_html_for_route("cart")
-		self.assertNotIn('id="webstore-box-type"', html)
+		self.assertNotIn(">Box</th>", html)
