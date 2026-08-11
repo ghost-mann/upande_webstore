@@ -87,6 +87,15 @@ share one source, with no new doctype, no fixtures and no migration. The cost
 is honest: someone has to enter rates on the seven live box Items, and that is
 a prerequisite for switching the flag on rather than a code problem.
 
+**Amended during implementation.** This section originally assumed
+`Item.custom_is_box` and `Item.custom_pack_rate` simply existed, because Mona
+live has them. They are `upande_harvest`'s fields, and on a site with only this
+app installed they are absent — so there was no way to mark an Item as a box and
+the feature could never work standalone. `install.py` therefore *ensures* both,
+alongside the fields it already ensures on Quotation and Sales Order.
+`create_custom_fields` skips fields that already exist, so this is a no-op on
+live and does not take ownership of them.
+
 ### Why the whole-box check is per group
 
 Real line quantities are small. A sample of 40 recent orders / 309 lines:
@@ -185,6 +194,7 @@ ones. That is a deliberate, scoped exception to the app's naming convention.
 | Sales Order Item | `custom_number_of_boxes` | exists |
 | Sales Order | `custom_has_mixed_boxes` | exists |
 | Quotation Item | the same three box fields | **created by `install.py`** |
+| Item | `custom_is_box`, `custom_pack_rate` | exists; **ensured by `install.py`** |
 
 `create_custom_fields` skips fields that already exist, so ensuring these is
 safe on a farm that already has them.
@@ -258,9 +268,16 @@ Server-side, in `place_order`:
 
 | Input | Result |
 |---|---|
-| Omitted | `today + default_lead_days` |
+| Omitted | Sales Order `delivery_date` = `today + default_lead_days` |
 | Earlier than today | Rejected |
 | Inside the lead window | Rejected, stating the earliest acceptable date |
+
+The requested date and the resolved delivery date stay **distinct**.
+`webstore_shipping_date` records what the buyer asked for, so when they ask for
+nothing it stays empty; only the Sales Order's `delivery_date` takes the lead-time
+default. Collapsing the two would stamp a derived date into a field that claims
+to be a customer request — and `test_both_are_optional` already encoded that,
+which is how the mistake was caught.
 
 The `min=` attribute on the cart's date input stays, but is now backed by a
 server check rather than being the only one.
