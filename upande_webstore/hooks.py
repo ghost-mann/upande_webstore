@@ -146,13 +146,14 @@ after_migrate = "upande_webstore.setup.install.after_migrate"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	# ERPNext's quotation -> sales order mapper drops custom fields, so the
+	# buyer's requested shipping date and dropoff have to be carried across
+	# explicitly. Fires for desk conversions too, not just the portal.
+	"Sales Order": {
+		"before_insert": "upande_webstore.services.conversion.carry_webstore_fields",
+	}
+}
 
 # Scheduled Tasks
 # ---------------
