@@ -45,6 +45,7 @@ def place_order(
 		frappe.throw(_("Your cart is empty."), frappe.ValidationError)
 
 	_assert_available(cart)
+	_assert_packable(cart)
 
 	settings = get_settings()
 	price_list = get_price_list()
@@ -90,6 +91,29 @@ def _assert_available(cart):
 			_("These items are no longer available in the requested quantity: {0}. Please adjust your cart.").format(", ".join(unavailable)),
 			frappe.ValidationError,
 		)
+
+
+def _assert_packable(cart):
+	"""Whole-box fill per box-type group, and the order minimum.
+
+	Inert unless the farm has switched packing on AND entered pack rates, so
+	this cannot break a site that has done neither.
+	"""
+	from upande_webstore.services import packing
+
+	if not packing.packing_enabled():
+		return
+	lines = [
+		{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type}
+		for row in cart.items
+	]
+	groups = packing.group_by_box_type(lines)
+	total_stems = sum(flt(row.qty) for row in cart.items)
+	problems = packing.find_problems(
+		groups, total_stems, packing.get_minimum_order_stems()
+	)
+	if problems:
+		frappe.throw("<br>".join(problems), frappe.ValidationError)
 
 
 def _cart_items(cart):
