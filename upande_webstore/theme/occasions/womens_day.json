@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Women's Day",
+  "seeds": {
+    "accent": "#9e6400",
+    "accent_dark": "#734900",
+    "accent_soft": "#fdf3e0"
+  },
+  "banner": {
+    "text": "International Women's Day — 8 March. Yellow and mixed lines are booking now.",
+    "cta_label": "Request a quotation",
+    "cta_url": "/portal/quotations"
+  },
+  "hero": {
+    "eyebrow": "Women's Day · 8 March",
+    "heading": "Yellow and mixed,",
+    "heading_em": "graded for the March peak",
+    "cta_primary": "Browse varieties"
+  }
+}

@@ -38,6 +38,23 @@ THEME_FIELDS = (
 	"custom_css",
 )
 
+# the colour subset of THEME_FIELDS — the only seeds an occasion can move
+COLOR_FIELDS = (
+	"accent",
+	"accent_dark",
+	"accent_soft",
+	"ink",
+	"ink_muted",
+	"canvas",
+	"wash",
+	"border",
+	"border_strong",
+	"success",
+	"warning",
+	"danger",
+	"info",
+)
+
 # seed fieldname -> ((scss token, derivation key), ...)
 # The token names differ from the field names where the SCSS already had its own
 # vocabulary: 'danger' fills the 'destructive' tokens, and warning is two-tone
@@ -58,16 +75,39 @@ SHAPE_FIELDS = (
 FONT_TOKENS = (("sans", "font-sans"), ("display", "display"), ("mono", "font-mono"))
 
 
-def _seed(settings, field):
-	return color.parse(settings.get(field))
+def _seed(values, field):
+	return color.parse(values.get(field))
 
 
-def get_tokens(settings):
+def _seed_values(settings, active_occasion):
+	"""Colour seeds after the occasion overlay.
+
+	Groups are replaced whole: an occasion that sets `accent` owns accent_dark
+	and accent_soft too, blank meaning re-derive. Merging here rather than over
+	the finished tokens is what makes the derived ramp — hover, deep, ring and
+	the contrast-picked on-accent — follow the occasion instead of the farm.
+	"""
+	values = {field: settings.get(field) for field in COLOR_FIELDS}
+	if not active_occasion:
+		return values
+
+	from upande_webstore.theme.occasion import SEED_GROUPS
+
+	seeds = active_occasion.get("seeds") or {}
+	for group in SEED_GROUPS.values():
+		if any(seeds.get(field) for field in group):
+			for field in group:
+				values[field] = seeds.get(field) or ""
+	return values
+
+
+def get_tokens(settings, occasion=None):
 	out = {}
+	values = _seed_values(settings, occasion)
 
-	ink = _seed(settings, "ink")
-	canvas = _seed(settings, "canvas")
-	muted = _seed(settings, "ink_muted")
+	ink = _seed(values, "ink")
+	canvas = _seed(values, "canvas")
+	muted = _seed(values, "ink_muted")
 
 	ink_scale = color.ink_scale(ink, muted, canvas or DEFAULT_CANVAS)
 	out.update(ink_scale)
@@ -75,15 +115,15 @@ def get_tokens(settings):
 		color.surface_scale(
 			ink,
 			canvas,
-			_seed(settings, "wash"),
-			_seed(settings, "border"),
-			_seed(settings, "border_strong"),
+			_seed(values, "wash"),
+			_seed(values, "border"),
+			_seed(values, "border_strong"),
 		)
 	)
 
-	accent = _seed(settings, "accent")
+	accent = _seed(values, "accent")
 	out.update(
-		color.accent_scale(accent, _seed(settings, "accent_dark"), _seed(settings, "accent_soft"))
+		color.accent_scale(accent, _seed(values, "accent_dark"), _seed(values, "accent_soft"))
 	)
 
 	# Text laid over the CTA gradient, which runs accent-deep -> accent. Judged
@@ -97,7 +137,7 @@ def get_tokens(settings):
 		)
 
 	for field, mapping in STATUS_TOKENS.items():
-		family = color.status_scale(_seed(settings, field))
+		family = color.status_scale(_seed(values, field))
 		if not family:
 			continue
 		for token, key in mapping:

@@ -212,10 +212,12 @@ knows about, excluding them from the list gives exactly this behaviour.
 
 ## The banner
 
-A block in `webstore_base.html` immediately above `{% block navbar %}`. Because
-`webstore_portal_base.html:1` extends the base, the banner and the recoloured
-tokens reach the portal for free — which is where signed-in trade buyers
-actually book, and so the audience that most needs a cutoff date.
+Rendered at the top of `{% block navbar %}` in `webstore_base.html`, above the
+`<nav>`. It cannot have a block of its own: `web.html` declares no sibling slot
+there, and Jinja silently drops a block the parent template never defines.
+Because `webstore_portal_base.html:1` extends the base, the banner and the
+recoloured tokens reach the portal for free — which is where signed-in trade
+buyers actually book, and so the audience that most needs a cutoff date.
 
 `.ws-navbar` is `position: sticky; top: 0; z-index: 1030`
 (`public/scss/webstore.bundle.scss:175`). A banner in normal flow above it

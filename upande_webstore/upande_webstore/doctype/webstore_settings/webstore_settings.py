@@ -12,7 +12,16 @@ class WebstoreSettings(Document):
 		if self.docstatus:
 			self.docstatus = 0
 		self.validate_font_url()
+		self.validate_occasion()
 		self.apply_feature_dependencies()
+
+	def validate_occasion(self):
+		if not self.occasion:
+			return
+		from upande_webstore.theme import occasion
+
+		if self.occasion not in occasion.list_names():
+			frappe.throw(_("No shipped occasion named {0}.").format(self.occasion))
 
 	def apply_feature_dependencies(self):
 		# the drawer has nothing to show without a cart

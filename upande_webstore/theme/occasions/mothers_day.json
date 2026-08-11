@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Mother's Day",
+  "seeds": {
+    "accent": "#a8386a",
+    "accent_dark": "#7a2850",
+    "accent_soft": "#fceef4"
+  },
+  "banner": {
+    "text": "Mother's Day — pastel and soft-pink lines are booking now.",
+    "cta_label": "Request a quotation",
+    "cta_url": "/portal/quotations"
+  },
+  "hero": {
+    "eyebrow": "Mother's Day · spring allocation",
+    "heading": "Soft pinks and creams,",
+    "heading_em": "cut for Mother's Day",
+    "cta_primary": "Browse varieties"
+  }
+}

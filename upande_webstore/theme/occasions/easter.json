@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "label": "Easter",
+  "seeds": {
+    "accent": "#2f7d5c",
+    "accent_dark": "#205740",
+    "accent_soft": "#e9f5ef"
+  },
+  "banner": {
+    "text": "Easter — whites, greens and pastels available for spring programmes.",
+    "cta_label": "Request a quotation",
+    "cta_url": "/portal/quotations"
+  },
+  "hero": {
+    "eyebrow": "Easter · spring programme",
+    "heading": "Whites and fresh greens,",
+    "heading_em": "cut for the spring table",
+    "cta_primary": "Browse varieties"
+  }
+}

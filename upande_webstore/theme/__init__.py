@@ -8,17 +8,21 @@ import frappe
 
 
 def get_theme(settings=None):
-	from upande_webstore.theme import branding, features, fonts, tokens
+	from upande_webstore.theme import branding, features, fonts, occasion, tokens
 
 	if settings is None:
 		from upande_webstore.services.settings import get_settings
 
 		settings = get_settings()
 
+	# resolved once and shared, so a page costs one file read rather than two
+	current = occasion.active(settings)
+
 	return frappe._dict(
-		tokens=tokens.get_tokens(settings),
+		tokens=tokens.get_tokens(settings, current),
 		custom_css=tokens.get_custom_css(settings),
 		font_link=fonts.resolve(settings)["link"],
-		branding=branding.get_branding(settings),
+		branding=branding.get_branding(settings, current),
 		features=features.enabled(),
+		occasion=current,
 	)

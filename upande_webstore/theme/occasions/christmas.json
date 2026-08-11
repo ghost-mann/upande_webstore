@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "label": "Christmas",
+  "seeds": {
+    "accent": "#8f1a25",
+    "accent_dark": "#63111a",
+    "accent_soft": "#f8ebec",
+    "canvas": "#faf7f2",
+    "wash": "#f0ebe3"
+  },
+  "banner": {
+    "text": "Christmas — December volumes are allocating now.",
+    "cta_label": "Request a quotation",
+    "cta_url": "/portal/quotations"
+  },
+  "hero": {
+    "eyebrow": "Christmas · December allocation",
+    "heading": "Deep reds and evergreen,",
+    "heading_em": "allocated for December",
+    "cta_primary": "Browse varieties"
+  }
+}

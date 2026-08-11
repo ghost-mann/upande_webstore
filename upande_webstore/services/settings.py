@@ -71,5 +71,6 @@ def update_website_context(context):
 	context.webstore_font_link = theme.font_link
 	context.webstore_branding = theme.branding
 	context.webstore_features = theme.features
+	context.webstore_occasion = theme.occasion
 	# retained one release for anything still reading the old key
 	context.webstore_appearance = get_appearance()

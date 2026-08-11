@@ -4,6 +4,19 @@ frappe.ui.form.on("Webstore Settings", {
 			frm.set_df_property("preset", "options", [""].concat(r.message || []).join("\n"));
 		});
 
+		frappe.call("upande_webstore.theme.occasion.list_occasions").then((r) => {
+			const options = r.message || [];
+			// set_data, not set_df_property: an Autocomplete reads df.options only
+			// in make_input(), which has already run by the time this resolves, so
+			// setting the property alone leaves the control empty and it renders as
+			// a plain text box. set_data fills awesomplete directly — the same call
+			// frappe's own async-loaded autocompletes use. df.options is set too so
+			// the list survives if the control is ever rebuilt.
+			frm.set_df_property("occasion", "options", options);
+			frm.fields_dict.occasion?.set_data(options);
+		});
+		frm.__ws_last_occasion = frm.doc.occasion;
+
 		frm.add_custom_button(
 			__("Export Theme"),
 			() => {
@@ -78,6 +91,19 @@ frappe.ui.form.on("Webstore Settings", {
 			},
 			__("Theme")
 		);
+	},
+
+	occasion(frm) {
+		// Clear the previous campaign's wording and cutoff date — otherwise last
+		// year's "book by 20 January" rides along into the next occasion.
+		if (frm.doc.occasion === frm.__ws_last_occasion) return;
+		frm.__ws_last_occasion = frm.doc.occasion;
+		[
+			"occasion_banner_text",
+			"occasion_banner_cta_label",
+			"occasion_banner_cta_url",
+			"occasion_runs_until",
+		].forEach((field) => frm.set_value(field, ""));
 	},
 });
 
