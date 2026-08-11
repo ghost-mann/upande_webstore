@@ -17,6 +17,11 @@
   "stock_display",
   "notification_emails",
   "warehouses",
+  "packing_section",
+  "enable_box_packing",
+  "default_box_type",
+  "minimum_order_stems",
+  "default_lead_days",
   "theme_tab",
   "theme_intro",
   "brand_colors_section",
@@ -184,6 +189,39 @@
    "fieldtype": "Table",
    "label": "Stock Warehouses",
    "options": "Webstore Warehouse"
+  },
+  {
+   "fieldname": "packing_section",
+   "fieldtype": "Section Break",
+   "label": "Boxes & Order Rules"
+  },
+  {
+   "fieldname": "enable_box_packing",
+   "fieldtype": "Check",
+   "label": "Box Packing Rules",
+   "default": "0",
+   "description": "Off = no box maths and no order minimum. Turn on only after pack rates are entered on your box Items."
+  },
+  {
+   "fieldname": "default_box_type",
+   "fieldtype": "Link",
+   "label": "Default Box Type",
+   "options": "Item",
+   "description": "Seeds each new cart line. Must be an Item flagged Is Box with a pack rate."
+  },
+  {
+   "fieldname": "minimum_order_stems",
+   "fieldtype": "Int",
+   "label": "Minimum Order (Stems)",
+   "default": "0",
+   "description": "0 = no minimum. Checked against the whole cart, not per line."
+  },
+  {
+   "fieldname": "default_lead_days",
+   "fieldtype": "Int",
+   "label": "Delivery Lead Time (Days)",
+   "default": "7",
+   "description": "Earliest shipping date a buyer may request, and the fallback when none is given."
   },
   {
    "fieldname": "theme_tab",
