@@ -74,6 +74,28 @@ WEBSTORE_CUSTOM_FIELDS = {
 			"read_only": 1,
 		},
 	],
+	# Box types are Items, so the storefront and the packing floor share one
+	# source. These two are `custom_`-prefixed rather than `webstore_` on
+	# purpose: they are the field names ops already reads on live, where
+	# upande_harvest created them. create_custom_fields skips fields that
+	# already exist, so ensuring them is a no-op there and makes the feature
+	# usable on a farm that has no harvest app to create them.
+	"Item": [
+		{
+			"fieldname": "custom_is_box",
+			"fieldtype": "Check",
+			"label": "Is Box",
+			"insert_after": "stock_uom",
+			"default": "0",
+		},
+		{
+			"fieldname": "custom_pack_rate",
+			"fieldtype": "Float",
+			"label": "Pack Rate",
+			"insert_after": "custom_is_box",
+			"description": "Stems this box holds. Leave at 0 and the storefront will not box-validate orders using it.",
+		},
+	],
 }
 
 
