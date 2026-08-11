@@ -22,13 +22,14 @@
 	<div class="ws-panel">
 		<div class="ws-panel-head"><h3>{{ _("Items") }}</h3><div class="meta">{{ cart["items"] | length }}</div></div>
 		<div style="overflow-x:auto">
-		<table class="table" style="min-width:640px">
-			<thead><tr><th>{{ _("Item") }}</th><th style="width:96px">{{ _("Qty") }}</th>{% if cart.boxes %}<th style="width:240px">{{ _("Box") }}</th>{% endif %}<th class="text-right">{{ _("Rate") }}</th><th class="text-right">{{ _("Amount") }}</th><th></th></tr></thead>
+		<table class="table" style="min-width:760px">
+			<thead><tr><th>{{ _("Item") }}</th><th style="width:130px">{{ _("Qty") }}</th>{% if cart.boxes %}<th style="width:240px">{{ _("Box") }}</th>{% endif %}<th class="text-right">{{ _("Rate") }}</th><th class="text-right">{{ _("Amount") }}</th><th></th></tr></thead>
 			<tbody>
 			{% for row in cart["items"] %}
 			<tr data-cart-row="{{ row.item_code }}">
 				<td>{% if row.route %}<a href="/{{ row.route }}">{{ row.web_title }}</a>{% else %}{{ row.item_name }}{% endif %}</td>
-				<td><input type="number" min="0" class="form-control form-control-sm webstore-cart-qty" data-item="{{ row.item_code }}" value="{{ row.qty }}"></td>
+				{%- set whole = row.qty | int -%}
+				<td><input type="number" min="0" step="1" class="form-control form-control-sm webstore-cart-qty" data-item="{{ row.item_code }}" value="{{ whole if whole == row.qty else row.qty }}" style="width:100%"></td>
 				{% if cart.boxes %}
 				<td>
 					<select class="form-control form-control-sm webstore-cart-box" data-item="{{ row.item_code }}" style="width:100%;min-width:200px">

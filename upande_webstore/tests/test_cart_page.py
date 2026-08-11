@@ -106,6 +106,10 @@ class TestCartPageBoxes(IntegrationTestCase):
 		# the buyer can change it, and the column has room for the control
 		self.assertIn('webstore-cart-box" data-item', html)
 		self.assertIn('width:240px', html)
+		# qty is readable: its own width, and 1750 not 1750.0
+		self.assertIn('width:130px', html)
+		self.assertIn('value="1750"', html)
+		self.assertNotIn('value="1750.0"', html)
 
 	def test_box_column_absent_when_packing_off(self):
 		from frappe.utils import get_html_for_route
