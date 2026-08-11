@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import add_days, flt, get_url_to_form, nowdate
+from frappe.utils import add_days, flt, formatdate, get_url_to_form, getdate, nowdate
 
 from upande_webstore.api.cart import _get_open_cart, _require_login
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
@@ -46,6 +46,7 @@ def place_order(
 
 	_assert_available(cart)
 	_assert_packable(cart)
+	_assert_shipping_date(shipping_date)
 
 	settings = get_settings()
 	price_list = get_price_list()
@@ -114,6 +115,38 @@ def _assert_packable(cart):
 	)
 	if problems:
 		frappe.throw("<br>".join(problems), frappe.ValidationError)
+
+
+def _earliest_delivery_date():
+	"""Today plus the farm's lead time, falling back to the shipped default so a
+	site that has never set it behaves as before."""
+	from upande_webstore.services.settings import get_settings
+
+	lead_days = int(flt(get_settings().get("default_lead_days"))) or DEFAULT_DELIVERY_DAYS
+	return add_days(nowdate(), lead_days)
+
+
+def _assert_shipping_date(shipping_date):
+	"""Reject a requested date the farm cannot ship.
+
+	The cart's date input carries a min= attribute, but that is client-side only;
+	this is the check that actually holds. A past date is necessarily inside the
+	lead window, so one comparison covers both.
+
+	Deliberately does not substitute a default: webstore_shipping_date records
+	what the buyer asked for, and stamping a derived date into it would claim a
+	request they never made.
+	"""
+	if not shipping_date:
+		return
+	earliest = _earliest_delivery_date()
+	if getdate(shipping_date) < getdate(earliest):
+		frappe.throw(
+			_("The earliest shipping date we can accept is {0}.").format(
+				formatdate(earliest)
+			),
+			frappe.ValidationError,
+		)
 
 
 def _cart_items(cart):
@@ -186,7 +219,8 @@ def _create_sales_order(
 	team confirms freight and stock before it is submitted."""
 	# the customer's requested shipping date is the Sales Order's delivery date,
 	# which is what ERPNext plans and picks against
-	delivery_date = shipping_date or add_days(nowdate(), DEFAULT_DELIVERY_DAYS)
+	# validated in place_order; falls back to the farm's lead time
+	delivery_date = shipping_date or _earliest_delivery_date()
 	order = frappe.get_doc({
 		"doctype": "Sales Order",
 		"customer": customer,

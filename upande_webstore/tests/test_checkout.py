@@ -248,7 +248,8 @@ class TestCheckoutShippingDetails(IntegrationTestCase):
 	def test_quotation_stores_shipping_date_and_dropoff(self):
 		from upande_webstore.api import cart, checkout
 
-		when = add_days(nowdate(), 5)
+		# beyond default_lead_days (7), which is now enforced server-side
+		when = add_days(nowdate(), 8)
 		cart.add_item("WS-SHIP-ITEM", 2)
 		result = checkout.place_order(shipping_date=when, dropoff_points="Gate 3\nDepot B")
 		quotation = frappe.get_doc("Quotation", result["quotation"])
