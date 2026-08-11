@@ -20,6 +20,20 @@ def make_box_item(item_code, pack_rate):
 	return item.name
 
 
+def enable_packing(default_box, minimum=0):
+	"""Pin the packing config, column-by-column.
+
+	Other modules — test_occasion in particular — save Webstore Settings as a
+	whole document, which rewrites every column including these. Any test that
+	clears caches or crosses a save boundary has to re-pin rather than assume
+	setUp's values survived.
+	"""
+	frappe.db.set_single_value("Webstore Settings", "enable_box_packing", 1)
+	frappe.db.set_single_value("Webstore Settings", "default_box_type", default_box)
+	frappe.db.set_single_value("Webstore Settings", "minimum_order_stems", minimum)
+	frappe.clear_cache()
+
+
 class TestCartBoxes(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -34,14 +48,7 @@ class TestCartBoxes(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		frappe.db.delete("Webstore Cart", {"user": "box.buyer@example.com"})
 		set_stock("WS-BOX-ITEM", 5000)
-		# Written column-by-column, never through a doc save. utils.py already
-		# documents why: repeated Single saves contend for the same tabSingles
-		# row, and mixing a save with column writes leaks packing state between
-		# tests in this class.
-		frappe.db.set_single_value("Webstore Settings", "enable_box_packing", 1)
-		frappe.db.set_single_value("Webstore Settings", "default_box_type", self.zim)
-		frappe.db.set_single_value("Webstore Settings", "minimum_order_stems", 0)
-		frappe.clear_cache()
+		enable_packing(self.zim)
 		frappe.set_user("box.buyer@example.com")
 
 	def tearDown(self):
@@ -118,6 +125,7 @@ class TestCartBoxes(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		frappe.db.set_value("Item", retired, "disabled", 1)
 		frappe.clear_cache(doctype="Item")
+		enable_packing(self.zim)
 		frappe.set_user("box.buyer@example.com")
 		result = cart.get_cart()
 		self.assertEqual(result["items"][0]["box"]["box_type"], self.zim)
