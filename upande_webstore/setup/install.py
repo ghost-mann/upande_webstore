@@ -73,6 +73,86 @@ WEBSTORE_CUSTOM_FIELDS = {
 			"insert_after": "webstore_notes",
 			"read_only": 1,
 		},
+		{
+			"fieldname": "custom_has_mixed_boxes",
+			"fieldtype": "Check",
+			"label": "Mixed Box Grading",
+			"insert_after": "webstore_dropoff_points",
+			"default": "0",
+		},
+	],
+	# Line-level box detail, on both the quotation and the order. `custom_`
+	# rather than `webstore_` because these are the names ops already reads on
+	# live; matching them is the point of sourcing box types from Items.
+	"Quotation Item": [
+		{
+			"fieldname": "custom_box_type",
+			"fieldtype": "Link",
+			"label": "Box Type",
+			"options": "Item",
+			"insert_after": "qty",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_pack_rate",
+			"fieldtype": "Float",
+			"label": "Pack Rate",
+			"insert_after": "custom_box_type",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_number_of_boxes",
+			"fieldtype": "Int",
+			"label": "Number of Boxes",
+			"insert_after": "custom_pack_rate",
+			"read_only": 1,
+		},
+	],
+	"Sales Order Item": [
+		{
+			"fieldname": "custom_box_type",
+			"fieldtype": "Link",
+			"label": "Box Type",
+			"options": "Item",
+			"insert_after": "qty",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_pack_rate",
+			"fieldtype": "Float",
+			"label": "Pack Rate",
+			"insert_after": "custom_box_type",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_number_of_boxes",
+			"fieldtype": "Int",
+			"label": "Number of Boxes",
+			"insert_after": "custom_pack_rate",
+			"read_only": 1,
+		},
+	],
+	# Box types are Items, so the storefront and the packing floor share one
+	# source. These two are `custom_`-prefixed rather than `webstore_` on
+	# purpose: they are the field names ops already reads on live, where
+	# upande_harvest created them. create_custom_fields skips fields that
+	# already exist, so ensuring them is a no-op there and makes the feature
+	# usable on a farm that has no harvest app to create them.
+	"Item": [
+		{
+			"fieldname": "custom_is_box",
+			"fieldtype": "Check",
+			"label": "Is Box",
+			"insert_after": "stock_uom",
+			"default": "0",
+		},
+		{
+			"fieldname": "custom_pack_rate",
+			"fieldtype": "Float",
+			"label": "Pack Rate",
+			"insert_after": "custom_is_box",
+			"description": "Stems this box holds. Leave at 0 and the storefront will not box-validate orders using it.",
+		},
 	],
 }
 

@@ -1,8 +1,9 @@
 import frappe
 from frappe import _
-from frappe.utils import add_days, flt, get_url_to_form, nowdate
+from frappe.utils import add_days, flt, formatdate, get_url_to_form, getdate, nowdate
 
 from upande_webstore.api.cart import _get_open_cart, _require_login
+from upande_webstore.services import dropoff
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
 from upande_webstore.services.settings import get_settings
 from upande_webstore.services.stock import get_source_warehouse, get_stock_qty
@@ -26,6 +27,7 @@ def place_order(
 	mode=QUOTATION,
 	shipping_date=None,
 	dropoff_points=None,
+	delivery_point=None,
 ):
 	"""Turn the open cart into a Quotation (price confirmation first) or a
 	Sales Order (commit now). Sales Orders are left as drafts for the sales
@@ -45,6 +47,8 @@ def place_order(
 		frappe.throw(_("Your cart is empty."), frappe.ValidationError)
 
 	_assert_available(cart)
+	_assert_packable(cart)
+	_assert_shipping_date(shipping_date)
 
 	settings = get_settings()
 	price_list = get_price_list()
@@ -59,7 +63,7 @@ def place_order(
 	try:
 		doc = build(
 			cart, customer, settings, price_list, contact_name, address_name,
-			po_reference, notes, shipping_date, dropoff_points,
+			po_reference, notes, shipping_date, dropoff_points, delivery_point,
 		)
 	finally:
 		frappe.set_user(session_user)
@@ -92,20 +96,115 @@ def _assert_available(cart):
 		)
 
 
+def _assert_packable(cart):
+	"""Whole-box fill per box-type group, and the order minimum.
+
+	Inert unless the farm has switched packing on AND entered pack rates, so
+	this cannot break a site that has done neither.
+	"""
+	from upande_webstore.services import packing
+
+	if not packing.packing_enabled():
+		return
+	lines = [
+		{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type}
+		for row in cart.items
+	]
+	groups = packing.group_by_box_type(lines)
+	total_stems = sum(flt(row.qty) for row in cart.items)
+	problems = packing.find_problems(
+		groups, total_stems, packing.get_minimum_order_stems()
+	)
+	if problems:
+		frappe.throw("<br>".join(problems), frappe.ValidationError)
+
+
+def _earliest_delivery_date():
+	"""Today plus the farm's lead time, falling back to the shipped default so a
+	site that has never set it behaves as before."""
+	from upande_webstore.services.settings import get_settings
+
+	lead_days = int(flt(get_settings().get("default_lead_days"))) or DEFAULT_DELIVERY_DAYS
+	return add_days(nowdate(), lead_days)
+
+
+def _assert_shipping_date(shipping_date):
+	"""Reject a requested date the farm cannot ship.
+
+	The cart's date input carries a min= attribute, but that is client-side only;
+	this is the check that actually holds. A past date is necessarily inside the
+	lead window, so one comparison covers both.
+
+	Deliberately does not substitute a default: webstore_shipping_date records
+	what the buyer asked for, and stamping a derived date into it would claim a
+	request they never made.
+	"""
+	if not shipping_date:
+		return
+	earliest = _earliest_delivery_date()
+	if getdate(shipping_date) < getdate(earliest):
+		frappe.throw(
+			_("The earliest shipping date we can accept is {0}.").format(
+				formatdate(earliest)
+			),
+			frappe.ValidationError,
+		)
+
+
+def _store_delivery_point(doc, delivery_point):
+	"""Written after insert, and only where it can be stored.
+
+	The field is another app's, and on Mona live it Links to a Delivery Point
+	doctype that is not installed — writing to it there would fail validation.
+	"""
+	stored = dropoff.resolve(delivery_point)
+	if stored and _present(doc.doctype, "custom_delivery_point"):
+		doc.db_set("custom_delivery_point", stored)
+
+
+def _present(doctype, fieldname):
+	return bool(frappe.get_meta(doctype).get_field(fieldname))
+
+
 def _cart_items(cart):
-	return [
-		{
+	from upande_webstore.services import packing
+
+	include_boxes = packing.packing_enabled()
+	rows = []
+	for row in cart.items:
+		line = {
 			"item_code": row.item_code,
 			"qty": row.qty,
 			"rate": get_item_price(row.item_code, qty=row.qty)["rate"],
 		}
+		if include_boxes and row.box_type:
+			line["custom_box_type"] = row.box_type
+			line["custom_pack_rate"] = packing.get_pack_rate(row.box_type)
+			# a line sharing a mixed box has no whole-box count of its own
+			line["custom_number_of_boxes"] = row.number_of_boxes or 0
+		rows.append(line)
+	return rows
+
+
+def _has_mixed_boxes(cart):
+	"""True when any box type carries more than one line, which is what tells the
+	desk this order needs mixed-box handling."""
+	from upande_webstore.services import packing
+
+	if not packing.packing_enabled():
+		return 0
+	lines = [
+		{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type}
 		for row in cart.items
 	]
+	groups = packing.group_by_box_type(lines)
+	return int(any(len(group["item_codes"]) > 1 for group in groups.values()))
 
 
 def _create_quotation(
 	cart, customer, settings, price_list, contact_name, address_name,
 	po_reference, notes, shipping_date=None, dropoff_points=None,
+	delivery_point=None,
 ):
 	quotation = frappe.get_doc({
 		"doctype": "Quotation",
@@ -127,18 +226,21 @@ def _create_quotation(
 	quotation.flags.ignore_permissions = True
 	quotation.insert()
 	quotation.submit()
+	_store_delivery_point(quotation, delivery_point)
 	return quotation
 
 
 def _create_sales_order(
 	cart, customer, settings, price_list, contact_name, address_name,
 	po_reference, notes, shipping_date=None, dropoff_points=None,
+	delivery_point=None,
 ):
 	"""Left as a draft on purpose: the customer has committed, but the sales
 	team confirms freight and stock before it is submitted."""
 	# the customer's requested shipping date is the Sales Order's delivery date,
 	# which is what ERPNext plans and picks against
-	delivery_date = shipping_date or add_days(nowdate(), DEFAULT_DELIVERY_DAYS)
+	# validated in place_order; falls back to the farm's lead time
+	delivery_date = shipping_date or _earliest_delivery_date()
 	order = frappe.get_doc({
 		"doctype": "Sales Order",
 		"customer": customer,
@@ -154,6 +256,7 @@ def _create_sales_order(
 		"po_no": po_reference,
 		"webstore_notes": notes,
 		"webstore_dropoff_points": dropoff_points or None,
+		"custom_has_mixed_boxes": _has_mixed_boxes(cart),
 		# Sales Order needs a warehouse per stock item; availability is summed
 		# across the configured webstore warehouses, so name the one holding it.
 		"items": [
@@ -163,6 +266,7 @@ def _create_sales_order(
 	})
 	order.flags.ignore_permissions = True
 	order.insert()
+	_store_delivery_point(order, delivery_point)
 	return order
 
 

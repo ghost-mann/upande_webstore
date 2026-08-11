@@ -45,9 +45,69 @@ def _reprice(cart):
 		row.item_name = frappe.get_cached_value("Item", row.item_code, "item_name")
 
 
+def _recompute_boxes(cart):
+	"""Derive each line's box count, exactly as _reprice re-resolves rates: the
+	client never supplies either."""
+	from upande_webstore.services import packing
+
+	if not packing.packing_enabled():
+		return
+	default_box = packing.get_default_box_type()
+	for row in cart.items:
+		# a box that was disabled or had its rate cleared falls back to the default
+		if row.box_type and not packing.is_usable_box(row.box_type):
+			row.box_type = None
+		if not row.box_type:
+			row.box_type = default_box or None
+		info = packing.compute_boxes(row.qty, packing.get_pack_rate(row.box_type))
+		row.number_of_boxes = info["boxes"] if info["pack_rate"] and info["is_full"] else 0
+
+
+def _box_view(cart):
+	"""Group summary for the cart page, or None when packing is off."""
+	from upande_webstore.services import packing
+
+	if not cart or not packing.packing_enabled():
+		return None
+	lines = [
+		{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type}
+		for row in cart.items
+	]
+	groups = packing.group_by_box_type(lines)
+	total_stems = sum(frappe.utils.flt(row.qty) for row in cart.items)
+	problems = packing.find_problems(
+		groups, total_stems, packing.get_minimum_order_stems()
+	)
+	return {
+		"groups": [
+			{
+				"box_type": group["box_type"],
+				"box_name": packing.box_label(group["box_type"]),
+				"pack_rate": group["pack_rate"],
+				"stems": group["stems"],
+				"boxes": group["boxes"],
+				"is_full": group["is_full"],
+				"nearest_down": group["nearest_down"],
+				"nearest_up": group["nearest_up"],
+			}
+			for group in sorted(groups.values(), key=lambda g: (g["box_type"] or ""))
+		],
+		"problems": problems,
+		"packable": not problems,
+		"total_stems": total_stems,
+	}
+
+
 def serialize_cart(cart):
 	if not cart:
-		return {"name": None, "items": [], "total": 0, "currency": None, "count": 0}
+		return {
+			"name": None,
+			"items": [],
+			"total": 0,
+			"currency": None,
+			"count": 0,
+			"boxes": None,
+		}
 	from upande_webstore.services.pricing import get_price_list
 
 	product_map = {}
@@ -70,12 +130,17 @@ def serialize_cart(cart):
 				"qty": row.qty,
 				"rate": row.rate,
 				"amount": row.amount,
+				"box": {
+					"box_type": row.get("box_type"),
+					"number_of_boxes": row.get("number_of_boxes") or 0,
+				},
 			}
 			for row in cart.items
 		],
 		"total": cart.total,
 		"currency": frappe.db.get_value("Price List", get_price_list(), "currency"),
 		"count": int(sum(row.qty for row in cart.items)),
+		"boxes": _box_view(cart),
 	}
 
 
@@ -86,6 +151,7 @@ def get_cart():
 	cart = _get_open_cart()
 	if cart:
 		_reprice(cart)
+		_recompute_boxes(cart)
 		cart.save(ignore_permissions=True)
 	return serialize_cart(cart)
 
@@ -100,7 +166,7 @@ def get_cart_count():
 
 @frappe.whitelist()
 @guard("cart")
-def add_item(item_code, qty=1):
+def add_item(item_code, qty=1, box_type=None):
 	_require_login()
 	qty = frappe.utils.flt(qty) or 1
 	if qty <= 0:
@@ -113,9 +179,12 @@ def add_item(item_code, qty=1):
 	_validate_stock(item_code, new_qty)
 	if existing:
 		existing.qty = new_qty
+		if box_type:
+			existing.box_type = box_type
 	else:
-		cart.append("items", {"item_code": item_code, "qty": qty})
+		cart.append("items", {"item_code": item_code, "qty": qty, "box_type": box_type or None})
 	_reprice(cart)
+	_recompute_boxes(cart)
 	cart.save(ignore_permissions=True)
 	return serialize_cart(cart)
 
@@ -136,6 +205,7 @@ def update_qty(item_code, qty):
 	_validate_stock(item_code, qty)
 	row.qty = qty
 	_reprice(cart)
+	_recompute_boxes(cart)
 	cart.save(ignore_permissions=True)
 	return serialize_cart(cart)
 
@@ -149,5 +219,35 @@ def remove_item(item_code):
 		return serialize_cart(None)
 	cart.items = [r for r in cart.items if r.item_code != item_code]
 	_reprice(cart)
+	_recompute_boxes(cart)
+	cart.save(ignore_permissions=True)
+	return serialize_cart(cart)
+
+
+@frappe.whitelist()
+@guard("cart")
+def get_box_types():
+	from upande_webstore.services.packing import get_box_types as _box_types
+
+	return _box_types()
+
+
+@frappe.whitelist()
+@guard("cart")
+def set_box_type(item_code, box_type):
+	from upande_webstore.services import packing
+
+	_require_login()
+	cart = _get_open_cart()
+	if not cart:
+		frappe.throw(_("Cart is empty."), frappe.ValidationError)
+	row = next((r for r in cart.items if r.item_code == item_code), None)
+	if not row:
+		frappe.throw(_("Item not in cart."), frappe.ValidationError)
+	if box_type and not packing.is_usable_box(box_type):
+		frappe.throw(_("That box type is not available."), frappe.ValidationError)
+	row.box_type = box_type or None
+	_reprice(cart)
+	_recompute_boxes(cart)
 	cart.save(ignore_permissions=True)
 	return serialize_cart(cart)

@@ -10,6 +10,13 @@ def setup_webstore_settings():
 	settings.default_territory = "All Territories"
 	settings.quotation_validity_days = 14
 	settings.stock_display = "In/Out Badge"
+	# Packing config is not in the FEATURES registry, so the feature-flag loop
+	# below does not cover it. Reset explicitly or a module that enables box
+	# packing breaks whichever module runs next.
+	settings.enable_box_packing = 0
+	settings.default_box_type = ""
+	settings.minimum_order_stems = 0
+	settings.default_lead_days = 7
 	for field in (
 		"brand_logo",
 		"hero_image",
