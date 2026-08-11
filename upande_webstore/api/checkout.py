@@ -117,14 +117,38 @@ def _assert_packable(cart):
 
 
 def _cart_items(cart):
-	return [
-		{
+	from upande_webstore.services import packing
+
+	include_boxes = packing.packing_enabled()
+	rows = []
+	for row in cart.items:
+		line = {
 			"item_code": row.item_code,
 			"qty": row.qty,
 			"rate": get_item_price(row.item_code, qty=row.qty)["rate"],
 		}
+		if include_boxes and row.box_type:
+			line["custom_box_type"] = row.box_type
+			line["custom_pack_rate"] = packing.get_pack_rate(row.box_type)
+			# a line sharing a mixed box has no whole-box count of its own
+			line["custom_number_of_boxes"] = row.number_of_boxes or 0
+		rows.append(line)
+	return rows
+
+
+def _has_mixed_boxes(cart):
+	"""True when any box type carries more than one line, which is what tells the
+	desk this order needs mixed-box handling."""
+	from upande_webstore.services import packing
+
+	if not packing.packing_enabled():
+		return 0
+	lines = [
+		{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type}
 		for row in cart.items
 	]
+	groups = packing.group_by_box_type(lines)
+	return int(any(len(group["item_codes"]) > 1 for group in groups.values()))
 
 
 def _create_quotation(
@@ -178,6 +202,7 @@ def _create_sales_order(
 		"po_no": po_reference,
 		"webstore_notes": notes,
 		"webstore_dropoff_points": dropoff_points or None,
+		"custom_has_mixed_boxes": _has_mixed_boxes(cart),
 		# Sales Order needs a warehouse per stock item; availability is summed
 		# across the configured webstore warehouses, so name the one holding it.
 		"items": [

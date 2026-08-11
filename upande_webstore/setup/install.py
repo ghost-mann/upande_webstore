@@ -73,6 +73,64 @@ WEBSTORE_CUSTOM_FIELDS = {
 			"insert_after": "webstore_notes",
 			"read_only": 1,
 		},
+		{
+			"fieldname": "custom_has_mixed_boxes",
+			"fieldtype": "Check",
+			"label": "Mixed Box Grading",
+			"insert_after": "webstore_dropoff_points",
+			"default": "0",
+		},
+	],
+	# Line-level box detail, on both the quotation and the order. `custom_`
+	# rather than `webstore_` because these are the names ops already reads on
+	# live; matching them is the point of sourcing box types from Items.
+	"Quotation Item": [
+		{
+			"fieldname": "custom_box_type",
+			"fieldtype": "Link",
+			"label": "Box Type",
+			"options": "Item",
+			"insert_after": "qty",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_pack_rate",
+			"fieldtype": "Float",
+			"label": "Pack Rate",
+			"insert_after": "custom_box_type",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_number_of_boxes",
+			"fieldtype": "Int",
+			"label": "Number of Boxes",
+			"insert_after": "custom_pack_rate",
+			"read_only": 1,
+		},
+	],
+	"Sales Order Item": [
+		{
+			"fieldname": "custom_box_type",
+			"fieldtype": "Link",
+			"label": "Box Type",
+			"options": "Item",
+			"insert_after": "qty",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_pack_rate",
+			"fieldtype": "Float",
+			"label": "Pack Rate",
+			"insert_after": "custom_box_type",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_number_of_boxes",
+			"fieldtype": "Int",
+			"label": "Number of Boxes",
+			"insert_after": "custom_pack_rate",
+			"read_only": 1,
+		},
 	],
 	# Box types are Items, so the storefront and the packing floor share one
 	# source. These two are `custom_`-prefixed rather than `webstore_` on

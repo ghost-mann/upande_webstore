@@ -93,3 +93,67 @@ class TestCheckoutBoxes(IntegrationTestCase):
 		cart.add_item("WS-CB-ITEM", 1750)
 		result = checkout.place_order()
 		self.assertTrue(result["quotation"])
+
+
+class TestBoxFieldMapping(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-MAP-A")
+		make_test_product("WS-MAP-B")
+		make_item_price("WS-MAP-A", "Standard Selling", 10)
+		make_item_price("WS-MAP-B", "Standard Selling", 10)
+		make_portal_user("map.buyer@example.com", "Map Buyer")
+		cls.zim = make_box_item("WS-MAP-ZIM", 300)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Webstore Cart", {"user": "map.buyer@example.com"})
+		set_stock("WS-MAP-A", 20000)
+		set_stock("WS-MAP-B", 20000)
+		frappe.db.set_single_value("Webstore Settings", "enable_box_packing", 1)
+		frappe.db.set_single_value("Webstore Settings", "default_box_type", self.zim)
+		frappe.db.set_single_value("Webstore Settings", "minimum_order_stems", 0)
+		frappe.clear_cache()
+		frappe.set_user("map.buyer@example.com")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_quotation_item_carries_box_fields(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-MAP-A", 600)
+		result = checkout.place_order()
+		row = frappe.get_doc("Quotation", result["quotation"]).items[0]
+		self.assertEqual(row.custom_box_type, self.zim)
+		self.assertEqual(int(row.custom_pack_rate), 300)
+		self.assertEqual(row.custom_number_of_boxes, 2)
+
+	def test_partial_line_records_zero_boxes(self):
+		"""A line inside a mixed box has no whole-box count of its own."""
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-MAP-A", 50)
+		cart.add_item("WS-MAP-B", 250)
+		result = checkout.place_order()
+		rows = frappe.get_doc("Quotation", result["quotation"]).items
+		self.assertEqual([r.custom_number_of_boxes for r in rows], [0, 0])
+
+	def test_sales_order_flags_mixed_boxes(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-MAP-A", 50)
+		cart.add_item("WS-MAP-B", 250)
+		result = checkout.place_order(mode="order")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		self.assertEqual(int(order.custom_has_mixed_boxes), 1)
+
+	def test_single_line_group_is_not_mixed(self):
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-MAP-A", 300)
+		result = checkout.place_order(mode="order")
+		order = frappe.get_doc("Sales Order", result["sales_order"])
+		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
