@@ -197,11 +197,18 @@ API. Box packing needs the opposite behaviour: when off, the cart and checkout
 must work normally with validation skipped. So it is a plain Check on
 `Webstore Settings`, read directly by `services/packing.py`.
 
-### Cart schema
+### Schema
+
+`Webstore Product` gains `box_type` (Link → Item) — the box that product ships
+in, mirroring `Website Item.custom_box_type` on live. The desk picker is filtered
+to Items with `custom_is_box` ticked and a rate above zero, and a product refuses
+to save with anything else.
 
 `Webstore Cart Item` gains `box_type` (Link → Item) and `number_of_boxes` (Int,
-read-only). `number_of_boxes` is derived on every save and never read from the
-client.
+read-only). The line's box is seeded from its product and may be changed by the
+buyer; `number_of_boxes` is derived on every save and never read from the client.
+A buyer's override survives quantity changes — recompute reseeds from the product
+only when a line has no usable box.
 
 ### Mapping into ERPNext
 
@@ -241,14 +248,18 @@ Lines are grouped by their box type; each group's stem total must be a whole
 multiple of that box's pack rate.
 
 ```
-BASKET                      CHECKOUT PANEL
-  Athena 60cm     50          Box type  [ ZIM (300 stems) v ]
-  Reflex 60cm    250
-  Alicia 60cm    300
-  Snow Flakes    600
-  ----------------            1,200 stems / 300 = 4 boxes, all full
-  total        1,200          1,200 >= 1,000 minimum
-                              -> checkout enabled
+BASKET
+  Athena 60cm     600   [ ZIM Box (300)      v ]   2 boxes
+  Madam Red 70cm 1000   [ Jumbo Box (500)    v ]   2 boxes
+  Fireworks 40cm  400   [ Standard Box (200) v ]   2 boxes
+  ------------------
+  total          2000
+
+  Jumbo Box       1000 stems - 2 boxes, all full
+  Standard Box     400 stems - 2 boxes, all full
+  ZIM Box          600 stems - 2 boxes, all full
+  total 2,000 >= 1,000 minimum
+  -> checkout enabled
 ```
 
 A group that does not divide cleanly blocks checkout and names both neighbours:
