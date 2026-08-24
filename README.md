@@ -2,6 +2,7 @@
 
 E-commerce webstore and customer portal for **ERPNext v16**, built as a single custom Frappe app. Serves both retail (B2C) and business (B2B) customers: a public catalog with guest pricing, and logged-in accounts with customer-specific price lists, carts, wishlists, and a full self-service portal.
 
+
 There is no online payment at launch. Checkout is **quotation-first**: placing an order creates a submitted ERPNext Quotation which the sales team reviews and converts to a Sales Order; payment is handled offline (invoice, bank transfer, credit terms). Customers can accept or decline their quotations from the portal.
 
 ## Requirements
