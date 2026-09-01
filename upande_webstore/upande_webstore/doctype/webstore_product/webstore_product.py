@@ -26,12 +26,12 @@ class WebstoreProduct(WebsiteGenerator):
 
 		if not self.box_type:
 			return
-		from upande_webstore.services.packing import is_usable_box, source_label
+		from upande_webstore.services.packing import box_source_hint, is_usable_box
 
 		if not is_usable_box(self.box_type):
 			frappe.throw(
-				_("{0} is not a usable box type on this site. Box types come from {1}.").format(
-					self.box_type, source_label()
+				_("{0} is not a usable box type on this site. {1}").format(
+					self.box_type, box_source_hint()
 				),
 				frappe.ValidationError,
 			)

@@ -203,3 +203,73 @@ class TestBoxSource(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_value("Webstore Product", product.name, "box_type"), "Xpol"
 		)
+
+	def test_settings_reject_a_default_box_the_source_does_not_know(self):
+		"""The farm default is the box most cart lines get, so a typo here turns
+		box enforcement off across the whole storefront while the form still says
+		it is on: every line falls back to no box, get_pack_rate returns 0 and
+		compute_boxes reports is_full."""
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		settings = frappe.get_doc("Webstore Settings")
+		original = settings.default_box_type
+		try:
+			settings.default_box_type = "Standard Box"
+			with self.assertRaises(frappe.ValidationError) as ctx:
+				settings.save(ignore_permissions=True)
+			self.assertIn("Box Type", str(ctx.exception))
+		finally:
+			frappe.db.set_single_value("Webstore Settings", "default_box_type", original or "")
+			frappe.clear_cache()
+
+	def test_settings_accept_a_default_box_from_the_resolved_source(self):
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		settings = frappe.get_doc("Webstore Settings")
+		original = settings.default_box_type
+		try:
+			settings.default_box_type = "Xpol"
+			settings.save(ignore_permissions=True)
+			self.assertEqual(
+				frappe.db.get_single_value("Webstore Settings", "default_box_type"), "Xpol"
+			)
+		finally:
+			frappe.db.set_single_value("Webstore Settings", "default_box_type", original or "")
+			frappe.clear_cache()
+
+	def test_a_blank_default_box_type_stays_valid(self):
+		"""Blank means "no farm default", which every site starts at."""
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		settings = frappe.get_doc("Webstore Settings")
+		settings.default_box_type = ""
+		settings.save(ignore_permissions=True)
+		self.assertFalse(
+			frappe.db.get_single_value("Webstore Settings", "default_box_type") or ""
+		)
+
+	def test_the_no_source_message_says_what_to_create(self):
+		"""Appending source_label() to "Box types come from ..." reads as
+		nonsense with no source, and names no next action — and with the default
+		box type now validated, this is the message an operator meets first on a
+		site that has neither representation."""
+		from unittest.mock import patch
+
+		from upande_webstore.services.packing import box_source_hint
+
+		with patch("upande_webstore.services.packing.get_box_source", return_value=None):
+			hint = box_source_hint()
+		self.assertNotIn("come from no", hint)
+		self.assertIn("stem capacity", hint)
+		self.assertIn("Is Box", hint)
+
+	def test_the_hint_names_the_source_when_there_is_one(self):
+		from upande_webstore.services.packing import box_source_hint
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		self.assertIn("Box types come from", box_source_hint())
+		self.assertIn("Box Type", box_source_hint())

@@ -160,17 +160,25 @@ def _store_delivery_point(doc, delivery_point):
 		doc.db_set("custom_delivery_point", stored)
 
 
-def _writable(doctype, fieldname, expect_options=None):
+def _writable(doctype, fieldname, expect_options=None, expect_fieldtype=None):
 	"""True when we may write this field on this site.
 
-	A field of the same name may point somewhere else entirely: Karen Roses'
+	A field of the same name may be something else entirely: Karen Roses'
 	`Sales Order Item.custom_box_type` links to its own `Box Type` doctype, and
 	writing an Item code there would fail validation and corrupt a field ops
-	reads. Skipping is always safe — the order still places, just without the
-	box detail.
+	reads. The type matters as much as the link target — a `custom_pack_rate` the
+	site models as a Select or a Link is not ours to write a number into. The
+	installer never touches a field the site already has, so this is the only
+	place that decides whether an existing field is ours to write; comparing the
+	name alone would write into whatever happens to carry it.
+
+	Skipping is always safe — the order still places, just without the box
+	detail.
 	"""
 	field = frappe.get_meta(doctype).get_field(fieldname)
 	if not field:
+		return False
+	if expect_fieldtype and field.fieldtype != expect_fieldtype:
 		return False
 	if expect_options is None:
 		return True
@@ -188,13 +196,21 @@ def _cart_items(cart, target_doctype):
 	include_boxes = packing.packing_enabled()
 	source = packing.get_box_source()
 	box_doctype = source.doctype if source else None
-	write_box = (
+	write_box = bool(
 		include_boxes
 		and box_doctype
-		and _writable(target_doctype, "custom_box_type", box_doctype)
+		and _writable(target_doctype, "custom_box_type", box_doctype, "Link")
 	)
-	write_rate = include_boxes and _writable(target_doctype, "custom_pack_rate")
-	write_count = include_boxes and _writable(target_doctype, "custom_number_of_boxes")
+	# Both are derived from the box type, so neither may be written without it.
+	# A row carrying "400 stems per box, 3 boxes" and no box name tells ops the
+	# pack rate of a box nobody named, and the quotation -> sales order mapper
+	# carries that emptiness onward.
+	write_rate = write_box and _writable(
+		target_doctype, "custom_pack_rate", expect_fieldtype="Float"
+	)
+	write_count = write_box and _writable(
+		target_doctype, "custom_number_of_boxes", expect_fieldtype="Int"
+	)
 
 	rows = []
 	for row in cart.items:
@@ -203,11 +219,17 @@ def _cart_items(cart, target_doctype):
 			"qty": row.qty,
 			"rate": get_item_price(row.item_code, qty=row.qty)["rate"],
 		}
-		if include_boxes and row.box_type:
+		# Re-derived here, not trusted from the cart: a box type is master data
+		# another app maintains, and one renamed or deleted between add-to-cart
+		# and checkout would otherwise be written verbatim into a Link and raise
+		# a raw LinkValidationError at the customer. A rate of 0 means the box no
+		# longer resolves, so the line simply carries no box detail.
+		pack_rate = packing.get_pack_rate(row.box_type) if include_boxes and row.box_type else 0
+		if pack_rate:
 			if write_box:
 				line["custom_box_type"] = row.box_type
 			if write_rate:
-				line["custom_pack_rate"] = packing.get_pack_rate(row.box_type)
+				line["custom_pack_rate"] = pack_rate
 			if write_count:
 				# a line sharing a mixed box has no whole-box count of its own
 				line["custom_number_of_boxes"] = row.number_of_boxes or 0
@@ -298,7 +320,7 @@ def _create_sales_order(
 		],
 		**(
 			{"custom_has_mixed_boxes": _has_mixed_boxes(cart)}
-			if _writable("Sales Order", "custom_has_mixed_boxes")
+			if _writable("Sales Order", "custom_has_mixed_boxes", expect_fieldtype="Check")
 			else {}
 		),
 	})

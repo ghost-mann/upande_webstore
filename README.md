@@ -48,6 +48,26 @@ usable boxes, and lists the ones being hidden with the reason (no rate entered,
 disabled). This app never creates, migrates or takes ownership of a `Box Type`
 doctype; it only reads one where a farm already has it.
 
+### What install adds, and what it never touches
+
+Install and every migrate are **create-only** for custom fields: a field the
+site already has — whatever its type, link target or read-only flag — is left
+exactly as it is and logged under *Error Log → Webstore custom fields skipped*.
+Nothing this app installs can repoint `Sales Order Item.custom_box_type` away
+from a farm's own `Box Type` doctype, or take an editable field away from the
+staff who use it. The trade-off is that changing one of *our own* shipped field
+definitions no longer rides along on `migrate`; it needs an explicit patch.
+
+The `custom_box_type` fields on Quotation Item and Sales Order Item are Links
+whose target is resolved per site from the box source above, so a farm running
+`Box Type` records gets a Link to `Box Type`, not to `Item`. On a site with no
+box source at all the field is not created — there is nothing to link to and
+packing is inert.
+
+Installing on a farm that has no box fields on `Item` **adds two columns to
+`tabItem`** — `custom_is_box` and `custom_pack_rate` — the first of them
+indexed. On a large item master that is a table alter worth scheduling.
+
 ## Customisation
 
 One branch serves many client projects: every visual and structural choice that

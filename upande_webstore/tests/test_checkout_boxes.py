@@ -191,9 +191,18 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		order = frappe.get_doc("Sales Order", result["sales_order"])
 		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
 
-	def test_an_order_still_places_when_the_box_field_points_elsewhere(self):
-		from upande_webstore.api import cart, checkout
+	def test_no_derived_box_detail_lands_without_the_box_type_itself(self):
+		"""The order still places, but the line carries nothing at all.
+
+		A pack rate and a box count with no box type name a box nobody can read
+		back: ops sees "400 stems per box, 3 boxes" of *what*, and the quotation
+		to sales order mapper carries the emptiness onward. On a Box Type farm
+		this is the default path — `custom_box_type` links to `Box Type`, our
+		definition says `Item`, so the box type is the one field that is skipped.
+		"""
 		from frappe.utils import flt
+
+		from upande_webstore.api import cart, checkout
 
 		field = frappe.db.get_value(
 			"Custom Field", {"dt": "Quotation Item", "fieldname": "custom_box_type"}, "name"
@@ -204,12 +213,67 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		try:
 			cart.add_item("WS-MAP-A", 600)
 			result = checkout.place_order(mode="quotation")
-			quotation = frappe.get_doc("Quotation", result["quotation"])
-			self.assertFalse(quotation.items[0].get("custom_box_type"))
-			self.assertTrue(flt(quotation.items[0].get("custom_pack_rate")) > 0)
+			row = frappe.get_doc("Quotation", result["quotation"]).items[0]
+			self.assertFalse(row.get("custom_box_type"))
+			self.assertFalse(flt(row.get("custom_pack_rate")), "a pack rate for an unnamed box")
+			self.assertFalse(row.get("custom_number_of_boxes"), "a box count for an unnamed box")
 		finally:
 			frappe.db.set_value("Custom Field", field, "options", original)
 			frappe.clear_cache(doctype="Quotation Item")
+			frappe.db.commit()
+
+	def test_a_derived_field_the_site_models_differently_is_not_written(self):
+		"""The installer never touches a field the site already has, so a farm
+		that models the box count as a Float keeps that shape — and we must not
+		write an Int's worth of meaning into it. The box type still lands; only
+		the count is skipped."""
+		from frappe.utils import flt
+
+		from upande_webstore.api import cart, checkout
+
+		field = frappe.db.get_value(
+			"Custom Field",
+			{"dt": "Quotation Item", "fieldname": "custom_number_of_boxes"},
+			"name",
+		)
+		original = frappe.db.get_value("Custom Field", field, "fieldtype")
+		frappe.db.set_value("Custom Field", field, "fieldtype", "Float")
+		frappe.clear_cache(doctype="Quotation Item")
+		try:
+			cart.add_item("WS-MAP-A", 600)
+			result = checkout.place_order(mode="quotation")
+			row = frappe.get_doc("Quotation", result["quotation"]).items[0]
+			self.assertEqual(row.get("custom_box_type"), self.zim)
+			self.assertTrue(flt(row.get("custom_pack_rate")) > 0)
+			self.assertFalse(row.get("custom_number_of_boxes"))
+		finally:
+			frappe.db.set_value("Custom Field", field, "fieldtype", original)
+			frappe.clear_cache(doctype="Quotation Item")
+			frappe.db.commit()
+
+	def test_a_box_that_stopped_resolving_before_checkout_is_not_written(self):
+		"""Box types are master data another app hand-maintains — 12 rows on
+		Karen Roses. One renamed or deleted between add-to-cart and checkout
+		would otherwise be written verbatim into a Link and raise a raw
+		LinkValidationError at the customer."""
+		from frappe.utils import flt
+
+		from upande_webstore.api import cart, checkout
+
+		cart.add_item("WS-MAP-A", 600)
+		frappe.set_user("Administrator")
+		frappe.db.set_value("Item", self.zim, "custom_is_box", 0)
+		frappe.clear_cache()
+		frappe.set_user("map.buyer@example.com")
+		try:
+			result = checkout.place_order(mode="quotation")
+			row = frappe.get_doc("Quotation", result["quotation"]).items[0]
+			self.assertFalse(row.get("custom_box_type"), "a box that no longer resolves was written")
+			self.assertFalse(flt(row.get("custom_pack_rate")))
+		finally:
+			frappe.set_user("Administrator")
+			frappe.db.set_value("Item", self.zim, "custom_is_box", 1)
+			frappe.clear_cache()
 			frappe.db.commit()
 
 
@@ -247,6 +311,37 @@ class TestBoxFieldTargetMismatch(IntegrationTestCase):
 		from upande_webstore.api.checkout import _writable
 
 		self.assertTrue(_writable("Quotation Item", "custom_box_type", "Item"))
+
+	def test_a_field_of_another_type_is_not_ours_to_write(self):
+		"""The installer never touches a field the site already has, so this is
+		the only check standing between us and someone else's schema. Comparing
+		the name alone would write a float into whatever the site happens to
+		model as `custom_pack_rate` — a Select of allowed box sizes, say."""
+		from upande_webstore.api.checkout import _writable
+
+		field = frappe.db.get_value(
+			"Custom Field", {"dt": "Quotation Item", "fieldname": "custom_pack_rate"}, "name"
+		)
+		original = frappe.db.get_value("Custom Field", field, ["fieldtype", "options"], as_dict=True)
+		frappe.db.set_value(
+			"Custom Field", field, {"fieldtype": "Select", "options": "\n300\n400"}
+		)
+		frappe.clear_cache(doctype="Quotation Item")
+		try:
+			self.assertFalse(
+				_writable("Quotation Item", "custom_pack_rate", expect_fieldtype="Float")
+			)
+			self.assertTrue(
+				_writable("Quotation Item", "custom_pack_rate", expect_fieldtype="Select")
+			)
+		finally:
+			frappe.db.set_value(
+				"Custom Field",
+				field,
+				{"fieldtype": original.fieldtype, "options": original.options},
+			)
+			frappe.clear_cache(doctype="Quotation Item")
+			frappe.db.commit()
 
 	def test_an_absent_field_is_never_written(self):
 		from upande_webstore.api.checkout import _writable

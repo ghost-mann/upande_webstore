@@ -13,6 +13,7 @@ class WebstoreSettings(Document):
 			self.docstatus = 0
 		self.validate_font_url()
 		self.validate_occasion()
+		self.validate_default_box_type()
 		self.apply_feature_dependencies()
 
 	def validate_occasion(self):
@@ -22,6 +23,26 @@ class WebstoreSettings(Document):
 
 		if self.occasion not in occasion.list_names():
 			frappe.throw(_("No shipped occasion named {0}.").format(self.occasion))
+
+	def validate_default_box_type(self):
+		"""The farm default is the box most cart lines actually get, so a typo
+		here turns box enforcement off across the whole storefront while the form
+		still says it is on: every line falls back to no box, get_pack_rate
+		returns 0 and compute_boxes reports is_full. The field is an Autocomplete
+		rather than a Link — the doctype box types live in differs per farm — so
+		nothing but this check stands between a mistyped name and that silence.
+		Blank is valid: it means "no farm default"."""
+		if not self.default_box_type:
+			return
+		from upande_webstore.services.packing import box_source_hint, is_usable_box
+
+		if not is_usable_box(self.default_box_type):
+			frappe.throw(
+				_("{0} is not a usable box type on this site. {1}").format(
+					self.default_box_type, box_source_hint()
+				),
+				frappe.ValidationError,
+			)
 
 	def apply_feature_dependencies(self):
 		# the drawer has nothing to show without a cart

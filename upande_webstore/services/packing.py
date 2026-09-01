@@ -54,6 +54,12 @@ def clear_box_source_cache():
 
 
 def _resolve_box_source():
+	# `filters` and `candidate_filters` must map a fieldname to a plain scalar.
+	# They are passed straight to frappe.get_all, which would also accept the
+	# operator form (`{"qty": [">", 0]}`), but get_pack_rate and
+	# get_unusable_box_types compare each value with int(flt(...)) row by row —
+	# a list there raises TypeError rather than filtering. Widening this needs
+	# those two comparisons taught the operator form first.
 	if _box_type_doctype_populated():
 		return frappe._dict(
 			doctype=BOX_TYPE_DOCTYPE,
@@ -94,13 +100,31 @@ def _item_has_box_fields():
 
 
 def source_label():
-	"""Plain words for the desk panel and validation messages."""
+	"""Plain words naming the source, for the desk panel's header."""
 	source = get_box_source()
 	if not source:
 		return _("no box type source on this site")
 	if source.doctype == BOX_TYPE_DOCTYPE:
 		return _("Box Type records with a stem capacity above zero")
 	return _("Items flagged Is Box with a pack rate above zero")
+
+
+def box_source_hint():
+	"""A whole sentence for validation messages, not a noun phrase.
+
+	`source_label` names a source that exists; appending it to "Box types come
+	from ..." reads as nonsense when there is no source at all ("come from no box
+	type source on this site") and names no next action. An operator who mistypes
+	a box on a site with no source needs to be told what to create, so the
+	no-source case gets its own sentence rather than a label.
+	"""
+	source = get_box_source()
+	if not source:
+		return _(
+			"This site has no box type source yet: either Box Type records with a "
+			"stem capacity, or Items with Is Box ticked and a pack rate."
+		)
+	return _("Box types come from {0}.").format(source_label())
 
 
 def _source_fields(source):
