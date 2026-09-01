@@ -157,7 +157,27 @@ function boxSummary(data) {
 				`<td colspan="2" class="text-muted">${box.reasons.join(", ")}</td></tr>`
 		)
 		.join("");
+	const mismatches = (data.field_mismatches || [])
+		.map((m) => {
+			const holds = m.rows
+				? __("holds {0} value(s)", [m.rows])
+				: __("holds no data yet");
+			return `<div>${__(
+				"{0}.custom_box_type still links to {1}, not {2} — checkout cannot write box detail there. It {3}.",
+				[
+					frappe.utils.escape_html(m.doctype),
+					frappe.utils.escape_html(m.targets || "-"),
+					frappe.utils.escape_html(m.source),
+					holds,
+				]
+			)}</div>`;
+		})
+		.join("");
+	const warning = mismatches
+		? `<div class="alert alert-warning" style="margin-bottom:.5rem">${mismatches}</div>`
+		: "";
 	return `
+		${warning}
 		<div class="text-muted" style="margin-bottom:.5rem">
 			${__("Box types come from")} <b>${frappe.utils.escape_html(data.label)}</b>
 		</div>

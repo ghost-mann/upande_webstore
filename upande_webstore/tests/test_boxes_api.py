@@ -10,6 +10,9 @@ from frappe.tests import IntegrationTestCase
 from upande_webstore.tests.utils import (
 	drop_box_type_doctype,
 	make_box_type,
+	make_item_price,
+	make_portal_user,
+	make_test_product,
 	setup_webstore_settings,
 )
 
@@ -61,6 +64,57 @@ class TestBoxesApi(IntegrationTestCase):
 		clear_box_source_cache()
 		self.assertIsNone(result["doctype"])
 		self.assertEqual(result["usable"], [])
+
+	def test_describe_source_reports_a_field_mismatch_with_its_row_count(self):
+		"""`custom_box_type` still links to `Item` (the shipped test-site shape);
+		once a Box Type source resolves that is a mismatch checkout cannot write
+		through, and a row already holding a value must be counted, not ignored."""
+		from upande_webstore.api.boxes import describe_source
+
+		make_test_product("WS-FM-ITEM")
+		make_item_price("WS-FM-ITEM", "Standard Selling", 10)
+		_, customer = make_portal_user("fm.buyer@example.com", "FM Buyer")
+		# other test modules that ran earlier on this site may leave committed
+		# Quotation Item rows behind, so the count that matters is the increase
+		# this test causes, not an assumed absolute value.
+		baseline = frappe.db.count("Quotation Item", filters=[["custom_box_type", "!=", ""]])
+		quotation = frappe.get_doc({
+			"doctype": "Quotation",
+			"quotation_to": "Customer",
+			"party_name": customer,
+			"company": frappe.defaults.get_global_default("company"),
+			"selling_price_list": "Standard Selling",
+			"items": [
+				{
+					"item_code": "WS-FM-ITEM",
+					"qty": 1,
+					"rate": 10,
+					"custom_box_type": "WS-FM-ITEM",
+				}
+			],
+		})
+		quotation.flags.ignore_permissions = True
+		quotation.insert()
+		try:
+			make_box_type("Xpol", 350)
+			result = describe_source()
+		finally:
+			frappe.delete_doc("Quotation", quotation.name, force=1, ignore_permissions=True)
+
+		mismatch = next(
+			m for m in result["field_mismatches"] if m["doctype"] == "Quotation Item"
+		)
+		self.assertEqual(mismatch["targets"], "Item")
+		self.assertEqual(mismatch["source"], "Box Type")
+		self.assertEqual(mismatch["rows"], baseline + 1)
+
+	def test_describe_source_field_mismatches_is_empty_when_the_field_agrees(self):
+		from upande_webstore.api.boxes import describe_source
+
+		# no Box Type doctype: the source resolves to Item, which is exactly
+		# where the shipped test-site's custom_box_type already points.
+		result = describe_source()
+		self.assertEqual(result["field_mismatches"], [])
 
 	def test_a_website_user_cannot_read_the_desk_endpoints(self):
 		from upande_webstore.api.boxes import list_box_types

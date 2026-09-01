@@ -21,6 +21,8 @@ def list_box_types():
 def describe_source():
 	"""Everything the Webstore Settings box panel renders."""
 	frappe.only_for("System Manager")
+	from upande_webstore.setup.install import box_type_field_mismatches
+
 	source = packing.get_box_source()
 	return {
 		"doctype": source.doctype if source else None,
@@ -28,4 +30,17 @@ def describe_source():
 		"usable": packing.get_box_types(),
 		"unusable": packing.get_unusable_box_types(),
 		"default_box_type": packing.get_default_box_type(),
+		# Not every mismatch is one the installer can fix on its own — a
+		# populated field or a standard DocField needs a human — so this is
+		# the only place an operator learns checkout has stopped writing box
+		# detail to that doctype.
+		"field_mismatches": [
+			{
+				"doctype": m.doctype,
+				"targets": m.targets,
+				"source": m.source,
+				"rows": m.rows,
+			}
+			for m in box_type_field_mismatches()
+		],
 	}

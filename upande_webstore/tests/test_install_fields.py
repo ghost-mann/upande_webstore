@@ -266,3 +266,94 @@ class TestBoxTypeLinkTarget(IntegrationTestCase):
 			self.assertNotIn("custom_box_type", names, doctype)
 			self.assertIn("custom_pack_rate", names, doctype)
 			self.assertIn("custom_number_of_boxes", names, doctype)
+
+
+class TestBoxTypeFieldRepoint(IntegrationTestCase):
+	"""The one place create-only bends: a `custom_box_type` this app created
+	itself, still empty, gets repointed if the resolved box source moves out
+	from under it after creation. A populated one is left untouched exactly
+	like every other existing field.
+
+	`Sales Order Item` is used here rather than `Quotation Item`: this site's
+	`Quotation Item.custom_box_type` already carries data from other tests'
+	fixtures, while `Sales Order Item`'s does not — which is exactly the
+	"nothing to orphan" precondition the repoint pass requires.
+	"""
+
+	DT = "Sales Order Item"
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.name = frappe.db.get_value(
+			"Custom Field", {"dt": self.DT, "fieldname": "custom_box_type"}, "name"
+		)
+		self.assertTrue(self.name, "this site has no Sales Order Item.custom_box_type to test with")
+		self.original_options = frappe.db.get_value("Custom Field", self.name, "options")
+		baseline_rows = frappe.db.count(self.DT, filters=[["custom_box_type", "!=", ""]])
+		self.assertEqual(
+			baseline_rows, 0, "this site already has custom_box_type data on Sales Order Item"
+		)
+		from upande_webstore.tests.utils import drop_box_type_doctype
+
+		drop_box_type_doctype()
+
+	def tearDown(self):
+		# create_webstore_custom_fields is exercised directly (not mocked), so a
+		# real repoint here really writes the Custom Field row; restoring it on
+		# every path, assertion failures included, is the only thing standing
+		# between this test and every later module inheriting a Sales Order
+		# Item field pointed at the wrong doctype.
+		from upande_webstore.services.packing import clear_box_source_cache
+		from upande_webstore.tests.utils import drop_box_type_doctype
+
+		frappe.db.set_value("Custom Field", self.name, "options", self.original_options)
+		# clears whichever row a test set, without deleting the row itself —
+		# these are real Sales Order Item lines, only the probe column is ours.
+		frappe.db.sql(f"update `tab{self.DT}` set custom_box_type=NULL where custom_box_type != ''")
+		drop_box_type_doctype()
+		frappe.clear_cache(doctype=self.DT)
+		clear_box_source_cache()
+		frappe.db.commit()
+
+	def test_an_empty_mismatched_field_is_repointed(self):
+		from upande_webstore.setup.install import create_webstore_custom_fields
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)  # flips the resolved source to Box Type
+		create_webstore_custom_fields()
+		self.assertEqual(
+			frappe.db.get_value("Custom Field", self.name, "options"),
+			"Box Type",
+			"an empty stale custom_box_type was not repointed to the new source",
+		)
+
+	def test_a_populated_mismatched_field_is_not_repointed(self):
+		from upande_webstore.setup.install import create_webstore_custom_fields
+		from upande_webstore.tests.utils import make_box_type
+
+		row_name = frappe.db.get_value(self.DT, {}, "name")
+		self.assertTrue(row_name, "no Sales Order Item row exists to mark as populated")
+		frappe.db.set_value(self.DT, row_name, "custom_box_type", "does-not-matter")
+
+		make_box_type("Xpol", 350)
+		create_webstore_custom_fields()
+
+		self.assertEqual(
+			frappe.db.get_value("Custom Field", self.name, "options"),
+			"Item",
+			"a populated custom_box_type was repointed despite holding data",
+		)
+
+	def test_a_field_already_matching_the_source_is_untouched(self):
+		"""No Box Type source resolves here, so custom_box_type already Links to
+		Item — the same as what packing.get_box_source() resolves. Nothing
+		should change, and nothing should need to."""
+		from upande_webstore.setup.install import create_webstore_custom_fields
+
+		create_webstore_custom_fields()
+		self.assertEqual(frappe.db.get_value("Custom Field", self.name, "options"), "Item")
+		self.assertEqual(
+			frappe.db.count(self.DT, filters=[["custom_box_type", "!=", ""]]),
+			0,
+			"an untouched field must not gain data as a side effect",
+		)

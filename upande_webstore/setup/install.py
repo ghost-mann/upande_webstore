@@ -183,6 +183,13 @@ def create_webstore_custom_fields():
 	two Item fields is itself what makes Items a box source. Re-resolving and
 	running again lands `custom_box_type` now rather than at the next migrate.
 	The second pass creates nothing on a site whose source already resolved.
+
+	One narrow exception to create-only follows the two create passes: a
+	`custom_box_type` this app created, still empty, gets repointed if the box
+	source it was linked to at creation time has since changed — a farm whose
+	`Box Type` table filled in later than the field did. See
+	`_repoint_unused_box_type_fields` for why an empty Link is safe to rewrite
+	and a populated one, Karen Roses' 5,019 values among them, is not.
 	"""
 	from upande_webstore.services import packing
 
@@ -201,6 +208,8 @@ def create_webstore_custom_fields():
 				"This site models these fields differently; left untouched:\n" + "\n".join(notable)
 			),
 		)
+	packing.clear_box_source_cache()
+	_repoint_unused_box_type_fields()
 
 
 def _create_missing_fields():
@@ -302,6 +311,105 @@ def _differs(existing, ours):
 	if ours["fieldtype"] in ("Link", "Table", "Table MultiSelect"):
 		return (existing.options or "") != (ours.get("options") or "")
 	return False
+
+
+def _box_type_field_doctypes():
+	"""Doctypes whose shipped definition wants a `custom_box_type` Link."""
+	return [
+		doctype
+		for doctype, fields in WEBSTORE_CUSTOM_FIELDS.items()
+		if any(df["fieldname"] == "custom_box_type" and df["fieldtype"] == "Link" for df in fields)
+	]
+
+
+def box_type_field_mismatches():
+	"""Every `custom_box_type` currently pointed away from this site's resolved
+	box source: which doctype, what it targets now, what it should target, and
+	how many rows already hold a value.
+
+	Shared by `_repoint_unused_box_type_fields` below, which can act only on an
+	empty Custom Field, and by `api.boxes.describe_source`, which must also
+	surface a mismatch that pass cannot touch at all — a standard DocField, or
+	a Link that already carries data — so an operator sees the problem even
+	when nothing here can fix it.
+	"""
+	from upande_webstore.services import packing
+
+	source = packing.get_box_source()
+	if not source:
+		return []
+	out = []
+	for doctype in _box_type_field_doctypes():
+		if not frappe.db.exists("DocType", doctype):
+			continue
+		field = frappe.get_meta(doctype).get_field("custom_box_type")
+		if not field or field.fieldtype != "Link":
+			continue
+		target = field.options or ""
+		if target == source.doctype:
+			continue
+		rows = frappe.db.count(doctype, filters=[["custom_box_type", "!=", ""]])
+		out.append(
+			frappe._dict(
+				doctype=doctype,
+				targets=target,
+				source=source.doctype,
+				rows=rows,
+				is_custom_field=bool(getattr(field, "is_custom_field", False)),
+			)
+		)
+	return out
+
+
+def _repoint_unused_box_type_fields():
+	"""Rewrite a `custom_box_type` Link this app created, if it is still empty.
+
+	Create-only never edits a field that already exists — including one this
+	app created itself. That is exactly the hazard: a farm whose `Box Type`
+	table is empty at install time gets `custom_box_type` linked to `Item`,
+	and if they later populate `Box Type` the resolved source flips but
+	nothing ever re-points the field. `api/checkout.py::_writable` then
+	refuses to write box detail to it, because its `options` no longer match
+	the resolved source — silently, with only an Error Log line to notice by.
+
+	An empty Link has nothing to orphan, so this is the one place create-only
+	bends: rewrite it while it holds zero rows, leave it the moment it holds
+	one. Karen Roses' `Sales Order Item.custom_box_type` — 5,019 live values —
+	is real data pointed at a doctype this app does not own, and the row-count
+	guard below leaves it exactly where create-only already leaves it. A
+	standard DocField is left alone unconditionally: only a Custom Field row
+	can be updated here, and repointing a field another app defines outright
+	is not this installer's call to make.
+
+	Also restricted to a field currently pointed at `Item` or `Box Type` — the
+	only two doctypes this app itself ever resolves as a box source. A field
+	some other app pointed at, say, `Item Group` is that farm's own way of
+	modelling something else, not a stale resolution of ours, and an empty
+	Custom Field is not licence to relabel someone else's schema; describe_source
+	still surfaces it so a human can decide.
+	"""
+	from upande_webstore.services import packing
+
+	known_sources = ("Item", packing.BOX_TYPE_DOCTYPE)
+	for mismatch in box_type_field_mismatches():
+		if not mismatch.is_custom_field or mismatch.rows:
+			continue
+		if mismatch.targets not in known_sources:
+			continue
+		name = frappe.db.get_value(
+			"Custom Field", {"dt": mismatch.doctype, "fieldname": "custom_box_type"}, "name"
+		)
+		if not name:
+			continue
+		frappe.db.set_value("Custom Field", name, "options", mismatch.source)
+		frappe.clear_cache(doctype=mismatch.doctype)
+		frappe.log_error(
+			title="Webstore custom_box_type repointed",
+			message=(
+				"{0}.custom_box_type held no data, so the installer repointed it "
+				"from {1} to {2} to match this site's resolved box source."
+			).format(mismatch.doctype, mismatch.targets or "-", mismatch.source),
+		)
 
 
 def seed_default_theme():
