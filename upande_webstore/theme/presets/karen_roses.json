@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "fields": {
+    "accent": "#9b2242",
+    "accent_dark": "#6f1730",
+    "accent_soft": "#fbe9ee",
+    "accent_drives_primary": 1,
+    "ink": "#1a1416",
+    "ink_muted": "#8a7d81",
+    "canvas": "#faf7f5",
+    "wash": "#f2ebec",
+    "border": "#e8e0e2",
+    "border_strong": "#cdbfc3",
+    "success": "#2d6a4f",
+    "warning": "#9a6700",
+    "danger": "#b42318",
+    "info": "#175cd3",
+    "site_name": "Karen Roses",
+    "wordmark": "karen",
+    "wordmark_bold": "roses",
+    "wordmark_subtitle": "Store & Customer Portal",
+    "hero_eyebrow": "Karen Roses · Nairobi, Kenya",
+    "hero_heading": "Roses cut to order,",
+    "hero_heading_em": "graded by stem and packed by the box",
+    "hero_body": "Export-grade roses from our Nairobi farm — standard and spray varieties graded 40 to 90cm, ordered by whole boxes, quoted and confirmed by the people who pack them.",
+    "hero_cta_primary": "Browse varieties",
+    "hero_cta_secondary_guest": "Open a trade account",
+    "hero_cta_secondary_member": "Go to your portal",
+    "process_eyebrow": "How ordering works",
+    "process_heading": "From your basket to a",
+    "process_heading_em": "confirmed quotation in one working day",
+    "footer_tagline": "Export-grade roses grown in Nairobi, graded by stem length and packed to whole boxes — ordered online, confirmed by people who know the farm.",
+    "footer_contact_email": "sales@karenroses.co.ke",
+    "footer_hours": "Mon–Sat, 07:00–17:00 EAT",
+    "footer_location": "Nairobi, Kenya",
+    "footer_website": "https://upande.com",
+    "footer_copyright": "Karen Roses Limited",
+    "footer_note": "Powered by Upande",
+    "portal_eyebrow": "Karen Roses · Customer Portal",
+    "enable_signup": 0
+  },
+  "tables": {
+    "hero_stats": [
+      { "value": "40+", "label": "rose varieties" },
+      { "value": "40–90cm", "label": "stem grades" },
+      { "value": "24h", "label": "quotation turnaround" }
+    ],
+    "category_cards": [
+      {
+        "label": "Standard Roses",
+        "subtitle": "Single-head, 40–90cm",
+        "category": "Standard Roses"
+      },
+      {
+        "label": "Spray Roses",
+        "subtitle": "Multi-head, 4–6 blooms a stem",
+        "category": "Spray Roses"
+      }
+    ],
+    "process_steps": [
+      {
+        "title": "Build your basket by the box",
+        "description": "Browse live availability and pick stems by variety and grade. The cart shows how your stems fill each box type and what is still needed to reach a whole box."
+      },
+      {
+        "title": "Ask for a quotation",
+        "description": "Send your basket with a PO reference. We confirm pricing, availability and freight within one working day."
+      },
+      {
+        "title": "Accept & receive",
+        "description": "Accept online from your portal. We pack to order and ship cold chain, with documents in your portal."
+      }
+    ],
+    "footer_links": [
+      { "column": "Shop", "label": "All varieties", "url": "/store" },
+      { "column": "Shop", "label": "Standard Roses", "url": "/store?category=Standard%20Roses" },
+      { "column": "Shop", "label": "Spray Roses", "url": "/store?category=Spray%20Roses" },
+      { "column": "Account", "label": "Customer portal", "url": "/portal" },
+      { "column": "Account", "label": "Quotations", "url": "/portal/quotations" },
+      { "column": "Account", "label": "Claims", "url": "/portal/claims" }
+    ]
+  }
+}

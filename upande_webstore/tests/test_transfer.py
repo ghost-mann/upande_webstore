@@ -17,7 +17,7 @@ class TestExportImport(IntegrationTestCase):
 		self.assertEqual(payload["schema"], SCHEMA_VERSION)
 		self.assertIn("fields", payload)
 		self.assertIn("tables", payload)
-		for table in ("hero_stats", "category_cards", "footer_links"):
+		for table in ("hero_stats", "category_cards", "process_steps", "footer_links"):
 			self.assertIn(table, payload["tables"])
 
 	def test_export_excludes_general_settings(self):
@@ -215,6 +215,7 @@ class TestPresets(IntegrationTestCase):
 		from upande_webstore.theme.transfer import list_presets
 
 		names = list_presets()
+		self.assertIn("karen_roses", names)
 		self.assertIn("mona_flowers", names)
 		self.assertIn("upande", names)
 
@@ -274,6 +275,44 @@ class TestPresets(IntegrationTestCase):
 		self.assertEqual(settings.accent, "#d9a514")
 		self.assertFalse(settings.accent_drives_primary)
 		self.assertNotIn("primary", tokens.get_tokens(settings))
+
+	def test_karen_preset_applies_rose_and_ships_its_own_steps(self):
+		from upande_webstore.theme.transfer import apply_preset
+
+		apply_preset("karen_roses")
+		settings = frappe.get_doc("Webstore Settings")
+		self.assertEqual(settings.accent, "#9b2242")
+		self.assertEqual(settings.accent_dark, "#6f1730")
+		self.assertEqual(settings.accent_soft, "#fbe9ee")
+		self.assertEqual(settings.accent_drives_primary, 1)
+		self.assertEqual(settings.enable_signup, 0)
+		self.assertEqual(settings.wordmark, "karen")
+		self.assertEqual(settings.wordmark_bold, "roses")
+		self.assertEqual(len(settings.category_cards), 2)
+		self.assertEqual(len(settings.hero_stats), 3)
+		# ordering steps travel with the preset rather than falling back to shipped copy
+		self.assertEqual(len(settings.process_steps), 3)
+		self.assertEqual(settings.process_steps[0].title, "Build your basket by the box")
+
+	def test_process_steps_survive_a_round_trip(self):
+		"""Editable ordering steps are theme content: an export must carry them and
+		an import must restore them, or a preset silently reverts to shipped copy."""
+		from upande_webstore.theme.transfer import export_theme, import_theme
+
+		settings = frappe.get_doc("Webstore Settings")
+		settings.append("process_steps", {"title": "Pick a box", "description": "By the box."})
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
+		payload = export_theme()
+		self.assertEqual(payload["tables"]["process_steps"][0]["title"], "Pick a box")
+
+		setup_webstore_settings()
+		self.assertFalse(frappe.get_doc("Webstore Settings").process_steps)
+
+		import_theme(payload)
+		steps = frappe.get_doc("Webstore Settings").process_steps
+		self.assertEqual([step.title for step in steps], ["Pick a box"])
 
 	def test_switching_presets_leaves_no_residue(self):
 		"""mona -> upande must not leave navy-only fields behind."""

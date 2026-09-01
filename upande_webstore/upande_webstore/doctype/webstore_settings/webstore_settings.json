@@ -907,7 +907,7 @@
    "fieldname": "preset",
    "fieldtype": "Select",
    "label": "Preset",
-   "options": "\nmona_flowers\nupande",
+   "options": "\nkaren_roses\nmona_flowers\nupande",
    "description": "Shipped configurations. Apply from the Theme menu above."
   },
   {

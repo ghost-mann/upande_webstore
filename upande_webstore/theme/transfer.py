@@ -23,7 +23,7 @@ PRESET_NAME_RE = re.compile(r"^[a-z0-9_]+$")
 # every branding scalar, plus the attachments which are not in DEFAULTS
 BRANDING_FIELDS = tuple(BRANDING_DEFAULTS) + ("brand_logo", "favicon", "hero_image")
 
-TABLE_FIELDS = ("hero_stats", "category_cards", "footer_links")
+TABLE_FIELDS = ("hero_stats", "category_cards", "process_steps", "footer_links")
 
 IMAGE_FIELDS = ("brand_logo", "favicon", "hero_image")
 
