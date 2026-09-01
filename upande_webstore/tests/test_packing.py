@@ -251,6 +251,56 @@ class TestBoxSource(IntegrationTestCase):
 			frappe.db.get_single_value("Webstore Settings", "default_box_type") or ""
 		)
 
+	def test_a_stale_default_box_type_does_not_block_an_unrelated_save(self):
+		"""Webstore Settings is one big form — Theme, Branding, nineteen feature
+		toggles — and the stored default can go stale on its own: the box Item
+		gets disabled, or the Box Type table gets emptied, with nobody touching
+		this field. Before the change guard, an operator saving a colour tweak
+		hit a box-type error about a field they never touched. The guard must not
+		swallow the check entirely: an operator who actively sets the field to
+		something the resolver does not know still has to be told."""
+		from upande_webstore.services.packing import clear_box_source_cache
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		settings = frappe.get_doc("Webstore Settings")
+		original_default = settings.default_box_type
+		original_minimum = settings.minimum_order_stems
+		try:
+			settings.default_box_type = "Xpol"
+			settings.save(ignore_permissions=True)
+
+			# Go stale under the saved value, exactly like a farm's box Item
+			# being disabled or its Box Type table being emptied.
+			frappe.db.set_value("Box Type", "Xpol", "custom_stem_capacity", 0)
+			clear_box_source_cache()
+
+			stale = frappe.get_doc("Webstore Settings")
+			self.assertEqual(stale.default_box_type, "Xpol")
+			stale.minimum_order_stems = 10
+			# Must not raise: default_box_type is unchanged, so an unrelated
+			# field edit must not re-run a check on a value nobody touched.
+			stale.save(ignore_permissions=True)
+			self.assertEqual(
+				int(frappe.db.get_single_value("Webstore Settings", "minimum_order_stems") or 0),
+				10,
+			)
+
+			# An operator who sets it themselves, even to another already-stale
+			# value, must still be stopped at the moment they touch it.
+			stale.default_box_type = "Not A Box"
+			with self.assertRaises(frappe.ValidationError):
+				stale.save(ignore_permissions=True)
+		finally:
+			frappe.db.set_single_value(
+				"Webstore Settings", "default_box_type", original_default or ""
+			)
+			frappe.db.set_single_value(
+				"Webstore Settings", "minimum_order_stems", original_minimum or 0
+			)
+			clear_box_source_cache()
+			frappe.clear_cache()
+
 	def test_the_no_source_message_says_what_to_create(self):
 		"""Appending source_label() to "Box types come from ..." reads as
 		nonsense with no source, and names no next action — and with the default

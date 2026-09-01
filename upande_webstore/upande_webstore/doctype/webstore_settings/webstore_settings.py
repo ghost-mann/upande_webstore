@@ -31,8 +31,22 @@ class WebstoreSettings(Document):
 		returns 0 and compute_boxes reports is_full. The field is an Autocomplete
 		rather than a Link — the doctype box types live in differs per farm — so
 		nothing but this check stands between a mistyped name and that silence.
-		Blank is valid: it means "no farm default"."""
+		Blank is valid: it means "no farm default".
+
+		Only checked when the value actually changed. Webstore Settings is one
+		big form — Theme, Branding, nineteen feature toggles — and a default that
+		was valid when it was set can go stale on its own: the box Item gets
+		disabled, or the `Box Type` table gets emptied, with nobody touching this
+		field. Without the change guard, an operator changing an unrelated colour
+		hits a box-type error about a field they never touched, and `apply_theme`
+		(the desk "Apply Preset" button, which saves the whole form including
+		this field untouched) fails the same way. An operator who breaks it by
+		setting it themselves still gets told at that moment, which is the point
+		of the check; a stale value inherited from before no longer holds the
+		whole form hostage."""
 		if not self.default_box_type:
+			return
+		if not self.has_value_changed("default_box_type"):
 			return
 		from upande_webstore.services.packing import box_source_hint, is_usable_box
 

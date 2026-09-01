@@ -186,6 +186,11 @@ def create_webstore_custom_fields():
 	"""
 	from upande_webstore.services import packing
 
+	# Cleared before pass one too, not just between passes: if anything earlier
+	# in this migrate already resolved and cached the box source, pass one would
+	# otherwise create custom_box_type against a stale target — and create-only
+	# then makes that permanent.
+	packing.clear_box_source_cache()
 	_create_missing_fields()
 	packing.clear_box_source_cache()
 	notable = _create_missing_fields()
@@ -200,7 +205,14 @@ def create_webstore_custom_fields():
 
 def _create_missing_fields():
 	missing, notable = _only_missing(_resolved_fields())
-	create_custom_fields(missing, ignore_validate=True)
+	# update=False: create_custom_fields reads its own "already exists" set from
+	# the database, not from the frappe.get_meta() our _only_missing() filter
+	# consulted. Left at the default (update=True), a field that a stale meta
+	# reported as missing would fall into frappe's `elif update:` branch and get
+	# rewritten instead of created — exactly the regression create-only exists to
+	# prevent. This makes the guarantee hold at the API boundary too, rather than
+	# resting on meta freshness alone.
+	create_custom_fields(missing, ignore_validate=True, update=False)
 	return notable
 
 

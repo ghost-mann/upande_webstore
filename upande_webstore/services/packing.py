@@ -95,6 +95,14 @@ def _box_type_doctype_populated():
 
 
 def _item_has_box_fields():
+	"""Guarded on Item existing, matching `_box_type_doctype_populated`'s shape.
+
+	ERPNext is optional here (`hooks.py` leaves `required_apps` commented out,
+	and `install.py::_only_missing` guards every doctype the same way), so a
+	site with no ERPNext installed has no `Item` doctype at all — reading its
+	meta unguarded raises DoesNotExistError from inside install/migrate."""
+	if not frappe.db.exists("DocType", "Item"):
+		return False
 	meta = frappe.get_meta("Item")
 	return bool(meta.get_field(BOX_FLAG)) and bool(meta.get_field(BOX_RATE))
 
