@@ -135,9 +135,11 @@ WEBSTORE_CUSTOM_FIELDS = {
 	# Box types are Items, so the storefront and the packing floor share one
 	# source. These two are `custom_`-prefixed rather than `webstore_` on
 	# purpose: they are the field names ops already reads on live, where
-	# upande_harvest created them. create_custom_fields skips fields that
-	# already exist, so ensuring them is a no-op there and makes the feature
+	# upande_harvest created them. This is also what makes the feature
 	# usable on a farm that has no harvest app to create them.
+	# create_custom_fields *updates* fields that already exist rather than
+	# skipping them, so create_webstore_custom_fields filters out anything this
+	# site defines with a different type or link target first.
 	"Item": [
 		{
 			"fieldname": "custom_is_box",
@@ -158,7 +160,63 @@ WEBSTORE_CUSTOM_FIELDS = {
 
 
 def create_webstore_custom_fields():
-	create_custom_fields(WEBSTORE_CUSTOM_FIELDS, ignore_validate=True)
+	"""Ensure our fields, but never repoint one a site already defines.
+
+	`create_custom_fields` updates existing fields rather than skipping them, so
+	an unguarded install would rewrite the link target of a `custom_` field
+	another app owns — Karen Roses' `Sales Order Item.custom_box_type` links to
+	its own `Box Type` doctype and carries 5,019 values. Anything already
+	defined differently is left exactly as it is, and logged.
+	"""
+	safe, skipped = _without_conflicts(WEBSTORE_CUSTOM_FIELDS)
+	if skipped:
+		frappe.log_error(
+			title="Webstore custom fields skipped",
+			message="This site already defines these fields differently:\n" + "\n".join(skipped),
+		)
+	create_custom_fields(safe, ignore_validate=True)
+
+
+def _without_conflicts(definitions):
+	"""Split our field definitions into (safe to ensure, skipped with reasons).
+
+	Reads the doctype's meta rather than the Custom Field table so a standard
+	field of the same name counts as a conflict too.
+	"""
+	safe = {}
+	skipped = []
+	for doctype, fields in definitions.items():
+		if not frappe.db.exists("DocType", doctype):
+			continue
+		meta = frappe.get_meta(doctype)
+		keep = []
+		for df in fields:
+			existing = meta.get_field(df["fieldname"])
+			if existing and _conflicts(existing, df):
+				skipped.append(
+					"{0}.{1}: site has {2}/{3}, we ship {4}/{5}".format(
+						doctype,
+						df["fieldname"],
+						existing.fieldtype,
+						existing.options or "-",
+						df["fieldtype"],
+						df.get("options") or "-",
+					)
+				)
+				continue
+			keep.append(df)
+		if keep:
+			safe[doctype] = keep
+	return safe, skipped
+
+
+def _conflicts(existing, ours):
+	"""A different fieldtype, or a Link/Table pointing somewhere else."""
+	if existing.fieldtype != ours["fieldtype"]:
+		return True
+	if ours["fieldtype"] in ("Link", "Table", "Table MultiSelect"):
+		return (existing.options or "") != (ours.get("options") or "")
+	return False
 
 
 def seed_default_theme():
