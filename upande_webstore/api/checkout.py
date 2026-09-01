@@ -156,18 +156,46 @@ def _store_delivery_point(doc, delivery_point):
 	doctype that is not installed — writing to it there would fail validation.
 	"""
 	stored = dropoff.resolve(delivery_point)
-	if stored and _present(doc.doctype, "custom_delivery_point"):
+	if stored and _writable(doc.doctype, "custom_delivery_point"):
 		doc.db_set("custom_delivery_point", stored)
 
 
-def _present(doctype, fieldname):
-	return bool(frappe.get_meta(doctype).get_field(fieldname))
+def _writable(doctype, fieldname, expect_options=None):
+	"""True when we may write this field on this site.
+
+	A field of the same name may point somewhere else entirely: Karen Roses'
+	`Sales Order Item.custom_box_type` links to its own `Box Type` doctype, and
+	writing an Item code there would fail validation and corrupt a field ops
+	reads. Skipping is always safe — the order still places, just without the
+	box detail.
+	"""
+	field = frappe.get_meta(doctype).get_field(fieldname)
+	if not field:
+		return False
+	if expect_options is None:
+		return True
+	return (field.options or "") == expect_options
 
 
-def _cart_items(cart):
+def _cart_items(cart, target_doctype):
+	"""Cart lines as document rows.
+
+	`target_doctype` decides which box fields are safe to write — Quotation Item
+	and Sales Order Item are not guaranteed to model box type the same way.
+	"""
 	from upande_webstore.services import packing
 
 	include_boxes = packing.packing_enabled()
+	source = packing.get_box_source()
+	box_doctype = source.doctype if source else None
+	write_box = (
+		include_boxes
+		and box_doctype
+		and _writable(target_doctype, "custom_box_type", box_doctype)
+	)
+	write_rate = include_boxes and _writable(target_doctype, "custom_pack_rate")
+	write_count = include_boxes and _writable(target_doctype, "custom_number_of_boxes")
+
 	rows = []
 	for row in cart.items:
 		line = {
@@ -176,10 +204,13 @@ def _cart_items(cart):
 			"rate": get_item_price(row.item_code, qty=row.qty)["rate"],
 		}
 		if include_boxes and row.box_type:
-			line["custom_box_type"] = row.box_type
-			line["custom_pack_rate"] = packing.get_pack_rate(row.box_type)
-			# a line sharing a mixed box has no whole-box count of its own
-			line["custom_number_of_boxes"] = row.number_of_boxes or 0
+			if write_box:
+				line["custom_box_type"] = row.box_type
+			if write_rate:
+				line["custom_pack_rate"] = packing.get_pack_rate(row.box_type)
+			if write_count:
+				# a line sharing a mixed box has no whole-box count of its own
+				line["custom_number_of_boxes"] = row.number_of_boxes or 0
 		rows.append(line)
 	return rows
 
@@ -224,7 +255,7 @@ def _create_quotation(
 		"webstore_notes": notes,
 		"webstore_shipping_date": shipping_date or None,
 		"webstore_dropoff_points": dropoff_points or None,
-		"items": _cart_items(cart),
+		"items": _cart_items(cart, "Quotation Item"),
 	})
 	quotation.flags.ignore_permissions = True
 	quotation.insert()
@@ -259,13 +290,17 @@ def _create_sales_order(
 		"po_no": po_reference,
 		"webstore_notes": notes,
 		"webstore_dropoff_points": dropoff_points or None,
-		"custom_has_mixed_boxes": _has_mixed_boxes(cart),
 		# Sales Order needs a warehouse per stock item; availability is summed
 		# across the configured webstore warehouses, so name the one holding it.
 		"items": [
 			dict(row, delivery_date=delivery_date, warehouse=get_source_warehouse(row["item_code"]))
-			for row in _cart_items(cart)
+			for row in _cart_items(cart, "Sales Order Item")
 		],
+		**(
+			{"custom_has_mixed_boxes": _has_mixed_boxes(cart)}
+			if _writable("Sales Order", "custom_has_mixed_boxes")
+			else {}
+		),
 	})
 	order.flags.ignore_permissions = True
 	order.insert()

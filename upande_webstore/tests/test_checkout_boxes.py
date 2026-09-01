@@ -191,3 +191,64 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		order = frappe.get_doc("Sales Order", result["sales_order"])
 		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
 
+	def test_an_order_still_places_when_the_box_field_points_elsewhere(self):
+		from upande_webstore.api import cart, checkout
+		from frappe.utils import flt
+
+		field = frappe.db.get_value(
+			"Custom Field", {"dt": "Quotation Item", "fieldname": "custom_box_type"}, "name"
+		)
+		original = frappe.db.get_value("Custom Field", field, "options")
+		frappe.db.set_value("Custom Field", field, "options", "Item Group")
+		frappe.clear_cache(doctype="Quotation Item")
+		try:
+			cart.add_item("WS-MAP-A", 600)
+			result = checkout.place_order(mode="quotation")
+			quotation = frappe.get_doc("Quotation", result["quotation"])
+			self.assertFalse(quotation.items[0].get("custom_box_type"))
+			self.assertTrue(flt(quotation.items[0].get("custom_pack_rate")) > 0)
+		finally:
+			frappe.db.set_value("Custom Field", field, "options", original)
+			frappe.clear_cache(doctype="Quotation Item")
+			frappe.db.commit()
+
+
+
+class TestBoxFieldTargetMismatch(IntegrationTestCase):
+	"""Karen Roses' `Sales Order Item.custom_box_type` links to its own `Box
+	Type` doctype. Writing an Item code there would fail validation and corrupt
+	a field ops reads, so we write nothing at all."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+
+	def setUp(self):
+		self.field = frappe.db.get_value(
+			"Custom Field", {"dt": "Quotation Item", "fieldname": "custom_box_type"}, "name"
+		)
+		self.original = frappe.db.get_value("Custom Field", self.field, "options")
+
+	def tearDown(self):
+		frappe.db.set_value("Custom Field", self.field, "options", self.original)
+		frappe.clear_cache(doctype="Quotation Item")
+		frappe.db.commit()
+
+	def test_a_mismatched_target_is_skipped_not_written(self):
+		from upande_webstore.api.checkout import _writable
+
+		frappe.db.set_value("Custom Field", self.field, "options", "Item Group")
+		frappe.clear_cache(doctype="Quotation Item")
+		self.assertFalse(_writable("Quotation Item", "custom_box_type", "Item"))
+		self.assertTrue(_writable("Quotation Item", "custom_pack_rate"))
+
+	def test_a_matching_target_is_written(self):
+		from upande_webstore.api.checkout import _writable
+
+		self.assertTrue(_writable("Quotation Item", "custom_box_type", "Item"))
+
+	def test_an_absent_field_is_never_written(self):
+		from upande_webstore.api.checkout import _writable
+
+		self.assertFalse(_writable("Quotation Item", "custom_not_a_real_field"))
