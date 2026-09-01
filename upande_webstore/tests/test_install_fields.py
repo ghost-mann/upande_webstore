@@ -20,9 +20,17 @@ class TestInstallFieldConflicts(IntegrationTestCase):
 			if self.existing
 			else None
 		)
+		self.created = False
 
 	def tearDown(self):
-		if self.existing and self.original:
+		# frappe.db.commit() below breaks the per-test savepoint rollback, so this
+		# is the only safety net: put a pre-existing field back exactly as it
+		# was, or delete one this test created itself. Skipping either branch
+		# leaves a bogus custom_box_type -> Item Group field in the database for
+		# every later test module.
+		if self.created:
+			frappe.delete_doc("Custom Field", self.existing, force=1, ignore_permissions=True)
+		elif self.existing and self.original:
 			frappe.db.set_value(
 				"Custom Field",
 				self.existing,
@@ -54,6 +62,7 @@ class TestInstallFieldConflicts(IntegrationTestCase):
 				}
 			).insert(ignore_permissions=True)
 			self.existing = frappe.db.get_value("Custom Field", FIELD, "name")
+			self.created = True
 		frappe.clear_cache(doctype="Sales Order Item")
 		frappe.db.commit()
 
