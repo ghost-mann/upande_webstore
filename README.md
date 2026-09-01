@@ -33,6 +33,21 @@ Open **Webstore Settings** (single doctype) in the desk and set:
 - **Stock Display** — In/Out badge or exact quantity
 - **Sales Notification Emails** — comma-separated recipients notified of new web quotations and portal accept/decline actions
 
+### Where box types come from
+
+The storefront reads box types from whichever representation your ERP already
+runs, resolved per site:
+
+1. **`Box Type` records** with a stem capacity above zero, if your site has that
+   doctype and has filled it in. The capacity is the pack rate.
+2. Otherwise **Items** with *Is Box* ticked and a *Pack Rate* above zero.
+3. Otherwise nothing — box packing stays inert, whatever the settings say.
+
+Webstore Settings → Boxes & Order Rules names which source is in use, lists the
+usable boxes, and lists the ones being hidden with the reason (no rate entered,
+disabled). This app never creates, migrates or takes ownership of a `Box Type`
+doctype; it only reads one where a farm already has it.
+
 ## Customisation
 
 One branch serves many client projects: every visual and structural choice that

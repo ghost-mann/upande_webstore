@@ -40,7 +40,7 @@ Four settings fields, plus resets in the shared test helper so a test that switc
 - Consumes: nothing.
 - Produces: settings fields `enable_box_packing` (Check, default `"0"`), `default_box_type` (Link → Item), `minimum_order_stems` (Int, default `"0"`), `default_lead_days` (Int, default `"7"`). After this task `setup_webstore_settings()` resets all four.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `upande_webstore/tests/test_packing.py`:
 
@@ -76,12 +76,12 @@ class TestPackingSettings(IntegrationTestCase):
 		self.assertEqual(int(settings.default_lead_days or 0), 7)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_packing`
 Expected: FAIL — `AttributeError: 'NoneType' object has no attribute 'default'`, because `enable_box_packing` does not exist yet.
 
-- [ ] **Step 3: Add the settings fields**
+- [x] **Step 3: Add the settings fields**
 
 In `webstore_settings.json`, add these four entries to the `fields` array:
 
@@ -105,7 +105,7 @@ And insert the five fieldnames into `field_order` immediately after `"warehouses
   "theme_tab",
 ```
 
-- [ ] **Step 4: Reset the new fields in the test helper**
+- [x] **Step 4: Reset the new fields in the test helper**
 
 In `upande_webstore/tests/utils.py`, inside `setup_webstore_settings()`, add immediately after the `settings.quotation_validity_days = 14` line:
 
@@ -119,12 +119,12 @@ In `upande_webstore/tests/utils.py`, inside `setup_webstore_settings()`, add imm
 	settings.default_lead_days = 7
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_packing`
 Expected: PASS (2 tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add upande_webstore/upande_webstore/doctype/webstore_settings/webstore_settings.json \
@@ -156,7 +156,7 @@ All the maths, none of the documents. `compute_boxes` is pure; the readers are t
   - `group_by_box_type(lines) -> dict` keyed by box item code; `lines` is a list of dicts with `item_code`, `qty`, `box_type`
   - `find_problems(groups, total_stems, minimum_stems) -> list[str]`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `upande_webstore/tests/test_packing.py`:
 
@@ -217,12 +217,12 @@ class TestBoxMaths(IntegrationTestCase):
 		self.assertEqual(sorted(groups["ZIM"]["item_codes"]), ["A", "B"])
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_packing`
 Expected: FAIL — `ModuleNotFoundError: No module named 'upande_webstore.services.packing'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `upande_webstore/services/packing.py`:
 
@@ -396,12 +396,12 @@ def find_problems(groups, total_stems, minimum_stems):
 	return problems
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_packing`
 Expected: PASS (8 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add upande_webstore/services/packing.py upande_webstore/tests/test_packing.py
@@ -429,7 +429,7 @@ Cart lines gain a box type and a derived box count, recomputed on every mutation
   - `cart._recompute_boxes(cart)` — internal
   - `serialize_cart` output gains a per-line `box` key and a top-level `boxes` key (`None` when packing is off, else `{groups, problems, packable, total_stems}`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `upande_webstore/tests/test_cart_boxes.py`:
 
@@ -566,12 +566,12 @@ class TestCartBoxes(IntegrationTestCase):
 		self.assertNotIn("WS-BOX-HIDDEN", codes)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_cart_boxes`
 Expected: FAIL — `KeyError: 'box'`, and `AttributeError: module 'upande_webstore.api.cart' has no attribute 'set_box_type'`
 
-- [ ] **Step 3: Add the cart item fields**
+- [x] **Step 3: Add the cart item fields**
 
 In `webstore_cart_item.json`, set `field_order` to:
 
@@ -586,7 +586,7 @@ and add these two entries to `fields`, after the `qty` entry:
   {"fieldname": "number_of_boxes", "fieldtype": "Int", "label": "Boxes", "read_only": 1},
 ```
 
-- [ ] **Step 4: Wire the cart**
+- [x] **Step 4: Wire the cart**
 
 In `upande_webstore/api/cart.py`, add after `_reprice`:
 
@@ -719,17 +719,17 @@ def set_box_type(item_code, box_type):
 	return serialize_cart(cart)
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_cart_boxes`
 Expected: PASS (8 tests)
 
-- [ ] **Step 6: Check nothing else broke**
+- [x] **Step 6: Check nothing else broke**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_cart`
 Expected: PASS — packing is off in those tests, so `boxes` is `None` and behaviour is unchanged.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add upande_webstore/upande_webstore/doctype/webstore_cart_item/webstore_cart_item.json \
@@ -751,7 +751,7 @@ One assert beside the existing availability check.
 - Consumes: `services.packing`, `cart._box_view` semantics from Task 3.
 - Produces: `checkout._assert_packable(cart)` — raises `frappe.ValidationError` listing every problem, or returns `None`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `upande_webstore/tests/test_checkout_boxes.py`:
 
@@ -853,12 +853,12 @@ class TestCheckoutBoxes(IntegrationTestCase):
 		self.assertTrue(result["quotation"])
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_checkout_boxes`
 Expected: FAIL — no exception raised; `place_order` currently accepts 1750 stems.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 In `upande_webstore/api/checkout.py`, add after `_assert_available`:
 
@@ -891,12 +891,12 @@ Then call it in `place_order` immediately after the existing `_assert_available(
 	_assert_packable(cart)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_checkout_boxes`
 Expected: PASS (6 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add upande_webstore/api/checkout.py upande_webstore/tests/test_checkout_boxes.py
@@ -918,7 +918,7 @@ Quotation Item needs three custom fields created; Sales Order Item already has t
 - Consumes: `services.packing`, `_cart_items` from `checkout.py`.
 - Produces: custom fields `custom_box_type`, `custom_pack_rate`, `custom_number_of_boxes` on both Quotation Item and Sales Order Item; `Sales Order.custom_has_mixed_boxes`. `_cart_items(cart)` gains those three keys per row when packing is enabled.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `upande_webstore/tests/test_checkout_boxes.py`:
 
@@ -987,12 +987,12 @@ class TestBoxFieldMapping(IntegrationTestCase):
 		self.assertEqual(int(order.custom_has_mixed_boxes or 0), 0)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_checkout_boxes`
 Expected: FAIL — `AttributeError: 'QuotationItem' object has no attribute 'custom_box_type'`
 
-- [ ] **Step 3: Ensure the custom fields exist**
+- [x] **Step 3: Ensure the custom fields exist**
 
 In `upande_webstore/setup/install.py`, add these three keys to `WEBSTORE_CUSTOM_FIELDS`. Note the `custom_` prefix is deliberate — ops already reads these exact names, and `create_custom_fields` skips any that already exist:
 
@@ -1061,7 +1061,7 @@ In `upande_webstore/setup/install.py`, add these three keys to `WEBSTORE_CUSTOM_
 	],
 ```
 
-- [ ] **Step 4: Populate the fields at checkout**
+- [x] **Step 4: Populate the fields at checkout**
 
 In `upande_webstore/api/checkout.py`, replace `_cart_items` with:
 
@@ -1106,17 +1106,17 @@ In `_create_sales_order`, add to the document dict, next to `webstore_dropoff_po
 		"custom_has_mixed_boxes": _has_mixed_boxes(cart),
 ```
 
-- [ ] **Step 5: Apply the new custom fields to the test site**
+- [x] **Step 5: Apply the new custom fields to the test site**
 
 Run: `bench --site webstore.localhost migrate`
 Expected: completes without error; `after_migrate` calls `create_webstore_custom_fields()`.
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_checkout_boxes`
 Expected: PASS (10 tests)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add upande_webstore/setup/install.py upande_webstore/api/checkout.py \
@@ -1139,7 +1139,7 @@ The date input's `min=` attribute is client-side only today. This backs it with 
 - Consumes: `default_lead_days` from Task 1.
 - Produces: `checkout._resolve_delivery_date(shipping_date) -> str` — returns the date to use, or raises `frappe.ValidationError`. `DEFAULT_DELIVERY_DAYS` stays as the fallback when the setting is unset.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `upande_webstore/tests/test_checkout_dates.py`:
 
@@ -1232,12 +1232,12 @@ class TestCheckoutDates(IntegrationTestCase):
 		)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_checkout_dates`
 Expected: FAIL — no exception for a past date; `test_omitted_date_uses_configured_lead` gets `+7` instead of `+3`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 In `upande_webstore/api/checkout.py`, add the import `getdate` and `formatdate` to the existing `frappe.utils` import line so it reads:
 
@@ -1283,7 +1283,7 @@ In `_create_sales_order`, replace the delivery-date line with the already-resolv
 	delivery_date = shipping_date
 ```
 
-- [ ] **Step 4: Update the two existing tests that predate the lead check**
+- [x] **Step 4: Update the two existing tests that predate the lead check**
 
 `setup_webstore_settings` now sets `default_lead_days = 7`, so a requested date 5 days out is inside the lead window. In `upande_webstore/tests/test_checkout.py`, in `test_quotation_stores_shipping_date_and_dropoff`, change:
 
@@ -1299,7 +1299,7 @@ to:
 
 `test_sales_order_uses_shipping_date_as_delivery_date` already uses 9 days and needs no change.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_checkout_dates`
 Expected: PASS (5 tests)
@@ -1307,7 +1307,7 @@ Expected: PASS (5 tests)
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_checkout`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add upande_webstore/api/checkout.py upande_webstore/tests/test_checkout.py \
@@ -1330,7 +1330,7 @@ ERPNext's mapper copies only what its `table_maps` declare, so the buyer's reque
 - Consumes: the `webstore_shipping_date` / `webstore_dropoff_points` fields the app already creates on Quotation.
 - Produces: `conversion.carry_webstore_fields(doc, method=None)`, registered as a Sales Order `before_insert` hook.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `upande_webstore/tests/test_conversion.py`:
 
@@ -1418,12 +1418,12 @@ class TestQuotationConversion(IntegrationTestCase):
 		self.assertEqual(str(order.delivery_date), add_days(nowdate(), 4))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_conversion`
 Expected: FAIL on `test_conversion_carries_date_and_dropoff` — `delivery_date` is not the requested date, and `webstore_dropoff_points` is empty.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `upande_webstore/services/conversion.py`:
 
@@ -1495,12 +1495,12 @@ doc_events = {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_conversion`
 Expected: PASS (3 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add upande_webstore/services/conversion.py upande_webstore/hooks.py \
@@ -1526,7 +1526,7 @@ git commit -m "fix(checkout): stop losing shipping date and dropoff on conversio
   - `checkout.place_order(..., delivery_point=None)` — extra keyword argument
   - `www/cart.py` context gains `delivery_points` (list) and `delivery_points_available` (bool)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `upande_webstore/tests/test_dropoff.py`:
 
@@ -1590,12 +1590,12 @@ class TestDropoff(IntegrationTestCase):
 		self.assertTrue(result["quotation"])
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_dropoff`
 Expected: FAIL — `ModuleNotFoundError: No module named 'upande_webstore.services.dropoff'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `upande_webstore/services/dropoff.py`:
 
@@ -1687,12 +1687,12 @@ In `upande_webstore/www/cart.py`, before `return context`:
 	context.delivery_points = dropoff.get_delivery_points()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_dropoff`
 Expected: PASS (3 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add upande_webstore/services/dropoff.py upande_webstore/api/checkout.py \
@@ -1714,7 +1714,7 @@ The page reloads after every quantity change, so the box summary is server-rende
 - Consumes: `cart.boxes` and per-line `cart.items[].box` from Task 3; `delivery_points` from Task 8; `cart.set_box_type` and `cart.get_box_types` endpoints.
 - Produces: no new Python interfaces.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `upande_webstore/tests/test_cart_page.py`. This module renders pages
 through `get_html_for_route` and reads context through `get_context` — do not
@@ -1793,12 +1793,12 @@ class TestCartPageBoxes(IntegrationTestCase):
 		self.assertNotIn("webstore-cart-box", html)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_cart_page`
 Expected: FAIL — `AttributeError: 'dict' object has no attribute 'box_types'` on the context test, and `AssertionError: 'webstore-cart-box' not found in ...` on the render test.
 
-- [ ] **Step 3: Render the box column, the group summary and the blocks**
+- [x] **Step 3: Render the box column, the group summary and the blocks**
 
 In `upande_webstore/www/cart.html`, add a Box header cell to the items table `<thead>`, after the Qty header:
 
@@ -1887,7 +1887,7 @@ and make the `place_order` payload read whichever dropoff control exists:
 				delivery_point: (document.getElementById("webstore-delivery-point") || {}).value || null,
 ```
 
-- [ ] **Step 4: Supply `box_types` to the template**
+- [x] **Step 4: Supply `box_types` to the template**
 
 In `upande_webstore/www/cart.py`, before `return context`:
 
@@ -1897,17 +1897,17 @@ In `upande_webstore/www/cart.py`, before `return context`:
 	context.box_types = get_box_types() if packing_enabled() else []
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore --module upande_webstore.tests.test_cart_page`
 Expected: PASS
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run: `bench --site webstore.localhost run-tests --app upande_webstore`
 Expected: PASS — no regressions across the existing test modules.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add upande_webstore/www/cart.html upande_webstore/www/cart.py \
