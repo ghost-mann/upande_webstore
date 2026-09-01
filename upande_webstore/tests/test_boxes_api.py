@@ -73,3 +73,23 @@ class TestBoxesApi(IntegrationTestCase):
 				list_box_types()
 		finally:
 			frappe.set_user("Administrator")
+
+	def test_the_settings_form_has_somewhere_to_render_the_summary(self):
+		field = frappe.get_meta("Webstore Settings").get_field("box_source_summary")
+		self.assertIsNotNone(field, "Webstore Settings has no box source panel")
+		self.assertEqual(field.fieldtype, "HTML")
+
+	def test_the_default_box_type_is_reported_so_the_panel_can_mark_it(self):
+		from upande_webstore.api.boxes import describe_source
+
+		make_box_type("Xpol", 350)
+		settings = frappe.get_doc("Webstore Settings")
+		settings.default_box_type = "Xpol"
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		try:
+			self.assertEqual(describe_source()["default_box_type"], "Xpol")
+		finally:
+			settings.default_box_type = ""
+			settings.save(ignore_permissions=True)
+			frappe.clear_cache()

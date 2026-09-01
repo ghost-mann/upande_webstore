@@ -13,6 +13,10 @@ frappe.ui.form.on("Webstore Settings", {
 			frm.fields_dict.default_box_type?.set_data(options);
 		});
 
+		frappe.call("upande_webstore.api.boxes.describe_source").then((r) => {
+			frm.get_field("box_source_summary").$wrapper.html(boxSummary(r.message));
+		});
+
 		frappe.call("upande_webstore.theme.occasion.list_occasions").then((r) => {
 			const options = r.message || [];
 			// set_data, not set_df_property: an Autocomplete reads df.options only
@@ -129,4 +133,37 @@ function report(frm, result) {
 			"</li></ul>";
 	}
 	frappe.msgprint({ title: __("Theme Applied"), message: message, indicator: "green" });
+}
+
+function boxSummary(data) {
+	if (!data) return "";
+	if (!data.doctype) {
+		return `<div class="text-muted">${__(
+			"This site has no box type source. Box packing stays inert until one exists — either Box Type records with a stem capacity, or Items with Is Box ticked and a pack rate."
+		)}</div>`;
+	}
+	const rows = (data.usable || [])
+		.map(
+			(box) =>
+				`<tr><td>${frappe.utils.escape_html(box.box_name)}</td>` +
+				`<td class="text-right">${box.pack_rate}</td>` +
+				`<td>${box.box_type === data.default_box_type ? __("default") : ""}</td></tr>`
+		)
+		.join("");
+	const problems = (data.unusable || [])
+		.map(
+			(box) =>
+				`<tr><td>${frappe.utils.escape_html(box.box_name)}</td>` +
+				`<td colspan="2" class="text-muted">${box.reasons.join(", ")}</td></tr>`
+		)
+		.join("");
+	return `
+		<div class="text-muted" style="margin-bottom:.5rem">
+			${__("Box types come from")} <b>${frappe.utils.escape_html(data.label)}</b>
+		</div>
+		<table class="table table-bordered table-sm">
+			<thead><tr><th>${__("Box")}</th><th class="text-right">${__("Stems")}</th><th></th></tr></thead>
+			<tbody>${rows || `<tr><td colspan="3" class="text-muted">${__("None usable yet.")}</td></tr>`}</tbody>
+			${problems ? `<tbody><tr><th colspan="3">${__("Hidden from the storefront")}</th></tr>${problems}</tbody>` : ""}
+		</table>`;
 }
