@@ -50,13 +50,16 @@ def setup_webstore_settings():
 	):
 		settings.set(field, "")
 	settings.set("occasion_runs_until", None)
-	for table in ("hero_stats", "category_cards", "footer_links"):
+	for table in ("hero_stats", "category_cards", "process_steps", "footer_links"):
 		settings.set(table, [])
 	settings.set("warehouses", [])
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
 
 	settings.save(ignore_permissions=True)
 	reset_portal_settings()
+	from upande_webstore.services.packing import clear_box_source_cache
+
+	clear_box_source_cache()
 	frappe.clear_cache()
 	return settings
 
@@ -105,6 +108,67 @@ def get_default_warehouse():
 	return frappe.db.get_value(
 		"Warehouse", {"company": company, "is_group": 0, "warehouse_name": "Stores"}, "name"
 	) or frappe.db.get_value("Warehouse", {"company": company, "is_group": 0}, "name")
+
+
+BOX_TYPE_DOCTYPE = "Box Type"
+
+
+def make_box_type_doctype():
+	"""A stand-in for the `Box Type` doctype Karen Roses runs.
+
+	Created as a Custom DocType so this app owns no file for it, exactly as on
+	live where another app defines it. Tests that create it MUST drop it in
+	tearDownClass: a lingering Box Type flips the source for every other module.
+	"""
+	if frappe.db.exists("DocType", BOX_TYPE_DOCTYPE):
+		return BOX_TYPE_DOCTYPE
+	frappe.get_doc({
+		"doctype": "DocType",
+		"name": BOX_TYPE_DOCTYPE,
+		"module": "Upande Webstore",
+		"custom": 1,
+		"autoname": "field:box_type",
+		"fields": [
+			{"fieldname": "box_type", "fieldtype": "Data", "label": "Box Type", "unique": 1, "reqd": 1},
+			{"fieldname": "custom_stem_capacity", "fieldtype": "Int", "label": "Stem Capacity"},
+		],
+		"permissions": [
+			{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+		],
+	}).insert(ignore_permissions=True)
+	frappe.clear_cache()
+	return BOX_TYPE_DOCTYPE
+
+
+def make_box_type(name, capacity):
+	"""One Box Type record, e.g. make_box_type("Xpol", 350)."""
+	from upande_webstore.services.packing import clear_box_source_cache
+
+	make_box_type_doctype()
+	if frappe.db.exists(BOX_TYPE_DOCTYPE, name):
+		frappe.db.set_value(BOX_TYPE_DOCTYPE, name, "custom_stem_capacity", capacity)
+	else:
+		frappe.get_doc({
+			"doctype": BOX_TYPE_DOCTYPE,
+			"box_type": name,
+			"custom_stem_capacity": capacity,
+		}).insert(ignore_permissions=True)
+	clear_box_source_cache()
+	return name
+
+
+def drop_box_type_doctype():
+	from upande_webstore.services.packing import clear_box_source_cache
+
+	if frappe.db.exists("DocType", BOX_TYPE_DOCTYPE):
+		frappe.delete_doc("DocType", BOX_TYPE_DOCTYPE, force=1, ignore_permissions=True)
+	# delete_doc removes the DocType record but, same as frappe's own uninstall
+	# routine (installer.py's _delete_doctypes), never drops the data table it
+	# described. Left alone, rows from one test's records survive into the next
+	# test's "freshly created" doctype and silently make it look populated.
+	frappe.db.sql_ddl(f"DROP TABLE IF EXISTS `tab{BOX_TYPE_DOCTYPE}`")
+	frappe.clear_cache()
+	clear_box_source_cache()
 
 
 def make_test_item(item_code, **kwargs):

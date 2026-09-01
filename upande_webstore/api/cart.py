@@ -100,6 +100,8 @@ def _box_view(cart):
 
 
 def serialize_cart(cart):
+	from upande_webstore.services import packing
+
 	if not cart:
 		return {
 			"name": None,
@@ -133,8 +135,7 @@ def serialize_cart(cart):
 				"amount": row.amount,
 				"box_type": row.get("box_type"),
 				"box_name": (
-					frappe.db.get_value("Item", row.box_type, "item_name") or row.box_type
-					if row.get("box_type") else None
+					packing.box_label(row.box_type) if row.get("box_type") else None
 				),
 				"number_of_boxes": row.get("number_of_boxes") or 0,
 			}

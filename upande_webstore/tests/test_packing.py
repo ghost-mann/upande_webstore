@@ -83,3 +83,90 @@ class TestBoxMaths(IntegrationTestCase):
 		self.assertEqual(groups["ZIM"]["stems"], 300)
 		self.assertEqual(groups["JUMBO"]["stems"], 500)
 		self.assertEqual(sorted(groups["ZIM"]["item_codes"]), ["A", "B"])
+
+
+class TestBoxSource(IntegrationTestCase):
+	"""Which representation a farm runs decides where box types come from.
+
+	Mona has Items flagged custom_is_box. Karen Roses has a populated `Box Type`
+	doctype and no box fields on Item at all. Both must work.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+
+	@classmethod
+	def tearDownClass(cls):
+		from upande_webstore.tests.utils import drop_box_type_doctype
+
+		drop_box_type_doctype()
+		super().tearDownClass()
+
+	def setUp(self):
+		from upande_webstore.tests.utils import drop_box_type_doctype
+
+		drop_box_type_doctype()
+
+	def test_items_are_the_source_when_no_box_type_doctype_exists(self):
+		from upande_webstore.services.packing import get_box_source
+
+		source = get_box_source()
+		self.assertEqual(source.doctype, "Item")
+		self.assertEqual(source.rate_field, "custom_pack_rate")
+
+	def test_a_populated_box_type_doctype_wins(self):
+		from upande_webstore.services.packing import get_box_source
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		source = get_box_source()
+		self.assertEqual(source.doctype, "Box Type")
+		self.assertEqual(source.rate_field, "custom_stem_capacity")
+
+	def test_an_empty_box_type_doctype_falls_through_to_items(self):
+		"""Mona has an empty one. An empty source must not disable packing."""
+		from upande_webstore.services.packing import clear_box_source_cache, get_box_source
+		from upande_webstore.tests.utils import make_box_type_doctype
+
+		make_box_type_doctype()
+		clear_box_source_cache()
+		self.assertEqual(get_box_source().doctype, "Item")
+
+	def test_a_box_type_with_no_capacity_falls_through_to_items(self):
+		from upande_webstore.services.packing import clear_box_source_cache, get_box_source
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Unrated", 0)
+		clear_box_source_cache()
+		self.assertEqual(get_box_source().doctype, "Item")
+
+	def test_box_types_come_back_from_the_box_type_doctype(self):
+		from upande_webstore.services.packing import get_box_types, get_pack_rate
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		make_box_type("Standard", 400)
+		names = {b["box_type"]: b["pack_rate"] for b in get_box_types()}
+		self.assertEqual(names["Xpol"], 350)
+		self.assertEqual(names["Standard"], 400)
+		self.assertEqual(get_pack_rate("Xpol"), 350)
+
+	def test_an_unrated_box_type_is_reported_as_unusable_not_hidden(self):
+		from upande_webstore.services.packing import get_box_types, get_unusable_box_types
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		make_box_type("Unrated", 0)
+		self.assertNotIn("Unrated", [b["box_type"] for b in get_box_types()])
+		unusable = {b["box_type"]: b["reasons"] for b in get_unusable_box_types()}
+		self.assertIn("Unrated", unusable)
+		self.assertTrue(unusable["Unrated"])
+
+	def test_the_source_is_named_in_plain_words(self):
+		from upande_webstore.services.packing import source_label
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		self.assertIn("Box Type", source_label())

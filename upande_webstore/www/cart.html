@@ -34,7 +34,7 @@
 				<td>
 					<select class="form-control form-control-sm webstore-cart-box" data-item="{{ row.item_code }}" style="width:100%;min-width:200px">
 						{% for box in box_types %}
-						<option value="{{ box.item_code }}" {% if box.item_code == row.box_type %}selected{% endif %}>{{ box.item_name }} ({{ box.pack_rate }})</option>
+						<option value="{{ box.box_type }}" {% if box.box_type == row.box_type %}selected{% endif %}>{{ box.box_name }} ({{ box.pack_rate }})</option>
 						{% endfor %}
 					</select>
 					{% if row.number_of_boxes %}<small class="text-muted">{{ row.number_of_boxes }} {{ _("boxes") }}</small>{% endif %}

@@ -196,6 +196,6 @@ class TestCartBoxes(IntegrationTestCase):
 
 		frappe.set_user("Administrator")
 		make_box_item("WS-BOX-HIDDEN", 0)
-		codes = [row["item_code"] for row in get_box_types()]
+		codes = [row["box_type"] for row in get_box_types()]
 		self.assertIn(self.zim, codes)
 		self.assertNotIn("WS-BOX-HIDDEN", codes)
