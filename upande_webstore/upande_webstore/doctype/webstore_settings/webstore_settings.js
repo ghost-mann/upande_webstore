@@ -4,6 +4,15 @@ frappe.ui.form.on("Webstore Settings", {
 			frm.set_df_property("preset", "options", [""].concat(r.message || []).join("\n"));
 		});
 
+		frappe.call("upande_webstore.api.boxes.list_box_types").then((r) => {
+			const options = r.message || [];
+			// set_data as well as the property: an Autocomplete reads df.options
+			// only in make_input(), which has already run by the time this
+			// resolves — the same reason the occasion field below does it.
+			frm.set_df_property("default_box_type", "options", options);
+			frm.fields_dict.default_box_type?.set_data(options);
+		});
+
 		frappe.call("upande_webstore.theme.occasion.list_occasions").then((r) => {
 			const options = r.message || [];
 			// set_data, not set_df_property: an Autocomplete reads df.options only
