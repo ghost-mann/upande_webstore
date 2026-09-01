@@ -147,6 +147,7 @@ WEBSTORE_CUSTOM_FIELDS = {
 			"label": "Is Box",
 			"insert_after": "stock_uom",
 			"default": "0",
+			"search_index": 1,
 		},
 		{
 			"fieldname": "custom_pack_rate",

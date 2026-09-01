@@ -113,15 +113,35 @@ def get_default_warehouse():
 BOX_TYPE_DOCTYPE = "Box Type"
 
 
+def _fixture_owns_box_type():
+	"""True only for the Custom DocType this fixture itself created.
+
+	A real `Box Type` on a live or restored site (Karen Roses) is custom=0 or
+	lives in a different module, so this returns False for it — the fixture
+	must never touch a doctype it did not create.
+	"""
+	row = frappe.db.get_value("DocType", BOX_TYPE_DOCTYPE, ["custom", "module"], as_dict=True)
+	return bool(row) and int(row.custom or 0) == 1 and row.module == "Upande Webstore"
+
+
 def make_box_type_doctype():
 	"""A stand-in for the `Box Type` doctype Karen Roses runs.
 
 	Created as a Custom DocType so this app owns no file for it, exactly as on
 	live where another app defines it. Tests that create it MUST drop it in
 	tearDownClass: a lingering Box Type flips the source for every other module.
+
+	Refuses to run against a site that already has a real `Box Type` — adopting
+	one would let `drop_box_type_doctype` delete production master data.
 	"""
 	if frappe.db.exists("DocType", BOX_TYPE_DOCTYPE):
-		return BOX_TYPE_DOCTYPE
+		if _fixture_owns_box_type():
+			return BOX_TYPE_DOCTYPE
+		frappe.throw(
+			"This site already has a real `Box Type` doctype. TestBoxSource must "
+			"not run against it: drop_box_type_doctype() would delete its "
+			"production data. Run these tests on a site without one."
+		)
 	frappe.get_doc({
 		"doctype": "DocType",
 		"name": BOX_TYPE_DOCTYPE,
@@ -158,10 +178,20 @@ def make_box_type(name, capacity):
 
 
 def drop_box_type_doctype():
+	"""Undo make_box_type_doctype — and only that.
+
+	Guarded end to end on _fixture_owns_box_type: a real `Box Type` (Karen
+	Roses, or a staging restore) must survive this unconditionally, table
+	included. delete_doc(force=1) skips the link-integrity check that would
+	otherwise refuse a doctype with data referencing it, and the DROP TABLE
+	that follows is non-transactional DDL a test rollback cannot undo — so
+	this must never fire against a doctype the fixture did not create.
+	"""
 	from upande_webstore.services.packing import clear_box_source_cache
 
-	if frappe.db.exists("DocType", BOX_TYPE_DOCTYPE):
-		frappe.delete_doc("DocType", BOX_TYPE_DOCTYPE, force=1, ignore_permissions=True)
+	if not _fixture_owns_box_type():
+		return
+	frappe.delete_doc("DocType", BOX_TYPE_DOCTYPE, force=1, ignore_permissions=True)
 	# delete_doc removes the DocType record but, same as frappe's own uninstall
 	# routine (installer.py's _delete_doctypes), never drops the data table it
 	# described. Left alone, rows from one test's records survive into the next

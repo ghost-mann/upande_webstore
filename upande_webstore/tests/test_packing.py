@@ -143,7 +143,7 @@ class TestBoxSource(IntegrationTestCase):
 		self.assertEqual(get_box_source().doctype, "Item")
 
 	def test_box_types_come_back_from_the_box_type_doctype(self):
-		from upande_webstore.services.packing import get_box_types, get_pack_rate
+		from upande_webstore.services.packing import box_label, get_box_types, get_pack_rate
 		from upande_webstore.tests.utils import make_box_type
 
 		make_box_type("Xpol", 350)
@@ -152,6 +152,7 @@ class TestBoxSource(IntegrationTestCase):
 		self.assertEqual(names["Xpol"], 350)
 		self.assertEqual(names["Standard"], 400)
 		self.assertEqual(get_pack_rate("Xpol"), 350)
+		self.assertEqual(box_label("Xpol"), "Xpol")
 
 	def test_an_unrated_box_type_is_reported_as_unusable_not_hidden(self):
 		from upande_webstore.services.packing import get_box_types, get_unusable_box_types

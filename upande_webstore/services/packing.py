@@ -58,7 +58,7 @@ def _resolve_box_source():
 		return frappe._dict(
 			doctype=BOX_TYPE_DOCTYPE,
 			rate_field=BOX_TYPE_CAPACITY,
-			label_field="box_type",
+			label_field="box_type" if frappe.get_meta(BOX_TYPE_DOCTYPE).get_field("box_type") else "name",
 			filters={},
 			candidate_filters={},
 		)
