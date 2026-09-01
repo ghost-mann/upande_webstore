@@ -20,17 +20,18 @@ class WebstoreProduct(WebsiteGenerator):
 
 	def validate_box_type(self):
 		"""A box that is not a box would silently fall back to the farm default,
-		which looks like the setting being ignored. Say so instead."""
+		which looks like the setting being ignored. Say so, and name where box
+		types come from on this site — it differs per farm."""
 		from frappe import _
 
 		if not self.box_type:
 			return
-		from upande_webstore.services.packing import is_usable_box
+		from upande_webstore.services.packing import is_usable_box, source_label
 
 		if not is_usable_box(self.box_type):
 			frappe.throw(
-				_("{0} is not usable as a box: it needs Is Box ticked, a Pack Rate above zero, and must not be disabled.").format(
-					self.box_type
+				_("{0} is not a usable box type on this site. Box types come from {1}.").format(
+					self.box_type, source_label()
 				),
 				frappe.ValidationError,
 			)

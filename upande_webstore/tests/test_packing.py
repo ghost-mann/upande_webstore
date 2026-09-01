@@ -15,7 +15,7 @@ class TestPackingSettings(IntegrationTestCase):
 		self.assertEqual(meta.get_field("enable_box_packing").default, "0")
 		self.assertEqual(meta.get_field("minimum_order_stems").default, "0")
 		self.assertEqual(meta.get_field("default_lead_days").default, "7")
-		self.assertEqual(meta.get_field("default_box_type").options, "Item")
+		self.assertEqual(meta.get_field("default_box_type").fieldtype, "Autocomplete")
 
 	def test_setup_helper_resets_packing_config(self):
 		settings = frappe.get_doc("Webstore Settings")
@@ -171,3 +171,35 @@ class TestBoxSource(IntegrationTestCase):
 
 		make_box_type("Xpol", 350)
 		self.assertIn("Box Type", source_label())
+
+	def test_box_fields_are_autocomplete_not_links(self):
+		"""A Link cannot vary its target per site; these must not have one."""
+		for doctype, fieldname in (
+			("Webstore Product", "box_type"),
+			("Webstore Cart Item", "box_type"),
+			("Webstore Settings", "default_box_type"),
+		):
+			field = frappe.get_meta(doctype).get_field(fieldname)
+			self.assertEqual(field.fieldtype, "Autocomplete", f"{doctype}.{fieldname}")
+			self.assertFalse(field.options, f"{doctype}.{fieldname} still names a target")
+
+	def test_a_product_rejects_a_box_the_source_does_not_know(self):
+		from upande_webstore.tests.utils import make_box_type, make_test_product
+
+		make_box_type("Xpol", 350)
+		product = make_test_product("WS-SRC-PROD")
+		product.box_type = "Not A Box"
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			product.save(ignore_permissions=True)
+		self.assertIn("Box Type", str(ctx.exception))
+
+	def test_a_product_accepts_a_box_from_the_resolved_source(self):
+		from upande_webstore.tests.utils import make_box_type, make_test_product
+
+		make_box_type("Xpol", 350)
+		product = make_test_product("WS-SRC-PROD2")
+		product.box_type = "Xpol"
+		product.save(ignore_permissions=True)
+		self.assertEqual(
+			frappe.db.get_value("Webstore Product", product.name, "box_type"), "Xpol"
+		)

@@ -60,11 +60,9 @@
   },
   {
    "fieldname": "box_type",
-   "fieldtype": "Link",
+   "fieldtype": "Autocomplete",
    "label": "Box Type",
-   "options": "Item",
-   "link_filters": "[[\"Item\",\"custom_is_box\",\"=\",1],[\"Item\",\"disabled\",\"=\",0]]",
-   "description": "The box this product ships in. Blank falls back to the farm default. Only Items flagged Is Box are offered."
+   "description": "The box this product ships in. Blank falls back to the farm default. Suggestions come from whichever box source this site runs — see Webstore Settings."
   },
   {
    "fieldname": "route",
