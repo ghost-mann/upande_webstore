@@ -57,7 +57,8 @@ Length` attribute holds `40cm … 120cm`. This app already renders variants
 - **No new doctypes.** Box type already has four representations. A fifth is
   not a fix.
 - **No name collisions.** `Box Type` and `Delivery Point` are both names other
-  apps already own. This app claims neither.
+  apps already own. This app claims neither — it *reads* them where a farm
+  already has them, and never creates, migrates or takes ownership of either.
 - **Deploying must change nothing.** Every live pack rate is `0`. If a missing
   rate meant "block", enabling this would brick the storefront. The feature
   must be inert until deliberately configured and switched on.
@@ -69,7 +70,7 @@ Length` attribute holds `40cm … 120cm`. This app already renders variants
 | Decision | Choice |
 |---|---|
 | Unit of sale | **Stems**, unchanged; box count is derived |
-| Pack rate source | **Items** with `custom_is_box=1` and `custom_pack_rate` |
+| Pack rate source | **Resolved per site**: `Box Type` records when populated, else Items with `custom_is_box=1` |
 | Box type | **Product supplies the default; buyer may override per line** |
 | Whole-box check | Per **box-type group**, not per line |
 | Minimum order | **Order total in stems**, configurable |
@@ -93,8 +94,11 @@ live has them. They are `upande_harvest`'s fields, and on a site with only this
 app installed they are absent — so there was no way to mark an Item as a box and
 the feature could never work standalone. `install.py` therefore *ensures* both,
 alongside the fields it already ensures on Quotation and Sales Order.
-`create_custom_fields` skips fields that already exist, so this is a no-op on
-live and does not take ownership of them.
+**Amended again 2026-09-01.** Two claims here were wrong, and both are corrected
+in *Box type source is site-dependent* below. Items are no longer the only
+source, and `create_custom_fields` does **not** skip fields that already exist —
+it updates them, so the installer filters conflicts out first and now only ever
+creates fields that are absent.
 
 ### Why the whole-box check is not per line
 
@@ -132,14 +136,124 @@ Only the box *count* is never a client input. A buyer's override survives
 quantity changes; recompute reseeds from the product only when a line has no
 usable box.
 
+### Box type source is site-dependent (amended 2026-09-01)
+
+An audit of **Karen Roses (`kaitet`)** on 2026-09-01 — a farm this design had
+never been checked against — falsified the premise above. The original audit
+covered Mona live and Mona staging only, and concluded the `Box Type` doctypes
+were empty everywhere. On Karen Roses it is the *populated* one.
+
+**What is actually there.** `Box Type` holds 12 records with real commercial
+data, richer than a pack rate:
+
+| Box Type | Stem capacity | L×W×H cm | Weight | CBM | Equiv. standard |
+|---|---|---|---|---|---|
+| Xpol | 350 | 99×40×20 | 23.4 kg | 0.0792 | 1.20 |
+| Standard | 400 | 100×33×20 | 19.8 kg | 0.0660 | **1.00** |
+| Flower Pack Pro | 300 | 100×39×25 | 28.3 kg | 0.0975 | 1.48 |
+| Large | 550 | 120×40×25 | 34.4 kg | 0.1200 | 1.82 |
+| Quarter Box | 100 | 82×22×16 | 9.8 kg | 0.0289 | 0.44 |
+
+`custom_equivalent_standard` is a freight-equivalence multiplier against
+Standard — how the farm costs airfreight. `custom_stem_capacity` is the column
+that corresponds to a pack rate.
+
+**Boxes as Items mean something else here.** A physical box is stocked as
+*packaging material components*, not as a sales concept. The Xpol box is three
+Items in item group `PACKAGING MATERIALS`: `1212100451` "Xpol Box
+100x38.5x20.5cm - Bottom", `1212100450` "- 2 Tops Covers" and `1212100381` "-
+complete". Cardboard that is bought and consumed. No `custom_is_box` or
+`custom_pack_rate` exists on Item on that site at all, and a capacity of 350
+could not sensibly live on the bottom *and* the lid.
+
+**The field points somewhere else too.** `Sales Order Item.custom_box_type` on
+Karen Roses is a Link to **`Box Type`**, not to Item, and carries 5,019 live
+values: Flower Pack Pro 2,403, Standard 1,418, Large 812, Small 386.
+`Loading Plan Item.custom_box_type` is the same Link. A third representation,
+the `Packrate` doctype (`box_type` as Data, `packrate` as Int), also exists.
+
+**The installer hazard this exposed.** `install.py` claimed
+`create_custom_fields` "skips fields that already exist". It does not:
+`update=True` is the default and `custom_field.py:363` saves any changed
+property. Installing this app on Karen Roses would rewrite
+`Sales Order Item.custom_box_type` from `options: Box Type` to `options: Item`,
+mark it read-only, and orphan all 5,019 values — "Flower Pack Pro" is not an
+Item code — while breaking the Loading Plan flow that reads the same field.
+
+#### Decision: resolve the source, do not impose one
+
+`services/packing.py` gains a resolver that decides site-wide, once per request,
+where box types come from:
+
+```
+Box Type doctype exists, has custom_stem_capacity,
+and has >= 1 row with capacity > 0
+  -> source = Box Type   (name, custom_stem_capacity)
+Item has both custom_is_box and custom_pack_rate
+  -> source = Item       (custom_is_box=1, disabled=0, custom_pack_rate > 0)
+neither
+  -> source = None       (packing inert, exactly as before)
+```
+
+*Populated* is load-bearing: the original audit found empty `Box Type` doctypes
+on Mona, and an empty one must fall through to Items rather than silently
+disable packing.
+
+The module's public surface is unchanged — `get_box_types`, `get_pack_rate`,
+`is_usable_box`, `box_label`, `compute_boxes`, `group_by_box_type`,
+`find_problems` keep their signatures — so `api/cart.py`, `api/checkout.py` and
+the cart page do not move. Only the reads inside change.
+
+#### The stored value is an Autocomplete, not a Link
+
+`Webstore Product.box_type`, `Webstore Cart Item.box_type` and
+`Webstore Settings.default_box_type` become **Autocomplete**, suggested from
+`get_box_types()` and validated by the resolver on save. A Link cannot vary its
+target per site, and a Dynamic Link would need a companion `box_doctype` column
+on every row to name a target that is a site-wide fact — redundant data to keep
+in sync. `Webstore Settings.occasion` already uses this pattern.
+
+A value that stops resolving — a farm switching source, a box being disabled —
+is treated exactly as an unusable box already is: the line reseeds from the
+product default, and packing skips the group when nothing resolves.
+
+#### Writing to ERPNext becomes conditional
+
+`api/checkout._present(doctype, fieldname)` becomes
+`_writable(doctype, fieldname, expect_options)`. `custom_box_type` is written
+only when the field exists **and** its `options` match the resolved source
+doctype. Karen Roses (source `Box Type`, field → `Box Type`) writes correctly;
+Mona (source `Item`, field → `Item`) writes; a mismatch is skipped silently,
+which is how `_store_delivery_point` already handles Mona's absent
+`Delivery Point`.
+
+#### The installer stops rewriting
+
+`create_webstore_custom_fields` filters out any field that already exists with a
+different `options` or `fieldtype`, and logs what it skipped. Every other field
+still updates, so genuine property fixes keep landing. This is the guard that
+protects the 5,019 lines, and it protects any other farm whose `custom_` field
+names collide with ours for the same reason.
+
+#### What this does not change
+
+The rest of the design stands. Stems remain the unit of sale, the product still
+supplies the default box with a per-line buyer override, whole-box fill is still
+checked per box-type group, and the feature is still inert until
+`enable_box_packing` is switched on. Freight equivalence, weight and CBM are
+read but **not used** — noted as available, not modelled.
+
 ### Rejected alternatives
 
 - **A new `Webstore Box Type` doctype.** Self-contained, but a fifth
   representation that immediately drifts from what packing reads.
 - **A `Webstore Settings` child table of box types.** No new doctype, but
   invisible to ops and re-typed per farm.
-- **Adopting Harvest's `Box Type`.** Introduces a hard dependency on
-  `upande_harvest` and breaks the standalone requirement.
+- **Adopting Harvest's `Box Type`** as the app's own doctype, shipped and
+  migrated. Introduces a hard dependency on `upande_harvest` and breaks the
+  standalone requirement. Reading a farm's existing `Box Type` records when they
+  happen to be there — which the 2026-09-01 amendment adds — is a different
+  thing: opportunistic, guarded at every read, and inert when absent.
 - **Boxes as the unit of sale.** "6 boxes of Athena" cannot express a mixed box
   holding three varieties, and would need a separate mixed-box builder.
 - **A single order-level box chosen at checkout.** Tried and removed: it cannot
@@ -167,9 +281,10 @@ setup/install.py                ensure Quotation Item box fields
 `services/packing.py` holds no document state:
 
 ```
-get_box_types()               -> [{item_code, item_name, pack_rate}]
-      Items where custom_is_box=1, not disabled, pack_rate > 0
-get_pack_rate(box_item)       -> int          0 when unusable
+get_box_source()              -> Source | None    resolved once per request
+get_box_types()               -> [{box_type, box_name, pack_rate}]
+      from the resolved source; [] when there is none
+get_pack_rate(box)            -> int          0 when unusable
 compute_boxes(qty, pack_rate) -> {boxes, remainder, is_full,
                                   nearest_down, nearest_up}
 group_by_box_type(lines)      -> {box_item: {stems, lines, ...}}
@@ -186,7 +301,7 @@ Added to `Webstore Settings`:
 | Field | Type | Default | Note |
 |---|---|---|---|
 | `enable_box_packing` | Check | `0` | Master switch; off means fully inert |
-| `default_box_type` | Link → Item | — | Seeds each new cart line |
+| `default_box_type` | Autocomplete | — | Seeds each new cart line; validated against the resolved source on save |
 | `minimum_order_stems` | Int | `0` | `0` means no minimum. Mona sets `1000` |
 | `default_lead_days` | Int | `7` | Preserves today's fallback |
 
@@ -199,12 +314,12 @@ must work normally with validation skipped. So it is a plain Check on
 
 ### Schema
 
-`Webstore Product` gains `box_type` (Link → Item) — the box that product ships
-in, mirroring `Website Item.custom_box_type` on live. The desk picker is filtered
-to Items with `custom_is_box` ticked and a rate above zero, and a product refuses
-to save with anything else.
+`Webstore Product` gains `box_type` (Autocomplete) — the box that product ships
+in, mirroring `Website Item.custom_box_type` on live. The desk picker is fed from
+the resolved source, and a product refuses to save with anything that source does
+not know.
 
-`Webstore Cart Item` gains `box_type` (Link → Item) and `number_of_boxes` (Int,
+`Webstore Cart Item` gains `box_type` (Autocomplete) and `number_of_boxes` (Int,
 read-only). The line's box is seeded from its product and may be changed by the
 buyer; `number_of_boxes` is derived on every save and never read from the client.
 A buyer's override survives quantity changes — recompute reseeds from the product
@@ -225,8 +340,9 @@ ones. That is a deliberate, scoped exception to the app's naming convention.
 | Quotation Item | the same three box fields | **created by `install.py`** |
 | Item | `custom_is_box`, `custom_pack_rate` | exists; **ensured by `install.py`** |
 
-`create_custom_fields` skips fields that already exist, so ensuring these is
-safe on a farm that already has them.
+Ensuring these is **not** unconditionally safe: `create_custom_fields` updates
+existing fields rather than skipping them. The installer is therefore
+create-only — see *Box type source is site-dependent*.
 
 Two fields are deliberately **never written**: `Quotation.custom_box_type`,
 because it links to the empty `Box Type` doctype, and the order-level
@@ -377,6 +493,14 @@ database:
   of `0`, `qty` of `0`, and `nearest_down == 0`
 - `group_by_box_type`: several lines to one box, several groups, one line each
 - `get_box_types`: excludes `custom_is_box=0`, disabled Items, and rate `0`
+- `get_box_source`: prefers a populated `Box Type`; falls through to Items when
+  that doctype is absent, has no capacity field, or has no row with a capacity
+  above `0`; returns `None` when neither source exists
+- `get_pack_rate`: reads `custom_stem_capacity` under a `Box Type` source and
+  `custom_pack_rate` under an Item source
+- `create_webstore_custom_fields`: a pre-existing `custom_box_type` pointing at
+  `Box Type` survives unchanged — the regression that would otherwise orphan
+  5,019 Karen Roses order lines
 
 Then against the cart and checkout:
 
@@ -419,8 +543,10 @@ rest of the suite stays green.
 
 ## Prerequisites before enabling
 
-1. Enter `custom_pack_rate` on the seven `custom_is_box` Items on live — all
-   are `0` today.
+1. Confirm which source the farm resolves to — the Webstore Settings box panel
+   names it. On Karen Roses that is `Box Type`, already populated, so nothing
+   needs entering. On Mona it is Items, and `custom_pack_rate` must be entered
+   on the seven `custom_is_box` Items — all are `0` today.
 2. Set `default_box_type`, `minimum_order_stems` (1000) and `default_lead_days`
    (1) in Webstore Settings.
 3. Switch on `enable_box_packing`.
