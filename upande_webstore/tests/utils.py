@@ -70,6 +70,8 @@ PORTAL_SETTING_DEFAULTS = {
 	"top_items_count": 0,
 	"statement_default_days": 0,
 	"max_attachment_mb": 0,
+	# 0 means unset, so get_int falls back to the shipped 14-day window
+	"claim_window_days": 0,
 	"quotation_accept_requires_po": 0,
 	"allow_invoice_pdf": 1,
 	"require_claim_document": 0,

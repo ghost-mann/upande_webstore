@@ -28,6 +28,21 @@ def make_submitted_invoice(customer, item_code):
 	return invoice
 
 
+def offered_invoices():
+	"""The Sales Invoice rows the claim picker would render for the session user."""
+	from upande_webstore.api.claims import get_claim_options
+
+	return get_claim_options()["documents"].get("Sales Invoice", [])
+
+
+def offered_names():
+	return [row["name"] for row in offered_invoices()]
+
+
+def offered_row(name):
+	return next((row for row in offered_invoices() if row["name"] == name), None)
+
+
 class TestClaimScoping(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -106,10 +121,7 @@ class TestClaimScoping(IntegrationTestCase):
 			create_claim("Other", "   ")
 
 	def test_offered_documents_are_only_the_customers_own(self):
-		from upande_webstore.api.claims import get_claim_options
-
-		documents = get_claim_options()["documents"]
-		invoices = documents.get("Sales Invoice", [])
+		invoices = offered_names()
 		self.assertIn(self.mine_invoice, invoices)
 		self.assertNotIn(self.other_invoice, invoices)
 
@@ -272,18 +284,26 @@ class TestClaimWindow(IntegrationTestCase):
 		self.assertEqual(list(CLAIMABLE_DOCTYPES), ["Sales Invoice"])
 
 	def test_a_recent_invoice_is_offered_and_accepted(self):
-		from upande_webstore.api.claims import create_claim, get_claim_options
+		from upande_webstore.api.claims import create_claim
 
 		recent = self._invoice_dated(2)
-		self.assertIn(recent, get_claim_options()["documents"]["Sales Invoice"])
+		self.assertTrue(offered_row(recent)["claimable"])
 		result = create_claim("Damaged goods", "Two boxes crushed.", "Sales Invoice", recent)
 		self.assertTrue(result["name"])
 
-	def test_an_invoice_past_the_window_drops_off_the_list(self):
+	def test_an_invoice_past_the_window_is_listed_but_not_claimable(self):
+		"""Hiding it left the customer unable to tell an expired invoice from a
+		missing one; it stays on the list, marked."""
+		old = self._invoice_dated(20)
+		row = offered_row(old)
+		self.assertIsNotNone(row, "an out-of-window invoice must still be listed")
+		self.assertFalse(row["claimable"])
+		self.assertEqual(str(row["date"]), frappe.utils.add_days(frappe.utils.nowdate(), -20))
+
+	def test_the_window_length_is_offered_to_the_page(self):
 		from upande_webstore.api.claims import get_claim_options
 
-		old = self._invoice_dated(20)
-		self.assertNotIn(old, get_claim_options()["documents"]["Sales Invoice"])
+		self.assertEqual(get_claim_options()["claim_window_days"], 14)
 
 	def test_an_invoice_past_the_window_is_refused_if_submitted_anyway(self):
 		from upande_webstore.api.claims import create_claim
@@ -304,7 +324,8 @@ class TestClaimWindow(IntegrationTestCase):
 		frappe.clear_cache()
 		frappe.set_user("window.buyer@example.com")
 		try:
-			self.assertIn(old, get_claim_options()["documents"]["Sales Invoice"])
+			self.assertTrue(offered_row(old)["claimable"])
+			self.assertEqual(get_claim_options()["claim_window_days"], 30)
 		finally:
 			frappe.set_user("Administrator")
 			from upande_webstore.tests.utils import reset_portal_settings

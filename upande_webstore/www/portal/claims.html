@@ -31,7 +31,7 @@
 				<select class="form-control" id="claim-document" disabled>
 					<option value="">{{ _("Pick a type first") }}</option>
 				</select>
-				<small class="form-text text-muted">{{ _("Only your own documents are listed.") }}</small>
+				<small class="form-text text-muted">{{ _("Only your own documents are listed.") }} {{ _("Claims can be filed within {0} days of the invoice date.").format(claim_window_days) }}</small>
 			</div>
 		</div>
 		<div class="form-group">
@@ -71,19 +71,22 @@ const doctypeSelect = document.getElementById("claim-doctype");
 const documentSelect = document.getElementById("claim-document");
 
 doctypeSelect.addEventListener("change", () => {
-	const names = claimDocuments[doctypeSelect.value] || [];
+	const rows = claimDocuments[doctypeSelect.value] || [];
 	documentSelect.innerHTML = "";
-	if (!names.length) {
+	if (!rows.length) {
 		documentSelect.disabled = true;
 		documentSelect.innerHTML = `<option value="">{{ _("Pick a type first") }}</option>`;
 		return;
 	}
 	documentSelect.disabled = false;
 	documentSelect.insertAdjacentHTML("beforeend", `<option value="">{{ _("Select…") }}</option>`);
-	names.forEach((n) => {
+	rows.forEach((row) => {
 		const option = document.createElement("option");
-		option.value = n;
-		option.textContent = n;
+		option.value = row.name;
+		option.textContent = row.label;
+		// past the window: shown so the customer can see the invoice is there and
+		// why it cannot be claimed, but not selectable. The server refuses it too.
+		option.disabled = !row.claimable;
 		documentSelect.appendChild(option);
 	});
 });

@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 
 from upande_webstore.api.cart import _require_login
-from upande_webstore.services.claims import get_claimable_documents
+from upande_webstore.services.claims import get_claim_window_days, get_claimable_documents
 from upande_webstore.services.portal_settings import get, get_claim_types, is_on
 from upande_webstore.services.portal import get_current_customer
 from upande_webstore.theme.features import guard
@@ -95,6 +95,8 @@ def get_claim_options():
 	return {
 		"types": list(get_claim_types()),
 		"documents": get_claimable_documents(customer),
+		# the page names the number in the reason it shows against an old invoice
+		"claim_window_days": get_claim_window_days(),
 		"require_document": is_on("require_claim_document"),
 		"allow_attachments": is_on("allow_claim_attachments"),
 		"max_attachment_mb": get("max_attachment_mb"),
