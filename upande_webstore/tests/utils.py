@@ -17,6 +17,9 @@ def setup_webstore_settings():
 	settings.default_box_type = ""
 	settings.minimum_order_stems = 0
 	settings.default_lead_days = 7
+	# Blank is "Buyer chooses"; reset explicitly or a module that narrows
+	# checkout to one mode leaks into whichever module runs next.
+	settings.checkout_mode = ""
 	for field in (
 		"brand_logo",
 		"hero_image",

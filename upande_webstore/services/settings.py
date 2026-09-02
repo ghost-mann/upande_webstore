@@ -9,6 +9,35 @@ def get_warehouses():
 	return [row.warehouse for row in get_settings().warehouses]
 
 
+# Select options on Webstore Settings.checkout_mode. Blank (a site that has
+# never touched the field) reads as CHECKOUT_MODE_BUYER_CHOOSES so an existing
+# install's cart page is unchanged by this setting existing at all.
+CHECKOUT_MODE_BUYER_CHOOSES = "Buyer chooses"
+CHECKOUT_MODE_QUOTATION_ONLY = "Quotation only"
+CHECKOUT_MODE_ORDER_ONLY = "Sales order only"
+
+
+def get_checkout_mode(settings=None):
+	"""The farm's resolved checkout_mode, blank folded to Buyer chooses."""
+	settings = settings or get_settings()
+	return (settings.get("checkout_mode") or "").strip() or CHECKOUT_MODE_BUYER_CHOOSES
+
+
+def checkout_mode_permits(mode, settings=None):
+	"""Whether a checkout `mode` ("quotation"/"order") may be used at all.
+
+	The button is only presentation; this is the check `place_order` re-runs
+	server-side so a client cannot post a mode the farm has switched off just
+	because the button that would have hidden it never rendered.
+	"""
+	resolved = get_checkout_mode(settings)
+	if resolved == CHECKOUT_MODE_QUOTATION_ONLY:
+		return mode == "quotation"
+	if resolved == CHECKOUT_MODE_ORDER_ONLY:
+		return mode == "order"
+	return True
+
+
 APPEARANCE_IMAGE_FIELDS = (
 	"brand_logo",
 	"hero_image",

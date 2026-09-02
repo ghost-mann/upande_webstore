@@ -18,7 +18,12 @@ def get_context(context):
 		serialize_cart,
 	)
 
+	from upande_webstore.services.settings import get_checkout_mode
+
 	context.no_cache = 1
+	# Presentation only — place_order re-checks this server-side, since the
+	# button a farm has hidden is not a security boundary on its own.
+	context.checkout_mode = get_checkout_mode()
 	cart = _get_open_cart()
 	if cart:
 		_reprice(cart)

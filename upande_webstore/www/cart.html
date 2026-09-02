@@ -70,7 +70,9 @@
 
 	<div>
 		<div class="ws-panel" style="position:sticky;top:82px">
-			<div class="ws-panel-head"><h3>{% if webstore_features.direct_order %}{{ _("Checkout") }}{% else %}{{ _("Request a quotation") }}{% endif %}</h3></div>
+			{% set show_quotation = checkout_mode != "Sales order only" %}
+			{% set show_order = webstore_features.direct_order and checkout_mode != "Quotation only" %}
+			<div class="ws-panel-head"><h3>{% if show_order %}{{ _("Checkout") }}{% else %}{{ _("Request a quotation") }}{% endif %}</h3></div>
 			<form id="webstore-checkout-form" onsubmit="return false;">
 				<div class="form-group">
 					<label>{{ _("Shipping address") }}</label>
@@ -101,10 +103,16 @@
 					<input type="text" class="form-control" id="webstore-po"></div>
 				<div class="form-group"><label>{{ _("Notes (optional)") }}</label>
 					<textarea class="form-control" id="webstore-notes" rows="2"></textarea></div>
+				{% if show_quotation %}
 				<button class="btn btn-primary btn-block" id="webstore-place-order" data-mode="quotation" style="width:100%" {% if cart.boxes and not cart.boxes.packable %}disabled{% endif %}>{{ _("Ask for quotation") }}</button>
-				{% if webstore_features.direct_order %}
+				{% endif %}
+				{% if show_order %}
 				<button class="btn btn-secondary btn-block" id="webstore-create-order" data-mode="order" style="width:100%;margin-top:.5rem" {% if cart.boxes and not cart.boxes.packable %}disabled{% endif %}>{{ _("Make a sales order") }}</button>
+				{% endif %}
+				{% if show_quotation and show_order %}
 				<p class="text-muted" style="font-size:.75rem;margin:.8rem 0 0">{{ _("A quotation gets pricing, availability and freight confirmed before you commit. A sales order goes straight to our team as an order. No payment is taken online either way.") }}</p>
+				{% elif show_order %}
+				<p class="text-muted" style="font-size:.75rem;margin:.8rem 0 0">{{ _("Your order goes straight to our team to confirm availability and freight. No payment is taken online.") }}</p>
 				{% else %}
 				<p class="text-muted" style="font-size:.75rem;margin:.8rem 0 0">{{ _("Our team confirms pricing, availability and freight within 24 hours — you accept online, payment is arranged offline.") }}</p>
 				{% endif %}

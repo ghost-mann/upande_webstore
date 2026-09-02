@@ -5,7 +5,7 @@ from frappe.utils import add_days, flt, formatdate, get_url_to_form, getdate, no
 from upande_webstore.api.cart import _get_open_cart, _require_login
 from upande_webstore.services import dropoff
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
-from upande_webstore.services.settings import get_settings
+from upande_webstore.services.settings import checkout_mode_permits, get_settings
 from upande_webstore.services.stock import get_source_warehouse, get_stock_qty
 from upande_webstore.theme.features import enabled, guard
 
@@ -37,6 +37,11 @@ def place_order(
 		frappe.throw(_("Unknown checkout mode {0}.").format(mode), frappe.ValidationError)
 	if mode == ORDER and not enabled()["direct_order"]:
 		frappe.throw(_("Direct ordering is not enabled."), frappe.PermissionError)
+	# The cart page only ever renders the button(s) checkout_mode permits, but
+	# that is presentation — a client can still post any mode directly, so the
+	# setting is re-checked here, server-side, before anything is created.
+	if not checkout_mode_permits(mode):
+		frappe.throw(_("This storefront does not accept this checkout mode."), frappe.ValidationError)
 
 	_require_login()
 	customer = get_customer()

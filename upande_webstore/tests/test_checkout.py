@@ -286,3 +286,78 @@ class TestCheckoutShippingDetails(IntegrationTestCase):
 		quotation = frappe.get_doc("Quotation", result["quotation"])
 		self.assertFalse(quotation.webstore_shipping_date)
 		self.assertFalse(quotation.webstore_dropoff_points)
+
+
+class TestCheckoutModeSetting(IntegrationTestCase):
+	"""checkout_mode narrows which button the cart page offers, but the button
+	is only presentation — place_order re-checks the setting itself, so a
+	client posting a mode the farm has switched off is still refused."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-MODE-ITEM")
+		make_item_price("WS-MODE-ITEM", "Standard Selling", 20)
+		make_portal_user("mode.buyer@example.com", "Mode Buyer")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Webstore Cart", {"user": "mode.buyer@example.com"})
+		set_stock("WS-MODE-ITEM", 20)
+		frappe.set_user("mode.buyer@example.com")
+
+	def tearDown(self):
+		# Reset on every path, including an assertion failure, or a mode set
+		# by one test narrows checkout for whichever test runs next.
+		frappe.set_user("Administrator")
+		setup_webstore_settings()
+
+	def _set_checkout_mode(self, mode):
+		frappe.set_user("Administrator")
+		frappe.db.set_single_value("Webstore Settings", "checkout_mode", mode)
+		frappe.clear_cache()
+		frappe.set_user("mode.buyer@example.com")
+
+	def _fresh_cart(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("Webstore Cart", {"user": "mode.buyer@example.com"})
+		frappe.set_user("mode.buyer@example.com")
+
+	def test_blank_checkout_mode_behaves_as_buyer_chooses(self):
+		"""An existing site that has never set checkout_mode must keep
+		offering both — exactly as before this setting existed."""
+		from upande_webstore.api import cart, checkout
+
+		self._set_checkout_mode("")
+		cart.add_item("WS-MODE-ITEM", 1)
+		self.assertEqual(checkout.place_order()["doctype"], "Quotation")
+
+		self._fresh_cart()
+		cart.add_item("WS-MODE-ITEM", 1)
+		self.assertEqual(checkout.place_order(mode="order")["doctype"], "Sales Order")
+
+	def test_both_succeed_under_buyer_chooses(self):
+		from upande_webstore.api import cart, checkout
+
+		self._set_checkout_mode("Buyer chooses")
+		cart.add_item("WS-MODE-ITEM", 1)
+		self.assertEqual(checkout.place_order()["doctype"], "Quotation")
+
+		self._fresh_cart()
+		cart.add_item("WS-MODE-ITEM", 1)
+		self.assertEqual(checkout.place_order(mode="order")["doctype"], "Sales Order")
+
+	def test_order_is_refused_when_quotation_only(self):
+		from upande_webstore.api import cart, checkout
+
+		self._set_checkout_mode("Quotation only")
+		cart.add_item("WS-MODE-ITEM", 1)
+		self.assertRaises(frappe.ValidationError, checkout.place_order, mode="order")
+
+	def test_quotation_is_refused_when_sales_order_only(self):
+		from upande_webstore.api import cart, checkout
+
+		self._set_checkout_mode("Sales order only")
+		cart.add_item("WS-MODE-ITEM", 1)
+		self.assertRaises(frappe.ValidationError, checkout.place_order, mode="quotation")

@@ -22,6 +22,7 @@
   "default_box_type",
   "minimum_order_stems",
   "default_lead_days",
+  "checkout_mode",
   "box_source_summary",
   "theme_tab",
   "theme_intro",
@@ -229,6 +230,13 @@
    "label": "Delivery Lead Time (Days)",
    "default": "7",
    "description": "Earliest shipping date a buyer may request, and the fallback when none is given."
+  },
+  {
+   "fieldname": "checkout_mode",
+   "fieldtype": "Select",
+   "label": "Checkout Mode",
+   "options": "\nBuyer chooses\nQuotation only\nSales order only",
+   "description": "Which checkout button(s) the cart page offers. Blank behaves as Buyer chooses."
   },
   {
    "fieldname": "box_source_summary",
