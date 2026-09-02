@@ -1243,6 +1243,11 @@ select.form-control { border-radius: 999px; }
 	align-items: center;
 	gap: 0.5rem;
 	margin-top: 0.7rem;
+	// the title's ::after stretches over the whole card so anywhere on it opens
+	// the product. These controls have to sit above that overlay or the click
+	// lands on the link and navigates away instead of adding to the basket.
+	position: relative;
+	z-index: 1;
 }
 .ws-card-cart input[data-webstore-qty] { width: 4.4rem; flex: 0 0 auto; }
 .ws-card-cart button, .ws-card-cart a.btn { flex: 1; }
