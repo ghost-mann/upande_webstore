@@ -12,7 +12,7 @@
 		{% endif %}
 		<div class="ws-card-body">
 			<span class="ws-sku">{{ p.item }}</span>
-			<h5 class="ws-card-title"><a href="/{{ p.route }}">{{ p.web_title }}</a></h5>
+			<h5 class="ws-card-title"{% if webstore_features.cart %} style="position:static"{% endif %}><a href="/{{ p.route }}"{% if webstore_features.cart %} style="position:static"{% endif %}>{{ p.web_title }}</a></h5>
 			<p class="ws-card-desc">{{ p.short_description or "" }}</p>
 			<div class="ws-card-foot">
 				{% if p.has_variants %}
@@ -39,6 +39,16 @@
 				</span>
 				{% endif %}
 			</div>
+			{% if webstore_features.cart %}
+			<div class="ws-card-cart">
+				{% if p.has_variants %}
+				<a class="btn btn-sm btn-primary" href="/{{ p.route }}">{{ _("Choose length") }}</a>
+				{% else %}
+				<input type="number" min="1" value="1" class="form-control form-control-sm" data-webstore-qty aria-label="{{ _('Quantity') }}">
+				<button class="btn btn-sm btn-primary" data-webstore-add-to-cart="{{ p.item }}">{{ _("Add to cart") }}</button>
+				{% endif %}
+			</div>
+			{% endif %}
 		</div>
 	</div>
 </div>

@@ -260,7 +260,14 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 		}
 		const add = target.closest<HTMLElement>("[data-webstore-add-to-cart]");
 		if (add) {
-			const qtyInput = document.getElementById("webstore-qty") as HTMLInputElement | null;
+			// On a listing of many cards, a global #webstore-qty would always read
+			// the first card's input. Look for a qty input scoped to this button's
+			// own card first, and only fall back to the single-product page's
+			// global input when the button has no card of its own.
+			const card = add.closest<HTMLElement>(".ws-card");
+			const qtyInput =
+				card?.querySelector<HTMLInputElement>("[data-webstore-qty]") ||
+				(document.getElementById("webstore-qty") as HTMLInputElement | null);
 			addToCart(add.getAttribute("data-webstore-add-to-cart") || "", parseFloat(qtyInput?.value || "1"));
 			return;
 		}

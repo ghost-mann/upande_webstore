@@ -1238,6 +1238,14 @@ select.form-control { border-radius: 999px; }
 }
 .ws-price { font-weight: 600; font-size: 0.98rem; color: var(--ws-ink); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .ws-price-note { font-size: 0.76rem; color: var(--ws-ink-mute); }
+.ws-card-cart {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.7rem;
+}
+.ws-card-cart input[data-webstore-qty] { width: 4.4rem; flex: 0 0 auto; }
+.ws-card-cart button, .ws-card-cart a.btn { flex: 1; }
 .ws-featured-flag {
 	position: absolute;
 	top: 10px;

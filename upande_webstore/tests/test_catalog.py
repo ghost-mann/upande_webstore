@@ -9,6 +9,23 @@ from upande_webstore.tests.utils import (
 )
 
 
+def _card_html(search):
+	"""Render /store scoped to one product by search term.
+
+	get_html_for_route builds its request from a bare path — a "?q=" suffix
+	never reaches frappe.form_dict (that parsing happens earlier in the real
+	request lifecycle, which this helper bypasses) — so the query param is set
+	directly instead.
+	"""
+	from frappe.utils import get_html_for_route
+
+	frappe.local.form_dict = frappe._dict({"q": search})
+	try:
+		return get_html_for_route("store")
+	finally:
+		frappe.local.form_dict = frappe._dict()
+
+
 class TestCatalog(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -154,3 +171,44 @@ class TestCatalog(IntegrationTestCase):
 			frappe.get_cached_doc = real_get_cached_doc
 			frappe.get_cached_value = real_get_cached_value
 			frappe.set_user("Administrator")
+
+
+class TestListingAddToCart(IntegrationTestCase):
+	"""The listing grid lets a buyer add straight from a card — but only when
+	the product needs no choice first, and only when the cart is switched on."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-LIST-QTY", web_title="Listing Qty Rose")
+		make_item_price("WS-LIST-QTY", "Standard Selling", 48)
+		make_variant_template("WS-LIST-TPL")
+		make_test_product("WS-LIST-TPL", web_title="Listing Template Rose", has_variants=1)
+
+	def setUp(self):
+		setup_webstore_settings()
+
+	def test_non_template_card_has_qty_input_and_add_button(self):
+		html = _card_html("WS-LIST-QTY")
+		self.assertIn('data-webstore-add-to-cart="WS-LIST-QTY"', html)
+		self.assertIn("data-webstore-qty", html)
+
+	def test_template_card_has_choose_length_link_and_no_add_button(self):
+		"""A template needs a stem length picked on its own page first, so the
+		card offers a link there instead of an add-straight-from-the-grid button."""
+		html = _card_html("WS-LIST-TPL")
+		self.assertNotIn('data-webstore-add-to-cart="WS-LIST-TPL"', html)
+		self.assertNotIn("data-webstore-qty", html)
+		self.assertIn("Choose length", html)
+
+	def test_cart_controls_hidden_when_cart_feature_disabled(self):
+		frappe.db.set_single_value("Webstore Settings", "enable_cart", 0)
+		frappe.clear_cache()
+		try:
+			html = _card_html("WS-LIST-QTY")
+			self.assertNotIn("data-webstore-add-to-cart", html)
+			self.assertNotIn("data-webstore-qty", html)
+		finally:
+			frappe.db.set_single_value("Webstore Settings", "enable_cart", 1)
+			frappe.clear_cache()
