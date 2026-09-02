@@ -12,6 +12,7 @@ import re
 import frappe
 from frappe import _
 
+from upande_webstore.services.access import require_permission
 from upande_webstore.theme.branding import DEFAULTS as BRANDING_DEFAULTS
 from upande_webstore.theme.tokens import THEME_FIELDS
 
@@ -57,7 +58,7 @@ def all_fields():
 
 @frappe.whitelist()
 def export_theme():
-	frappe.only_for("System Manager")
+	require_permission("Webstore Settings")
 	settings = frappe.get_doc("Webstore Settings")
 
 	fields = {}
@@ -119,7 +120,7 @@ def import_theme(payload):
 	leave residue from the previous one, and the desk button promises this
 	overwrites every Theme, Branding and Features value.
 	"""
-	frappe.only_for("System Manager")
+	require_permission("Webstore Settings", "write")
 	payload = _resolve_payload(payload)
 
 	settings = frappe.get_doc("Webstore Settings")
@@ -180,7 +181,7 @@ def list_presets():
 
 @frappe.whitelist()
 def apply_preset(name):
-	frappe.only_for("System Manager")
+	require_permission("Webstore Settings", "write")
 	# the regex rejects '/', '.' and '%' outright, so no path can escape PRESET_DIR
 	if not isinstance(name, str) or not PRESET_NAME_RE.match(name):
 		frappe.throw(_("Invalid preset name."))

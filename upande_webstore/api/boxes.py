@@ -6,21 +6,32 @@ to open Webstore Settings and see how its boxes are configured.
 """
 
 import frappe
+from frappe import _
 
 from upande_webstore.services import packing
+from upande_webstore.services.access import require_permission
 
 
 @frappe.whitelist()
 def list_box_types():
 	"""Usable box type names, for desk autocompletes."""
-	frappe.only_for("System Manager")
+	if frappe.session.user == "Guest":
+		# @frappe.whitelist() (no allow_guest) already blocks Guest; this is
+		# belt-and-braces for the no-source branch below, which has no doctype
+		# to check permission against and would otherwise wave a Guest through.
+		frappe.throw(_("Not permitted."), frappe.PermissionError)
+	source = packing.get_box_source()
+	if not source:
+		# nothing to read, so there is no permission question to ask
+		return []
+	require_permission(source.doctype)
 	return [box["box_type"] for box in packing.get_box_types()]
 
 
 @frappe.whitelist()
 def describe_source():
 	"""Everything the Webstore Settings box panel renders."""
-	frappe.only_for("System Manager")
+	require_permission("Webstore Settings")
 	from upande_webstore.setup.install import box_type_field_mismatches
 
 	source = packing.get_box_source()

@@ -284,6 +284,31 @@ def make_portal_user(email, customer_name=None, price_list=None):
 	return email, customer_name
 
 
+def make_desk_user(email, roles, first_name=None):
+	"""A System User carrying exactly `roles`, for desk-side permission tests.
+
+	Recreated from scratch on every call rather than reused like
+	make_portal_user — a test asserting a specific role's DocPerms must not
+	inherit roles a previous, failed test left behind. Callers must clean up
+	with frappe.delete_doc("User", email, force=True, ignore_permissions=True)
+	on every path, including when an assertion raises.
+	"""
+	if frappe.db.exists("User", email):
+		frappe.delete_doc("User", email, force=True, ignore_permissions=True)
+	first_name = first_name or email.split("@")[0].replace(".", " ").title()
+	user = frappe.get_doc({
+		"doctype": "User",
+		"email": email,
+		"first_name": first_name,
+		"send_welcome_email": 0,
+		"user_type": "System User",
+	})
+	user.flags.ignore_permissions = True
+	user.insert()
+	user.add_roles(*roles)
+	return email
+
+
 def make_item_price(item_code, price_list, rate):
 	existing = frappe.db.get_value("Item Price", {"item_code": item_code, "price_list": price_list})
 	if existing:

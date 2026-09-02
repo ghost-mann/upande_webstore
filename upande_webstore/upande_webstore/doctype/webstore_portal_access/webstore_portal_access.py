@@ -3,6 +3,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
+from upande_webstore.services.access import require_permission
 from upande_webstore.services.provisioning import grant_portal_access, revoke_portal_access
 
 
@@ -22,7 +23,7 @@ class WebstorePortalAccess(Document):
 	@frappe.whitelist()
 	def grant(self):
 		"""Create or re-link the Website User and give them portal access."""
-		frappe.only_for(("System Manager", "Sales Manager", "Sales User"))
+		require_permission("Webstore Portal Access", "write")
 		user, contact = grant_portal_access(
 			self.customer, self.full_name, self.email, phone=self.phone
 		)
@@ -48,7 +49,7 @@ class WebstorePortalAccess(Document):
 
 		Generating a new link invalidates any previous one.
 		"""
-		frappe.only_for(("System Manager", "Sales Manager", "Sales User"))
+		require_permission("Webstore Portal Access", "write")
 		if not self.user:
 			frappe.throw(_("Grant access first."), frappe.ValidationError)
 		user = frappe.get_doc("User", self.user)
@@ -58,7 +59,7 @@ class WebstorePortalAccess(Document):
 	@frappe.whitelist()
 	def revoke(self):
 		"""Disable the login, keeping the Contact and its customer link."""
-		frappe.only_for(("System Manager", "Sales Manager", "Sales User"))
+		require_permission("Webstore Portal Access", "write")
 		if not self.user:
 			frappe.throw(_("This person has not been granted access yet."), frappe.ValidationError)
 		revoke_portal_access(self.user)

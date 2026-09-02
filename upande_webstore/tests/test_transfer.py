@@ -467,3 +467,58 @@ class TestInstallSeeding(IntegrationTestCase):
 
 		after_migrate()
 		self.assertFalse(frappe.db.get_single_value("Webstore Settings", "accent"))
+
+
+class TestTransferPermissions(IntegrationTestCase):
+	"""Every theme transfer endpoint used to hardcode frappe.only_for("System
+	Manager"), which ignored Webstore Settings' own DocPerms entirely. These
+	prove the checks now follow read/write on Webstore Settings instead."""
+
+	def setUp(self):
+		setup_webstore_settings()
+		frappe.set_user("Administrator")
+
+	def _read_only_user(self):
+		from upande_webstore.tests.utils import make_desk_user
+
+		frappe.permissions.add_permission("Webstore Settings", "Sales User", 0, "read")
+		return make_desk_user("theme.reader@example.com", ["Sales User"])
+
+	def _cleanup_read_only_user(self, email):
+		frappe.set_user("Administrator")
+		frappe.delete_doc("User", email, force=True, ignore_permissions=True)
+		frappe.permissions.reset_perms("Webstore Settings")
+
+	def test_export_theme_refuses_a_user_without_read(self):
+		from upande_webstore.theme.transfer import export_theme
+		from upande_webstore.tests.utils import make_portal_user
+
+		email, _customer = make_portal_user("theme.export.blocked@example.com", "Theme Blocked Ltd")
+		frappe.set_user(email)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				export_theme()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_import_theme_refuses_a_read_only_user(self):
+		from upande_webstore.theme.transfer import SCHEMA_VERSION, import_theme
+
+		email = self._read_only_user()
+		frappe.set_user(email)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				import_theme({"schema": SCHEMA_VERSION, "fields": {}, "tables": {}})
+		finally:
+			self._cleanup_read_only_user(email)
+
+	def test_apply_preset_refuses_a_read_only_user(self):
+		from upande_webstore.theme.transfer import apply_preset
+
+		email = self._read_only_user()
+		frappe.set_user(email)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				apply_preset("mona_flowers")
+		finally:
+			self._cleanup_read_only_user(email)

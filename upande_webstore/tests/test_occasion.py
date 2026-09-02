@@ -263,3 +263,23 @@ class TestContext(IntegrationTestCase):
 		from upande_webstore.theme import get_theme
 
 		self.assertIsNone(get_theme().occasion)
+
+
+class TestListOccasionsPermission(IntegrationTestCase):
+	"""list_occasions feeds the Webstore Settings autocomplete, so it must
+	follow that doctype's own read permission rather than a hardcoded role."""
+
+	def setUp(self):
+		setup_webstore_settings()
+
+	def test_a_user_without_settings_read_is_refused(self):
+		from upande_webstore.theme.occasion import list_occasions
+		from upande_webstore.tests.utils import make_portal_user
+
+		email, _customer = make_portal_user("occasion.reader@example.com", "Occasion Reader Ltd")
+		frappe.set_user(email)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				list_occasions()
+		finally:
+			frappe.set_user("Administrator")

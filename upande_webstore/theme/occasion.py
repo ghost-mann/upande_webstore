@@ -13,6 +13,8 @@ import re
 
 import frappe
 
+from upande_webstore.services.access import require_permission
+
 SCHEMA_VERSION = 1
 
 OCCASION_DIR = os.path.join(os.path.dirname(__file__), "occasions")
@@ -134,7 +136,7 @@ def active(settings=None):
 @frappe.whitelist()
 def list_occasions():
 	"""[{value, label}] for the desk Autocomplete."""
-	frappe.only_for("System Manager")
+	require_permission("Webstore Settings")
 	return [
 		{"value": name, "label": (load(name) or {}).get("label") or name} for name in list_names()
 	]

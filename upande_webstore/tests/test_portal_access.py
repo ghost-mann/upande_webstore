@@ -177,3 +177,46 @@ class TestPortalAccess(IntegrationTestCase):
 		doc = self._record(email="Mixed.Case@Example.com")
 		self.assertEqual(doc.email, "mixed.case@example.com")
 		frappe.db.delete("Webstore Portal Access", {"email": "mixed.case@example.com"})
+
+	def test_grant_refuses_a_user_without_write_on_portal_access(self):
+		"""grant/revoke/password_setup_link used to hardcode a tuple of role
+		names that only duplicated Webstore Portal Access's own DocPerms; this
+		proves the replacement check still refuses someone without write."""
+		from upande_webstore.tests.utils import make_portal_user
+
+		doc = self._record()
+		email, _customer = make_portal_user("portal.access.blocked@example.com", "Portal Blocked Ltd")
+		frappe.set_user(email)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				doc.grant()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_revoke_refuses_a_user_without_write_on_portal_access(self):
+		from upande_webstore.tests.utils import make_portal_user
+
+		doc = self._record()
+		doc.grant()
+		doc.reload()
+		email, _customer = make_portal_user("portal.access.blocked2@example.com", "Portal Blocked2 Ltd")
+		frappe.set_user(email)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				doc.revoke()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_password_setup_link_refuses_a_user_without_write_on_portal_access(self):
+		from upande_webstore.tests.utils import make_portal_user
+
+		doc = self._record()
+		doc.grant()
+		doc.reload()
+		email, _customer = make_portal_user("portal.access.blocked3@example.com", "Portal Blocked3 Ltd")
+		frappe.set_user(email)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				doc.password_setup_link()
+		finally:
+			frappe.set_user("Administrator")
