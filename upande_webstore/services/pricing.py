@@ -173,19 +173,38 @@ def get_item_price(item_code, qty=1, user=None):
 		"ignore_pricing_rule": 0,
 		"transaction_date": frappe.utils.nowdate(),
 	})
-	# ERPNext's get_item_details unconditionally loads the Item document
-	# (frappe.get_cached_doc), which Item is not readable by Guest for on
-	# newer frappe — and the storefront must not require exposing it. That
-	# helper is out of this app's control, but it (like frappe's own
-	# permission checks) honours frappe.flags.ignore_permissions, so this
-	# only ever bypasses the Item read for the duration of the call, then
-	# restores whatever the flag was before.
-	previous_ignore_permissions = frappe.flags.ignore_permissions
-	frappe.flags.ignore_permissions = True
+	# ERPNext's get_item_details unconditionally loads the Item document, and
+	# on newer frappe that load is permission-checked -- Item is not readable
+	# by Guest, nor by the Customer role, and the storefront must not require
+	# exposing it (Item carries cost/valuation data). get_item_details takes
+	# no ignore_permissions argument (checked: erpnext.stock.get_item_details
+	# offers no such parameter), so there is no supported bypass to pass it.
+	#
+	# What actually gates the read is Document.check_permission, which
+	# returns True immediately when the DOCUMENT's own flags.ignore_permissions
+	# is set (frappe/model/document.py, Document.has_permission) -- it never
+	# looks at the global frappe.flags.ignore_permissions. Setting only the
+	# global flag (a previous attempt at this fix) is therefore a no-op here:
+	# ERPNext builds its own Item instance internally, whose flags are unset,
+	# so its check_permission sees nothing and still 403s.
+	#
+	# The lever that works: frappe.get_cached_doc returns the very same
+	# Python object from the request-local document cache on every call for
+	# a given item within this request. Fetching it here first and flipping
+	# *its* flag means ERPNext's own internal get_cached_doc("Item", ...)
+	# receives that already-flagged instance, and its permission check passes
+	# -- Pricing Rule evaluation and everything else inside get_item_details
+	# runs exactly as it would for a permitted user. Restored in a finally:
+	# the flagged instance stays in the cache for the rest of the request,
+	# and anything later that legitimately expects a real permission check on
+	# this Item must not silently inherit this bypass.
+	item = frappe.get_cached_doc("Item", item_code)
+	previous_ignore_permissions = item.flags.ignore_permissions
+	item.flags.ignore_permissions = True
 	try:
 		details = get_item_details(args)
 	finally:
-		frappe.flags.ignore_permissions = previous_ignore_permissions
+		item.flags.ignore_permissions = previous_ignore_permissions
 	rate = details.get("rate") or details.get("price_list_rate") or 0.0
 	return {
 		"rate": float(rate),

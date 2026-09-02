@@ -8,11 +8,19 @@ from upande_webstore.services.stock import get_stock_info
 
 @frappe.whitelist(allow_guest=True)
 def get_attributes(template_item):
-	template = frappe.get_cached_doc("Item", template_item)
-	if not template.has_variants:
+	# Item is not readable by Guest/Customer on newer frappe; the storefront
+	# must not require exposing it, so read only has_variants directly and
+	# pull the attribute rows via frappe.get_all (also permission-independent)
+	# rather than loading the Item document for its child table.
+	if not frappe.db.get_value("Item", template_item, "has_variants"):
 		return []
 	result = []
-	for row in template.attributes:
+	for row in frappe.get_all(
+		"Item Variant Attribute",
+		filters={"parent": template_item, "parenttype": "Item"},
+		fields=["attribute"],
+		order_by="idx",
+	):
 		values = frappe.get_all(
 			"Item Attribute Value",
 			filters={"parent": row.attribute},

@@ -96,6 +96,40 @@ class TestCheckout(IntegrationTestCase):
 		self.assertEqual(result["doctype"], "Quotation")
 		self.assertIn("quotation", result)
 
+	def test_assert_available_survives_item_permission_enforcement(self):
+		"""_assert_available's own stock-recheck at checkout loads the Item
+		document too -- reachable by a portal customer with only the
+		Customer role, which does not carry Item read on newer frappe (see
+		test_pricing.py for the same story on cart repricing). Unlike
+		get_item_price, there is no legitimate reason for this read to touch
+		Item permission-checked at all, so the fake below raises for Item
+		unconditionally.
+
+		Exercised directly against _assert_available rather than the full
+		place_order: place_order's own order-creation path also calls
+		get_item_price to reprice (already covered, with its own
+		flag-aware simulation, in test_pricing.py) -- an unconditional raise
+		here would trip that unrelated, already-fixed call too.
+		"""
+		from upande_webstore.api import cart as cart_api
+		from upande_webstore.api.checkout import _assert_available
+
+		cart_api.add_item("WS-CHK-ITEM", 3)
+		cart_doc = cart_api._get_open_cart()
+
+		real_get_cached_doc = frappe.get_cached_doc
+
+		def fake_get_cached_doc(doctype, *args, **kwargs):
+			if doctype == "Item":
+				raise frappe.PermissionError("No permission for Item")
+			return real_get_cached_doc(doctype, *args, **kwargs)
+
+		frappe.get_cached_doc = fake_get_cached_doc
+		try:
+			_assert_available(cart_doc)
+		finally:
+			frappe.get_cached_doc = real_get_cached_doc
+
 
 class TestDirectOrder(IntegrationTestCase):
 	@classmethod

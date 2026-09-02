@@ -91,7 +91,11 @@ def place_order(
 def _assert_available(cart):
 	unavailable = []
 	for row in cart.items:
-		item = frappe.get_cached_doc("Item", row.item_code)
+		# Item is not readable by Guest/Customer on newer frappe; the storefront
+		# must not require exposing it, so read only the fields this needs.
+		item = frappe.db.get_value(
+			"Item", row.item_code, ["is_stock_item", "item_name"], as_dict=True
+		)
 		if item.is_stock_item and flt(row.qty) > get_stock_qty(row.item_code):
 			unavailable.append(item.item_name)
 	if unavailable:

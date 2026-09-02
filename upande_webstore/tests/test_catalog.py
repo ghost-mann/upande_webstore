@@ -110,12 +110,25 @@ class TestCatalog(IntegrationTestCase):
 		those permission-checked reads with frappe.db.get_value, a
 		permission-independent field read) and pass after it.
 
-		The fakes below only raise when frappe.flags.ignore_permissions is
-		falsy — real permission checks in frappe return early once that flag
-		is set, so an unconditional raise here would be stricter than the
-		framework and could hide a fix (or push toward the wrong one) that
-		relies on the flag, the way services/pricing.get_item_price now does
-		for its ERPNext price lookup.
+		The fakes below only raise when frappe.flags.ignore_permissions (the
+		global flag) is falsy. That is deliberately narrower than what this
+		app's own Item reads need: they were rewritten onto frappe.db.get_value
+		(permission-independent field reads, exercised below), which never
+		touches get_cached_doc/get_cached_value at all, so this simulation
+		style suits them fine.
+
+		It does NOT suit services.pricing.get_item_price's ERPNext price
+		lookup, and deliberately does not attempt to cover it here. That call
+		bypasses Item's permission check by flagging the DOCUMENT's own
+		flags.ignore_permissions (frappe/model/document.py:407), not the
+		global one this fake checks — and needs a fetch-then-flag ordering
+		these two patched functions cannot honour: the very
+		frappe.get_cached_doc("Item", ...) call get_item_price makes to
+		obtain the doc to flag would itself be intercepted here and raise,
+		before get_item_price ever has a chance to set the flag. See
+		test_pricing.TestGuestAndCustomerPricingSurvivesItemPermissionEnforcement
+		for that call site's own, correctly-shaped, simulation and coverage
+		(Guest and Customer-role alike).
 		"""
 		real_get_cached_doc = frappe.get_cached_doc
 		real_get_cached_value = frappe.get_cached_value
@@ -154,19 +167,6 @@ class TestCatalog(IntegrationTestCase):
 
 			info = get_stock_info("WS-CAT-ALPHA")
 			self.assertIn("in_stock", info)
-
-			# A non-template product: get_item_price's ERPNext price lookup
-			# is the call site the template case above deliberately avoids.
-			# WS-CAT-ALPHA has a seeded Item Price (see setUpClass), so a rate
-			# of 0 would mean pricing silently failed rather than resolved.
-			alpha_result = get_products(search="Alpha Sensor")
-			alpha_titles = [p["web_title"] for p in alpha_result["products"]]
-			self.assertIn("Alpha Sensor", alpha_titles)
-			alpha_product = next(
-				p for p in alpha_result["products"] if p["web_title"] == "Alpha Sensor"
-			)
-			self.assertIsNotNone(alpha_product["price"])
-			self.assertGreater(alpha_product["price"]["rate"], 0)
 		finally:
 			frappe.get_cached_doc = real_get_cached_doc
 			frappe.get_cached_value = real_get_cached_value
