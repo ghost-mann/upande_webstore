@@ -62,15 +62,17 @@ def get_wishlist():
 		)
 		if not product or not product.published:
 			continue
-		item_doc = frappe.get_cached_doc("Item", product.item)
+		# Item is not readable by a Customer on newer frappe either; the
+		# wishlist must not require exposing it, so read only this field.
+		has_variants = frappe.db.get_value("Item", product.item, "has_variants")
 		items.append({
 			"product": product.name,
 			"web_title": product.web_title,
 			"route": product.route,
 			"image": product.image,
 			"item_code": product.item,
-			"has_variants": item_doc.has_variants,
-			"price": None if item_doc.has_variants else get_item_price(product.item),
-			"stock": None if item_doc.has_variants else get_stock_info(product.item),
+			"has_variants": has_variants,
+			"price": None if has_variants else get_item_price(product.item),
+			"stock": None if has_variants else get_stock_info(product.item),
 		})
 	return {"items": items, "count": len(items)}

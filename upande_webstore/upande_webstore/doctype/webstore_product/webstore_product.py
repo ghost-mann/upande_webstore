@@ -42,11 +42,16 @@ class WebstoreProduct(WebsiteGenerator):
 		from upande_webstore.services.stock import get_stock_info
 
 		context.no_cache = 1
-		item_doc = frappe.get_cached_doc("Item", self.item)
-		context.item_doc = item_doc
+		# Item is not readable by Guest on newer frappe; the public product page
+		# must not require exposing it, so read only the two fields this uses
+		# rather than the whole document (context.item_doc was never read by
+		# the template, so it is dropped rather than narrowed).
+		item_fields = frappe.db.get_value(
+			"Item", self.item, ["image", "has_variants"], as_dict=True
+		) or {}
 		# a photo set on the Item counts as the product photo
-		context.image = self.image or item_doc.image
-		context.is_template = bool(item_doc.has_variants)
+		context.image = self.image or item_fields.get("image")
+		context.is_template = bool(item_fields.get("has_variants"))
 		if context.is_template:
 			from upande_webstore.services.pricing import get_variant_price_range
 

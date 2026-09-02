@@ -4,7 +4,9 @@ from upande_webstore.services.settings import get_settings, get_warehouses
 
 
 def get_stock_qty(item_code):
-	item = frappe.get_cached_doc("Item", item_code)
+	# Item is not readable by Guest on newer frappe; the storefront must not
+	# require exposing it, so read only the field this needs.
+	item = frappe.db.get_value("Item", item_code, ["has_variants"], as_dict=True)
 	if item.has_variants:
 		variants = frappe.get_all("Item", filters={"variant_of": item_code}, pluck="name")
 		return max((_bin_qty(v) for v in variants), default=0.0)
@@ -47,7 +49,9 @@ def get_source_warehouse(item_code):
 
 
 def get_stock_info(item_code):
-	item = frappe.get_cached_doc("Item", item_code)
+	# Item is not readable by Guest on newer frappe; the storefront must not
+	# require exposing it, so read only the field this needs.
+	item = frappe.db.get_value("Item", item_code, ["is_stock_item"], as_dict=True)
 	settings = get_settings()
 	show_qty = settings.stock_display == "Exact Quantity"
 	if not item.is_stock_item:

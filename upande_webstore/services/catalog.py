@@ -35,12 +35,18 @@ def get_products(search=None, category=None, featured_only=False, start=0, page_
 	else:
 		total = frappe.db.count("Webstore Product", filters)
 	for product in products:
-		has_variants = frappe.get_cached_value("Item", product["item"], "has_variants")
+		# Item is not readable by Guest on newer frappe; the storefront must not
+		# require exposing it, so read the two fields directly rather than via
+		# a permission-checked cached document (one query instead of two).
+		item_fields = frappe.db.get_value(
+			"Item", product["item"], ["has_variants", "image"], as_dict=True
+		) or {}
+		has_variants = item_fields.get("has_variants")
 		product["has_variants"] = has_variants
 		# most people attach the photo to the Item in ERPNext, so use that when
 		# the listing has none of its own
 		if not product.get("image"):
-			product["image"] = frappe.get_cached_value("Item", product["item"], "image")
+			product["image"] = item_fields.get("image")
 		product["price"] = None if has_variants else get_item_price(product["item"])
 		# a template has no price of its own; show the range across its variants
 		product["price_range"] = (

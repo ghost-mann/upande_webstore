@@ -25,7 +25,9 @@ def _get_open_cart(create=False):
 
 
 def _validate_stock(item_code, qty):
-	item = frappe.get_cached_doc("Item", item_code)
+	# Item is not readable by Guest/Customer on newer frappe; the storefront
+	# must not require exposing it, so read only the fields this needs.
+	item = frappe.db.get_value("Item", item_code, ["is_stock_item", "item_name"], as_dict=True)
 	if not item.is_stock_item:
 		return
 	available = get_stock_qty(item_code)
@@ -42,7 +44,9 @@ def _reprice(cart):
 		price = get_item_price(row.item_code, qty=row.qty)
 		row.rate = price["rate"]
 		row.amount = row.rate * row.qty
-		row.item_name = frappe.get_cached_value("Item", row.item_code, "item_name")
+		# Item is not readable by Guest/Customer on newer frappe; the storefront
+		# must not require exposing it, so this reads the field directly.
+		row.item_name = frappe.db.get_value("Item", row.item_code, "item_name")
 
 
 def _recompute_boxes(cart):

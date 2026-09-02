@@ -54,7 +54,19 @@ def get_item_price(item_code, qty=1, user=None):
 		"ignore_pricing_rule": 0,
 		"transaction_date": frappe.utils.nowdate(),
 	})
-	details = get_item_details(args)
+	# ERPNext's get_item_details unconditionally loads the Item document
+	# (frappe.get_cached_doc), which Item is not readable by Guest for on
+	# newer frappe — and the storefront must not require exposing it. That
+	# helper is out of this app's control, but it (like frappe's own
+	# permission checks) honours frappe.flags.ignore_permissions, so this
+	# only ever bypasses the Item read for the duration of the call, then
+	# restores whatever the flag was before.
+	previous_ignore_permissions = frappe.flags.ignore_permissions
+	frappe.flags.ignore_permissions = True
+	try:
+		details = get_item_details(args)
+	finally:
+		frappe.flags.ignore_permissions = previous_ignore_permissions
 	rate = details.get("rate") or details.get("price_list_rate") or 0.0
 	return {
 		"rate": float(rate),
