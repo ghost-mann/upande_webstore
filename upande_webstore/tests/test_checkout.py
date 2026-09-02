@@ -11,6 +11,26 @@ from upande_webstore.tests.utils import (
 )
 
 
+
+class TestCheckoutModeDependencies(IntegrationTestCase):
+	"""A setting must not be able to leave a buyer with no way to check out."""
+
+	def tearDown(self):
+		setup_webstore_settings()
+
+	def test_sales_order_only_switches_direct_ordering_back_on(self):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.enable_direct_order = 0
+		settings.checkout_mode = "Sales order only"
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+		self.assertEqual(
+			int(frappe.get_doc("Webstore Settings").enable_direct_order),
+			1,
+			"Sales order only with direct ordering off renders no checkout button at all",
+		)
+
+
 class TestCheckout(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):

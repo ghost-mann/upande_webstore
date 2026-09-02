@@ -63,6 +63,13 @@ class WebstoreSettings(Document):
 		if not self.enable_cart and self.enable_cart_drawer:
 			self.enable_cart_drawer = 0
 
+		# "Sales order only" says the sales order IS the checkout, so the flag
+		# that gates it cannot stay off: the cart page would render no checkout
+		# button at all and place_order would refuse both modes, leaving a buyer
+		# with a full basket and no way out and nothing on screen explaining why
+		if self.checkout_mode == "Sales order only" and not self.enable_direct_order:
+			self.enable_direct_order = 1
+
 	def validate_font_url(self):
 		url = (self.google_fonts_url or "").strip()
 		if url and not fonts.is_allowed_url(url):
