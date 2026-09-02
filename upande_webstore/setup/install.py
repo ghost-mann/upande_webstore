@@ -146,10 +146,23 @@ WEBSTORE_CUSTOM_FIELDS = {
 	# site already has, whatever shape it is in.
 	"Item": [
 		{
+			# Fresh installs get the box fields in their own collapsible
+			# section rather than floating loose in whatever section
+			# stock_uom happens to sit in. Create-only means a site that
+			# already has custom_is_box positioned the old way still gets
+			# this section created, but that field is never moved into it —
+			# exactly the "existing means untouched" rule below.
+			"fieldname": "custom_webstore_packing_section",
+			"fieldtype": "Section Break",
+			"label": "Webstore Packing",
+			"insert_after": "stock_uom",
+			"collapsible": 1,
+		},
+		{
 			"fieldname": "custom_is_box",
 			"fieldtype": "Check",
 			"label": "Is Box",
-			"insert_after": "stock_uom",
+			"insert_after": "custom_webstore_packing_section",
 			"default": "0",
 			"search_index": 1,
 		},

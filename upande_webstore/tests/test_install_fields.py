@@ -357,3 +357,94 @@ class TestBoxTypeFieldRepoint(IntegrationTestCase):
 			0,
 			"an untouched field must not gain data as a side effect",
 		)
+
+
+class TestItemPackingSection(IntegrationTestCase):
+	"""Fresh installs get the box fields inside their own collapsible section
+	instead of floating loose in whatever section stock_uom happens to sit in.
+	`create_custom_fields` commits internally, so — like the fixtures above —
+	this restores exactly what setUp found, on every path."""
+
+	ITEM_FIELDS = ("custom_webstore_packing_section", "custom_is_box", "custom_pack_rate")
+	RESTORABLE = (
+		"dt", "fieldname", "label", "fieldtype", "options", "insert_after",
+		"read_only", "description", "default", "search_index", "collapsible",
+	)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.backups = {}
+		for fieldname in self.ITEM_FIELDS:
+			name = frappe.db.get_value("Custom Field", {"dt": "Item", "fieldname": fieldname}, "name")
+			if not name:
+				continue
+			doc = frappe.get_doc("Custom Field", name)
+			self.backups[fieldname] = {k: doc.get(k) for k in self.RESTORABLE}
+			frappe.delete_doc("Custom Field", name, force=1, ignore_permissions=True)
+		frappe.clear_cache(doctype="Item")
+		frappe.db.commit()
+
+	def tearDown(self):
+		for fieldname in self.ITEM_FIELDS:
+			current = frappe.db.get_value("Custom Field", {"dt": "Item", "fieldname": fieldname}, "name")
+			if current:
+				frappe.delete_doc("Custom Field", current, force=1, ignore_permissions=True)
+			backup = self.backups.get(fieldname)
+			if backup:
+				frappe.get_doc(
+					dict({"doctype": "Custom Field"}, **{k: v for k, v in backup.items() if v is not None})
+				).insert(ignore_permissions=True)
+		frappe.clear_cache(doctype="Item")
+		frappe.db.commit()
+
+	def test_fresh_field_set_creates_the_section_and_places_is_box_inside_it(self):
+		from upande_webstore.setup.install import create_webstore_custom_fields
+
+		create_webstore_custom_fields()
+
+		section = frappe.db.get_value(
+			"Custom Field",
+			{"dt": "Item", "fieldname": "custom_webstore_packing_section"},
+			["fieldtype", "label", "collapsible", "insert_after"],
+			as_dict=True,
+		)
+		self.assertTrue(section, "the packing section was not created")
+		self.assertEqual(section.fieldtype, "Section Break")
+		self.assertEqual(section.label, "Webstore Packing")
+		self.assertEqual(int(section.collapsible or 0), 1)
+		self.assertEqual(section.insert_after, "stock_uom")
+
+		self.assertEqual(
+			frappe.db.get_value("Custom Field", {"dt": "Item", "fieldname": "custom_is_box"}, "insert_after"),
+			"custom_webstore_packing_section",
+			"custom_is_box must land inside the new section on a fresh field set",
+		)
+
+	def test_an_existing_is_box_field_is_not_moved_into_the_new_section(self):
+		"""Create-only: a site with custom_is_box already positioned the old
+		way (pointed straight at stock_uom) gets the new section, but the
+		existing field is never moved — that is intended, not a bug."""
+		from upande_webstore.setup.install import create_webstore_custom_fields
+
+		frappe.get_doc({
+			"doctype": "Custom Field",
+			"dt": "Item",
+			"fieldname": "custom_is_box",
+			"label": "Is Box",
+			"fieldtype": "Check",
+			"insert_after": "stock_uom",
+			"default": "0",
+		}).insert(ignore_permissions=True)
+		frappe.clear_cache(doctype="Item")
+
+		create_webstore_custom_fields()
+
+		self.assertTrue(
+			frappe.db.exists("Custom Field", {"dt": "Item", "fieldname": "custom_webstore_packing_section"}),
+			"the section must still be created even though custom_is_box predates it",
+		)
+		self.assertEqual(
+			frappe.db.get_value("Custom Field", {"dt": "Item", "fieldname": "custom_is_box"}, "insert_after"),
+			"stock_uom",
+			"create-only must never move an existing field",
+		)
