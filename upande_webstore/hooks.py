@@ -226,7 +226,11 @@ doc_events = {
 
 # Request Events
 # ----------------
-# before_request = ["upande_webstore.utils.before_request"]
+# sends a portal customer past frappe's unbranded /me page and into the
+# portal instead - see redirect_me_to_portal's docstring for why this is a
+# before_request hook and not the get_website_user_home_page hook above,
+# which only fires on login.
+before_request = ["upande_webstore.services.portal.redirect_me_to_portal"]
 # after_request = ["upande_webstore.utils.after_request"]
 
 # Job Events

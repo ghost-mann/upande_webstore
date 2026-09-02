@@ -30,6 +30,58 @@ def get_website_user_home_page(user):
 	return get_landing_route() or LANDING_ROUTES["Dashboard"]
 
 
+def _redirect(location):
+	"""Raise a werkzeug redirect that frappe.app turns into a response.
+
+	frappe.Redirect (frappe.local.flags.redirect_location + raise) is only
+	interpreted by the website page renderer (frappe/website/path_resolver.py,
+	frappe/website/serve.py), which runs *after* before_request - raising it
+	this early would bubble straight past that renderer and surface as a
+	generic 500 (frappe.app.handle_exception has no special case for it). A
+	plain werkzeug HTTPException, by contrast, is turned into its response at
+	the request-dispatch level (frappe.app.application's `isinstance(e,
+	HTTPException)` branch), which does run this early - so raising one from a
+	before_request hook actually redirects. upande_webshop's
+	shopping_cart.utils._redirect reaches for the same construction to solve
+	the identical problem for its own before_request hook.
+	"""
+	from werkzeug.exceptions import HTTPException
+	from werkzeug.utils import redirect as werkzeug_redirect
+
+	class _Redirect(HTTPException):
+		code = 302
+
+		def get_response(self, environ=None, scope=None):
+			return werkzeug_redirect(location, code=self.code)
+
+	raise _Redirect()
+
+
+def redirect_me_to_portal():
+	"""before_request hook: send a portal customer past frappe's unbranded
+	/me (frappe/www/me.py, which 200s for any logged-in website user) and
+	into the portal they actually belong to.
+
+	Only for a user this app is responsible for - one with active portal
+	access - so the check defers entirely to get_website_user_home_page, the
+	same function login already uses: /me and login can never disagree about
+	where a customer belongs. Everyone else (no portal access, a System
+	Manager, a website user of some other app on a multi-app site) reaches
+	/me exactly as they do today.
+
+	Fires on every request, so the path is checked before any database
+	lookup - get_website_user_home_page's queries only run for the rare
+	request that is actually /me.
+	"""
+	path = (frappe.request.path or "").strip("/") if frappe.request else ""
+	if path != "me":
+		return
+
+	destination = get_website_user_home_page(frappe.session.user)
+	if destination:
+		_redirect(destination)
+
+
 def get_current_customer():
 	customer = get_customer()
 	if not customer:
