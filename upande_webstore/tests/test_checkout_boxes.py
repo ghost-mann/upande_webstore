@@ -96,6 +96,21 @@ class TestCheckoutBoxes(IntegrationTestCase):
 		result = checkout.place_order()
 		self.assertTrue(result["quotation"])
 
+	def test_inert_when_no_box_types_resolve(self):
+		"""Defect: packing switched on before any box type is configured must
+		not block checkout - the farm has configured nothing yet, so there is
+		nothing to validate against. Patches get_box_types() rather than
+		relying on the site having no box type anywhere, since other test
+		classes leave committed box Items behind."""
+		from unittest.mock import patch
+
+		from upande_webstore.api import cart, checkout
+
+		with patch("upande_webstore.services.packing.get_box_types", return_value=[]):
+			cart.add_item("WS-CB-ITEM", 1750)
+			result = checkout.place_order()
+		self.assertTrue(result["quotation"])
+
 
 class TestBoxFieldMapping(IntegrationTestCase):
 	@classmethod

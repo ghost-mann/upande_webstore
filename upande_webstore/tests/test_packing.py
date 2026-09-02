@@ -29,6 +29,61 @@ class TestPackingSettings(IntegrationTestCase):
 		self.assertEqual(int(settings.default_lead_days or 0), 7)
 
 
+class TestPackingEnabledNeedsBoxTypes(IntegrationTestCase):
+	"""Defect: the checkbox alone used to be enough for packing_enabled() to
+	report on, so a farm that switched it on before configuring a single box
+	type got an empty <select> on every cart row and a box column with
+	nothing in it. "Configured" must mean box types actually resolve.
+
+	get_box_types() is patched directly rather than driven through real box
+	fixtures, so these stay independent of whatever the site's actual box
+	source happens to hold."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+
+	def tearDown(self):
+		setup_webstore_settings()
+
+	def test_the_checkbox_alone_is_not_enough(self):
+		from unittest.mock import patch
+
+		from upande_webstore.services.packing import packing_enabled
+
+		frappe.db.set_single_value("Webstore Settings", "enable_box_packing", 1)
+		frappe.clear_cache()
+		with patch("upande_webstore.services.packing.get_box_types", return_value=[]):
+			self.assertFalse(packing_enabled())
+
+	def test_a_resolved_box_type_switches_it_on(self):
+		from unittest.mock import patch
+
+		from upande_webstore.services.packing import packing_enabled
+
+		frappe.db.set_single_value("Webstore Settings", "enable_box_packing", 1)
+		frappe.clear_cache()
+		with patch(
+			"upande_webstore.services.packing.get_box_types",
+			return_value=[{"box_type": "Xpol", "box_name": "Xpol", "pack_rate": 350}],
+		):
+			self.assertTrue(packing_enabled())
+
+	def test_the_checkbox_off_stays_off_regardless_of_box_types(self):
+		from unittest.mock import patch
+
+		from upande_webstore.services.packing import packing_enabled
+
+		frappe.db.set_single_value("Webstore Settings", "enable_box_packing", 0)
+		frappe.clear_cache()
+		with patch(
+			"upande_webstore.services.packing.get_box_types",
+			return_value=[{"box_type": "Xpol", "box_name": "Xpol", "pack_rate": 350}],
+		):
+			self.assertFalse(packing_enabled())
+
+
 class TestBoxMaths(IntegrationTestCase):
 	def test_exact_multiple_is_full(self):
 		from upande_webstore.services.packing import compute_boxes

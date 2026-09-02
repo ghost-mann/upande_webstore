@@ -26,7 +26,24 @@ _UNSET = object()
 
 
 def packing_enabled():
-	return bool(int(flt(get_settings().get("enable_box_packing"))))
+	"""Packing is inert until it is actually configured, not merely ticked on.
+
+	A farm can flip the checkbox before creating a single Box Type or box
+	Item; the checkbox alone would then leave the storefront rendering a box
+	column and a `<select>` with nothing in it, and checkout would have a box
+	summary with an empty group. So "enabled" here means the checkbox is on
+	*and* at least one usable box type actually resolves.
+
+	Every consumer of packing state - _recompute_boxes, _box_view and the
+	cart page context (box_types), _assert_packable, _cart_items's
+	include_boxes, _has_mixed_boxes - reads this one function rather than the
+	raw setting, so answering "does anything resolve" here, once, is what
+	keeps a farm with no box types unpackable-safe everywhere at once: none
+	of them can disagree about whether packing is on.
+	"""
+	if not bool(int(flt(get_settings().get("enable_box_packing")))):
+		return False
+	return bool(get_box_types())
 
 
 def get_default_box_type():

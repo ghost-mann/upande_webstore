@@ -123,3 +123,49 @@ class TestCartPageBoxes(IntegrationTestCase):
 		frappe.set_user("page.box@example.com")
 		html = get_html_for_route("cart")
 		self.assertNotIn(">Box</th>", html)
+
+
+class TestCartPageNoBoxTypes(IntegrationTestCase):
+	"""Defect: packing switched on before any box type is configured used to
+	render a box column with an empty <select> on every row. Zero usable box
+	types must make the storefront behave as though packing were off, not
+	half-on with nothing to pick from — patch get_box_types() rather than
+	relying on the site having no box type anywhere, since other test classes
+	leave committed box Items behind."""
+
+	@classmethod
+	def setUpClass(cls):
+		from upande_webstore.tests.utils import make_item_price, make_test_product
+
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-PAGE-NOBOX")
+		make_item_price("WS-PAGE-NOBOX", "Standard Selling", 10)
+		make_portal_user("page.nobox@example.com", "Page No Box Buyer")
+
+	def setUp(self):
+		from upande_webstore.tests.utils import set_stock
+
+		frappe.set_user("Administrator")
+		frappe.db.delete("Webstore Cart", {"user": "page.nobox@example.com"})
+		set_stock("WS-PAGE-NOBOX", 5000)
+		frappe.db.set_single_value("Webstore Settings", "enable_box_packing", 1)
+		frappe.db.set_single_value("Webstore Settings", "default_box_type", "")
+		frappe.db.set_single_value("Webstore Settings", "minimum_order_stems", 0)
+		frappe.clear_cache()
+		frappe.set_user("page.nobox@example.com")
+
+	def test_box_column_absent_when_no_box_types_resolve(self):
+		from unittest.mock import patch
+
+		from frappe.utils import get_html_for_route
+
+		from upande_webstore.api import cart
+
+		with patch("upande_webstore.services.packing.get_box_types", return_value=[]):
+			cart.add_item("WS-PAGE-NOBOX", 1750)
+			html = get_html_for_route("cart")
+		self.assertNotIn(">Box</th>", html)
+		# the <select> itself, not the (always-present) delegated click handler
+		# that merely names the class it would match
+		self.assertNotIn('webstore-cart-box" data-item', html)
