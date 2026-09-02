@@ -97,6 +97,66 @@ def grant_portal_access(customer, full_name, email, phone=None, send_welcome=Tru
 	return user, contact
 
 
+def has_active_portal_access(user):
+	"""True only when `user` holds an Active Webstore Portal Access record.
+
+	This, not the Customer role, is the source of truth for "is this a portal
+	customer" wherever this app needs to answer that question: a site can
+	reuse the Customer role for something this app never touches, but this
+	app is the only writer of Webstore Portal Access, so its status is the
+	precise signal - grant() flips it to Active, revoke() flips it back.
+	"""
+	if not user or user in ("Administrator", "Guest"):
+		return False
+	return bool(frappe.db.exists("Webstore Portal Access", {"user": user, "status": "Active"}))
+
+
+def guard_desk_access_for_portal_customers(doc, method=None):
+	"""User.validate doc_event: refuse to grant a desk-access role to someone
+	who currently holds active portal access.
+
+	Frappe flips a user's user_type to System User the moment any assigned
+	role has desk_access=1 (User.set_system_user, called from the core
+	validate() that runs before doc_events - frappe/core/doctype/user/user.py
+	lines ~404-415). That recalculation already happened by the time this
+	hook fires, so there is nothing here to race or loop against: this only
+	blocks the save outright, before it reaches the database, so the
+	recalculated user_type is never persisted either.
+
+	Fires only on a role newly added in *this* save, not on the mere
+	coexistence of an existing System User and an active portal access
+	record - an existing System Manager who is also a customer contact must
+	keep saving undisturbed; only the transition (granting a desk role while
+	portal access is active) is refused. ensure_user()'s own Customer grant
+	sails through untouched because Customer carries no desk access.
+	"""
+	if not has_active_portal_access(doc.name):
+		return
+
+	before = doc.get_doc_before_save()
+	previous_roles = {r.role for r in ((before.get("roles") if before else None) or [])}
+	current_roles = {r.role for r in (doc.get("roles") or [])}
+	newly_added = current_roles - previous_roles
+	if not newly_added:
+		return
+
+	desk_roles = sorted(
+		role for role in newly_added if frappe.get_cached_value("Role", role, "desk_access")
+	)
+	if not desk_roles:
+		return
+
+	frappe.throw(
+		_(
+			"{0} has active portal access and cannot also be given the role(s) {1}, "
+			"which grant desk access. Revoke their portal access first if you "
+			"genuinely want to give them desk access."
+		).format(doc.name, ", ".join(desk_roles)),
+		frappe.ValidationError,
+		title=_("Portal customer cannot be given desk access"),
+	)
+
+
 def revoke_portal_access(email):
 	"""Disable the login. The Contact and its Customer link are kept, so history
 	stays intact and access can be restored without retyping anything."""

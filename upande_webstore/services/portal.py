@@ -4,6 +4,32 @@ from frappe import _
 from upande_webstore.services.pricing import get_customer
 
 
+def get_website_user_home_page(user):
+	"""Where a portal customer lands after login.
+
+	Wired via the `get_website_user_home_page` hook. frappe only reaches this
+	hook once two earlier checks come up empty - Role.home_page for any of the
+	user's roles, then Portal Settings.default_portal_home
+	(frappe/website/utils.py get_home_page) - so a site that has configured
+	either of those silently wins over the landing_page setting this reuses;
+	both are unset on every site this app has installed on so far, but that
+	precedence is frappe's, not this hook's, to override.
+
+	Returns None for anyone this app is not responsible for - no active
+	portal access, or a user who (despite holding portal access) currently
+	has desk access - so frappe's normal resolution carries on for them; a
+	System Manager must never be redirected into the portal.
+	"""
+	from upande_webstore.services.portal_settings import LANDING_ROUTES, get_landing_route
+	from upande_webstore.services.provisioning import has_active_portal_access
+
+	if not has_active_portal_access(user):
+		return None
+	if frappe.db.get_value("User", user, "user_type") != "Website User":
+		return None
+	return get_landing_route() or LANDING_ROUTES["Dashboard"]
+
+
 def get_current_customer():
 	customer = get_customer()
 	if not customer:

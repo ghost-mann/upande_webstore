@@ -70,6 +70,11 @@ update_website_context = ["upande_webstore.services.settings.update_website_cont
 # 	"Role": "home_page"
 # }
 
+# frappe consults this only once Role.home_page and
+# Portal Settings.default_portal_home both come up empty - see the docstring
+# on get_website_user_home_page for the precedence this defers to
+get_website_user_home_page = "upande_webstore.services.portal.get_website_user_home_page"
+
 # Generators
 # ----------
 
@@ -152,7 +157,14 @@ doc_events = {
 	# explicitly. Fires for desk conversions too, not just the portal.
 	"Sales Order": {
 		"before_insert": "upande_webstore.services.conversion.carry_webstore_fields",
-	}
+	},
+	# A desk-bearing role granted to a portal customer flips frappe's own
+	# user_type to System User silently (User.has_desk_access) - this refuses
+	# the save outright so that promotion can never happen for someone this
+	# app granted portal access to. See guard_desk_access_for_portal_customers.
+	"User": {
+		"validate": "upande_webstore.services.provisioning.guard_desk_access_for_portal_customers",
+	},
 }
 
 # Scheduled Tasks
