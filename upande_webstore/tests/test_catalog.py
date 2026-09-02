@@ -64,7 +64,7 @@ class TestCatalog(IntegrationTestCase):
 		from upande_webstore.services.catalog import get_categories
 
 		categories = get_categories()
-		self.assertTrue(any(c["name"] == "Products" and c["count"] >= 2 for c in categories))
+		self.assertTrue(any(c["value"] == "Products" and c["count"] >= 2 for c in categories))
 
 	def test_store_page_renders(self):
 		from frappe.utils import get_html_for_route
@@ -212,3 +212,116 @@ class TestListingAddToCart(IntegrationTestCase):
 		finally:
 			frappe.db.set_single_value("Webstore Settings", "enable_cart", 1)
 			frappe.clear_cache()
+
+
+class TestCategories(IntegrationTestCase):
+	"""The curated `categories` table on Webstore Settings, once populated,
+	replaces the derived category list — but stays completely inert until an
+	operator adds a row (see TestCatalog.test_categories for the untouched,
+	derived path)."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		for group in ("WS Cat Rose", "WS Cat Aster", "WS Cat Zinnia", "WS Cat Herb"):
+			if not frappe.db.exists("Item Group", group):
+				frappe.get_doc({
+					"doctype": "Item Group",
+					"item_group_name": group,
+					"parent_item_group": "All Item Groups",
+				}).insert(ignore_permissions=True)
+		make_test_product("WS-CATTBL-ROSE", web_title="Rose Bunch", item_group="WS Cat Rose")
+		make_test_product("WS-CATTBL-ASTER", web_title="Aster Bunch", item_group="WS Cat Aster")
+		make_test_product("WS-CATTBL-ZINNIA", web_title="Zinnia Bunch", item_group="WS Cat Zinnia")
+		# WS Cat Herb deliberately gets no product: it exists so a configured
+		# row for it proves out the zero-published-products omission below.
+
+	def setUp(self):
+		# The class-wide rollback only fires once every test in this class has
+		# run, so a table one test configures would otherwise still be sitting
+		# there for the next test in this class — reset it before each one.
+		setup_webstore_settings()
+
+	def _set_categories(self, rows):
+		settings = frappe.get_doc("Webstore Settings")
+		settings.set("categories", [])
+		for row in rows:
+			settings.append("categories", row)
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
+	def test_empty_table_keeps_derived_behaviour(self):
+		"""The inert path: no rows configured, so behaviour is unchanged from
+		before curated categories existed — derived, alphabetical, value==label."""
+		from upande_webstore.services.catalog import get_categories
+
+		entry = next(c for c in get_categories() if c["value"] == "WS Cat Rose")
+		self.assertEqual(entry["label"], "WS Cat Rose")
+		self.assertGreaterEqual(entry["count"], 1)
+
+	def test_configured_table_used_in_table_order_not_alphabetical(self):
+		"""Proves curation actually curates: Zinnia, Rose, Aster is the table
+		order and must come back exactly that way, not resorted to Aster,
+		Rose, Zinnia the way the derived path would."""
+		from upande_webstore.services.catalog import get_categories
+
+		self._set_categories([
+			{"item_group": "WS Cat Zinnia", "published": 1},
+			{"item_group": "WS Cat Rose", "published": 1},
+			{"item_group": "WS Cat Aster", "published": 1},
+		])
+		self.assertEqual(
+			[c["value"] for c in get_categories()],
+			["WS Cat Zinnia", "WS Cat Rose", "WS Cat Aster"],
+		)
+
+	def test_unpublished_row_hidden(self):
+		from upande_webstore.services.catalog import get_categories
+
+		self._set_categories([
+			{"item_group": "WS Cat Rose", "published": 1},
+			{"item_group": "WS Cat Aster", "published": 0},
+		])
+		values = [c["value"] for c in get_categories()]
+		self.assertIn("WS Cat Rose", values)
+		self.assertNotIn("WS Cat Aster", values)
+
+	def test_label_used_for_display_while_value_stays_the_item_group(self):
+		"""The href/filter value must stay the Item Group name so a bookmark or
+		the /store?category= filter itself survives a display rename."""
+		from upande_webstore.services.catalog import get_categories, get_products
+
+		self._set_categories([
+			{"item_group": "WS Cat Rose", "label": "Fresh Roses", "published": 1},
+		])
+		entry = get_categories()[0]
+		self.assertEqual(entry["value"], "WS Cat Rose")
+		self.assertEqual(entry["label"], "Fresh Roses")
+
+		result = get_products(category="WS Cat Rose", page_length=100)
+		titles = [p["web_title"] for p in result["products"]]
+		self.assertIn("Rose Bunch", titles)
+
+	def test_configured_row_with_no_published_products_omitted(self):
+		"""A configured category with nothing published behind it would just
+		be a link to an empty page, same as the derived list already avoids."""
+		from upande_webstore.services.catalog import get_categories
+
+		self._set_categories([
+			{"item_group": "WS Cat Rose", "published": 1},
+			{"item_group": "WS Cat Herb", "published": 1},
+		])
+		values = [c["value"] for c in get_categories()]
+		self.assertIn("WS Cat Rose", values)
+		self.assertNotIn("WS Cat Herb", values)
+
+	def test_rendered_store_page_shows_the_label(self):
+		from frappe.utils import get_html_for_route
+
+		self._set_categories([
+			{"item_group": "WS Cat Rose", "label": "Fresh Roses", "published": 1},
+		])
+		html = get_html_for_route("store")
+		self.assertIn("Fresh Roses", html)
+		self.assertIn("category=WS%20Cat%20Rose", html)

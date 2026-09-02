@@ -1,0 +1,19 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Category",
+ "module": "Upande Webstore",
+ "istable": 1,
+ "engine": "InnoDB",
+ "creation": "2026-09-01 00:00:01.000000",
+ "modified": "2026-09-01 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": ["item_group", "label", "published"],
+ "fields": [
+  {"fieldname": "item_group", "fieldtype": "Link", "label": "Item Group", "options": "Item Group", "reqd": 1, "in_list_view": 1, "columns": 4},
+  {"fieldname": "label", "fieldtype": "Data", "label": "Label", "in_list_view": 1, "columns": 4, "description": "Display name shown on the storefront. Blank uses the Item Group's own name."},
+  {"fieldname": "published", "fieldtype": "Check", "label": "Published", "default": "1", "in_list_view": 1, "columns": 2}
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

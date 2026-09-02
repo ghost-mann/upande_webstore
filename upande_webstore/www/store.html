@@ -119,7 +119,7 @@
 			<ul>
 				<li><a href="/store" class="{{ 'active' if not category else '' }}">{{ _("All products") }}<span class="ws-count">{{ total }}</span></a></li>
 				{% for c in categories %}
-				<li><a href="/store?category={{ c.name | urlencode }}" class="{{ 'active' if category == c.name else '' }}">{{ c.name }} <span class="ws-count">{{ c.count }}</span></a></li>
+				<li><a href="/store?category={{ c.value | urlencode }}" class="{{ 'active' if category == c.value else '' }}">{{ c.label }} <span class="ws-count">{{ c.count }}</span></a></li>
 				{% endfor %}
 			</ul>
 		</div>

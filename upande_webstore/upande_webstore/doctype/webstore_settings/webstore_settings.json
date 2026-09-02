@@ -94,6 +94,8 @@
   "hero_cta_secondary_member",
   "hero_stats_section",
   "hero_stats",
+  "categories_section",
+  "categories",
   "category_cards_section",
   "category_cards",
   "process_section",
@@ -657,6 +659,18 @@
    "fieldtype": "Table",
    "label": "Hero Stats",
    "options": "Webstore Hero Stat"
+  },
+  {
+   "fieldname": "categories_section",
+   "fieldtype": "Section Break",
+   "label": "Categories",
+   "description": "Curated filter list for the storefront sidebar. Leave empty to keep today's automatic behaviour: every Item Group with a published product, alphabetically."
+  },
+  {
+   "fieldname": "categories",
+   "fieldtype": "Table",
+   "label": "Categories",
+   "options": "Webstore Category"
   },
   {
    "fieldname": "category_cards_section",

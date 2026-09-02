@@ -54,7 +54,7 @@ def setup_webstore_settings():
 	):
 		settings.set(field, "")
 	settings.set("occasion_runs_until", None)
-	for table in ("hero_stats", "category_cards", "process_steps", "footer_links"):
+	for table in ("hero_stats", "categories", "category_cards", "process_steps", "footer_links"):
 		settings.set(table, [])
 	settings.set("warehouses", [])
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
