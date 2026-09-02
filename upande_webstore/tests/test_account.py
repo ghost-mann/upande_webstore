@@ -37,3 +37,19 @@ class TestAccount(IntegrationTestCase):
 
 		frappe.set_user("Guest")
 		self.assertRaises(frappe.PermissionError, update_profile, "X", "1")
+
+	def test_sign_up_refuses_a_desk_users_email(self):
+		"""sign_up already refuses any pre-existing User before it does
+		anything else, so a desk user's email is already refused cleanly -
+		this pins that down as a Defect A requirement rather than an
+		accident."""
+		from upande_webstore.api.account import sign_up
+		from upande_webstore.tests.utils import make_desk_user
+
+		email = "acct.deskuser@example.com"
+		make_desk_user(email, ["Sales User"])
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				sign_up(email, "Desk User Signing Up", "+254700000000")
+		finally:
+			frappe.delete_doc("User", email, force=True, ignore_permissions=True)

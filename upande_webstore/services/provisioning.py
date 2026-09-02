@@ -15,8 +15,37 @@ from frappe.utils import validate_email_address
 PORTAL_ROLE = "Customer"
 
 
+def _desk_access_roles(role_names):
+	"""Which of these role names grant desk access, per the Role doctype's own
+	desk_access flag.
+
+	This is the same signal frappe itself derives user_type from
+	(User.has_desk_access, frappe/core/doctype/user/user.py) - checked directly
+	against the roles in question rather than trusting a user's stored
+	user_type, which only gets recomputed on save and so can be stale. Checking
+	roles directly also needs no special case for Administrator: its user_type
+	is hardcoded to "System User" regardless of roles, but in practice it also
+	carries roles with desk_access=1 (System Manager and friends), so it is
+	caught the same way as everyone else.
+
+	Shared by ensure_user() (an existing user must not already have desk
+	access before portal access is granted) and
+	guard_desk_access_for_portal_customers() (a portal customer must not be
+	newly given a desk-access role) - one decision, two moments it is asked at.
+	"""
+	return sorted(role for role in role_names if frappe.get_cached_value("Role", role, "desk_access"))
+
+
 def ensure_user(email, full_name, phone=None, send_welcome=True):
-	"""Website User for this email, created if absent. Never grants desk access."""
+	"""Website User for this email, created if absent. Never grants desk access.
+
+	Refuses outright when the email already belongs to a user who holds desk
+	access: reusing that account for portal access would leave a customer
+	login that still reaches the desk, and this function must never strip an
+	existing account's roles to fix that - it might be a real staff member's
+	account. The caller has to resolve the conflict by hand (a different
+	email, or demoting the account in User first).
+	"""
 	email = (email or "").strip().lower()
 	validate_email_address(email, throw=True)
 	if not (full_name or "").strip():
@@ -24,6 +53,17 @@ def ensure_user(email, full_name, phone=None, send_welcome=True):
 
 	if frappe.db.exists("User", email):
 		user = frappe.get_doc("User", email)
+		desk_roles = _desk_access_roles(r.role for r in user.roles)
+		if desk_roles:
+			frappe.throw(
+				_(
+					"{0} is a desk user (role(s): {1}) and cannot be granted portal access - "
+					"they would still be able to reach the desk. Use a different email for "
+					"this contact, or remove {0}'s desk access in User first."
+				).format(email, ", ".join(desk_roles)),
+				frappe.ValidationError,
+				title=_("Email belongs to a desk user"),
+			)
 	else:
 		user = frappe.get_doc(
 			{
@@ -140,9 +180,7 @@ def guard_desk_access_for_portal_customers(doc, method=None):
 	if not newly_added:
 		return
 
-	desk_roles = sorted(
-		role for role in newly_added if frappe.get_cached_value("Role", role, "desk_access")
-	)
+	desk_roles = _desk_access_roles(newly_added)
 	if not desk_roles:
 		return
 

@@ -178,6 +178,53 @@ class TestPortalAccess(IntegrationTestCase):
 		self.assertEqual(doc.email, "mixed.case@example.com")
 		frappe.db.delete("Webstore Portal Access", {"email": "mixed.case@example.com"})
 
+	def test_grant_refuses_when_email_belongs_to_a_desk_user(self):
+		"""Defect: granting portal access to an email that already belongs to a
+		System User used to succeed silently, leaving a customer login that
+		still reached the desk. It must now be refused outright, naming the
+		email, and must not touch the existing account."""
+		from upande_webstore.tests.utils import make_desk_user
+
+		email = "granted.deskuser@example.com"
+		make_desk_user(email, ["Sales User"])
+		doc = self._record(email=email)
+		try:
+			with self.assertRaisesRegex(frappe.ValidationError, email):
+				doc.grant()
+			doc.reload()
+			self.assertEqual(doc.status, "Not Granted")
+
+			user = frappe.get_doc("User", email)
+			self.assertEqual(user.user_type, "System User")
+			self.assertIn("Sales User", [r.role for r in user.roles])
+		finally:
+			frappe.delete_doc("Webstore Portal Access", doc.name, force=True, ignore_permissions=True)
+			frappe.delete_doc("User", email, force=True, ignore_permissions=True)
+
+	def test_grant_succeeds_for_an_email_that_is_already_a_website_user(self):
+		"""The normal re-grant path, and must not regress: an email whose User
+		already exists as a plain Website User (no desk access) is still
+		grantable."""
+		from upande_webstore.services.provisioning import ensure_user
+
+		email = "granted.existing.website.user@example.com"
+		ensure_user(email, "Existing Website User", send_welcome=False)
+		doc = self._record(email=email)
+		try:
+			doc.grant()
+			doc.reload()
+			self.assertEqual(doc.status, "Active")
+
+			user = frappe.get_doc("User", doc.user)
+			self.assertEqual(user.user_type, "Website User")
+			self.assertIn("Customer", [r.role for r in user.roles])
+		finally:
+			frappe.delete_doc("Webstore Portal Access", doc.name, force=True, ignore_permissions=True)
+			contact = frappe.db.get_value("Contact", {"user": email})
+			if contact:
+				frappe.delete_doc("Contact", contact, force=True, ignore_permissions=True)
+			frappe.delete_doc("User", email, force=True, ignore_permissions=True)
+
 	def test_grant_refuses_a_user_without_write_on_portal_access(self):
 		"""grant/revoke/password_setup_link used to hardcode a tuple of role
 		names that only duplicated Webstore Portal Access's own DocPerms; this

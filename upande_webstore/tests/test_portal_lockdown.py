@@ -154,10 +154,12 @@ class TestPortalLockdown(IntegrationTestCase):
 			self._cleanup_user(EMAIL)
 
 	def test_existing_system_user_who_later_gains_portal_access_is_not_broken(self):
-		"""A System Manager who is also a customer contact is a real case: the
-		guard must fire only on a NEW desk-role grant, never on the mere
-		coexistence of an existing System User and an active portal access
-		record."""
+		"""grant() itself now refuses to create this state (see
+		test_provisioning.py) - but the state can still exist from before that
+		refusal shipped, or from data outside this app's control. Once it
+		exists, the guard must fire only on a NEW desk-role grant, never on the
+		mere coexistence of an existing System User and an active portal access
+		record, so build that state directly rather than through grant()."""
 		email = "lockdown.dual.role@example.com"
 		make_desk_user(email, ["Sales Manager"])
 		doc = frappe.get_doc(
@@ -166,13 +168,13 @@ class TestPortalLockdown(IntegrationTestCase):
 				"customer": CUSTOMER,
 				"full_name": "Dual Role Person",
 				"email": email,
+				"user": email,
+				"status": "Active",
 			}
 		)
 		doc.flags.ignore_permissions = True
 		doc.insert()
 		try:
-			doc.grant()  # must not raise, even though this user already has desk access
-			doc.reload()
 			self.assertEqual(doc.status, "Active")
 
 			user = frappe.get_doc("User", email)
