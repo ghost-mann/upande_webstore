@@ -11,6 +11,7 @@ the workspace's name, and the sidebar keyed off that name.
 
 import json
 import os
+import re
 
 import frappe
 from frappe.desk.utils import slug
@@ -27,6 +28,7 @@ from upande_webstore.patches.reclaim_orphan_webstore_workspace import (
 	execute,
 	reclaim_orphan,
 )
+from upande_webstore.setup.install import NAVIGATION_BLOCK, ensure_navigation_block
 
 APP_ROOT = os.path.dirname(upande_webstore.__file__)
 SIDEBAR_JSON = os.path.join(APP_ROOT, "workspace_sidebar", "upande_webstore.json")
@@ -39,6 +41,12 @@ MODULE = "Upande Webstore"
 
 # link types whose targets are real documents we can check exist
 CHECKABLE_LINK_TYPES = ("DocType", "Report", "Page")
+
+# matches a whole <a class="wsn-tile" ...> opening tag, whatever order its
+# other attributes (href, data-doctype, target, ...) come in
+TILE_TAG = re.compile(r'<a\s+class="wsn-tile"[^>]*>')
+HREF_ATTR = re.compile(r'href="([^"]+)"')
+DATA_DOCTYPE_ATTR = re.compile(r'data-doctype="([^"]+)"')
 
 
 def _sidebar_json():
@@ -86,10 +94,29 @@ class TestWorkspaceContent(IntegrationTestCase):
 		self.doc = frappe.get_doc("Workspace", WORKSPACE)
 
 	def test_it_is_not_an_empty_shell(self):
-		"""An empty workspace resolves the route but lands people on a blank page."""
+		"""An empty workspace resolves the route but lands people on a blank page.
+
+		The link-list layout is gone in favour of a single Custom HTML Block, so
+		`links` is expected to be empty now — the block and the shortcuts are what
+		carry the workspace's actual navigation.
+		"""
 		self.assertTrue(json.loads(self.doc.content or "[]"), "workspace has no content blocks")
-		self.assertTrue(self.doc.links, "workspace has no links")
+		self.assertTrue(self.doc.custom_blocks, "workspace has no custom blocks")
 		self.assertTrue(self.doc.shortcuts, "workspace has no shortcuts")
+
+	def test_content_is_a_single_custom_block(self):
+		"""The old card/shortcut layout is gone: the body is one tile-grid block."""
+		blocks = json.loads(self.doc.content or "[]")
+		self.assertEqual(len(blocks), 1, f"expected exactly one content block, got {blocks!r}")
+		block = blocks[0]
+		self.assertEqual(block.get("type"), "custom_block")
+		self.assertEqual(block.get("data", {}).get("custom_block_name"), NAVIGATION_BLOCK)
+
+	def test_custom_blocks_table_references_the_same_block(self):
+		"""desktop.py reads permissions off `custom_blocks`, not the content JSON —
+		a block named only in content renders as a permission-denied blank tile."""
+		names = {cb.custom_block_name for cb in self.doc.custom_blocks}
+		self.assertIn(NAVIGATION_BLOCK, names)
 
 	def test_every_link_target_exists(self):
 		for link in self.doc.links:
@@ -112,9 +139,10 @@ class TestWorkspaceContent(IntegrationTestCase):
 				)
 
 	def test_content_blocks_reference_real_cards_and_shortcuts(self):
-		"""A card/shortcut block naming something absent renders as a blank tile."""
+		"""A card/shortcut/custom_block naming something absent renders as a blank tile."""
 		card_labels = {link.label for link in self.doc.links if link.type == "Card Break"}
 		shortcut_labels = {s.label for s in self.doc.shortcuts}
+		custom_block_names = {cb.custom_block_name for cb in self.doc.custom_blocks}
 
 		for block in json.loads(self.doc.content or "[]"):
 			data = block.get("data") or {}
@@ -122,6 +150,8 @@ class TestWorkspaceContent(IntegrationTestCase):
 				self.assertIn(data.get("card_name"), card_labels)
 			elif block.get("type") == "shortcut":
 				self.assertIn(data.get("shortcut_name"), shortcut_labels)
+			elif block.get("type") == "custom_block":
+				self.assertIn(data.get("custom_block_name"), custom_block_names)
 
 
 class TestWorkspaceSidebar(IntegrationTestCase):
@@ -258,3 +288,66 @@ class TestOrphanWorkspacePatch(IntegrationTestCase):
 		entry = "upande_webstore.patches.reclaim_orphan_webstore_workspace"
 		self.assertIn(entry, pre, "patch must be listed under [pre_model_sync]")
 		self.assertNotIn(entry, post)
+
+
+class TestNavigationBlockSetup(IntegrationTestCase):
+	"""`Custom HTML Block` is not an importable doctype, so nothing but this
+	function ever creates or refreshes "Webstore Navigation". These tests call
+	it directly rather than relying on migrate having already run it."""
+
+	def test_block_exists_after_setup(self):
+		ensure_navigation_block()
+		self.assertTrue(frappe.db.exists("Custom HTML Block", NAVIGATION_BLOCK))
+
+	def test_ensure_navigation_block_is_idempotent(self):
+		"""Running it twice must not raise (autoname is `prompt`, so a naive second
+		insert would collide) and must not leave a duplicate row behind."""
+		ensure_navigation_block()
+		ensure_navigation_block()
+		self.assertEqual(frappe.db.count("Custom HTML Block", {"name": NAVIGATION_BLOCK}), 1)
+
+	def test_block_is_public_with_no_role_restrictions(self):
+		"""Matches how upande_scp and upande_crm ship theirs — gating happens per
+		tile in the block's own script, not by hiding the whole grid."""
+		ensure_navigation_block()
+		doc = frappe.get_doc("Custom HTML Block", NAVIGATION_BLOCK)
+		self.assertEqual(doc.private, 0)
+		self.assertEqual(doc.roles, [])
+
+
+class TestNavigationBlockTiles(IntegrationTestCase):
+	def setUp(self):
+		ensure_navigation_block()
+		self.block = frappe.get_doc("Custom HTML Block", NAVIGATION_BLOCK)
+
+	def test_every_internal_tile_resolves_to_an_existing_doctype(self):
+		"""A tile pointing at a missing doctype 404s the moment someone clicks it —
+		except a tile carrying data-doctype, which the block's own script hides
+		when that doctype is absent (Box Type, shipped by a different app)."""
+		known_slugs = {slug(name) for name in frappe.get_all("DocType", pluck="name")}
+		tiles = TILE_TAG.findall(self.block.html)
+		self.assertTrue(tiles, "no tiles found in the navigation block html")
+
+		checked = 0
+		for tag in tiles:
+			href_match = HREF_ATTR.search(tag)
+			self.assertTrue(href_match, f"tile has no href: {tag!r}")
+			href = href_match.group(1)
+			if not href.startswith("/app/"):
+				continue  # external tile, e.g. Open Storefront -> /store
+			if DATA_DOCTYPE_ATTR.search(tag):
+				continue  # optional doctype, gated client-side by the block's script
+			with self.subTest(href=href):
+				doctype_slug = href[len("/app/") :]
+				self.assertIn(
+					doctype_slug,
+					known_slugs,
+					f"tile links to {href!r} but no installed doctype slugs to it",
+				)
+				checked += 1
+		self.assertTrue(checked, "no internal tiles were actually checked")
+
+	def test_the_optional_box_type_tile_carries_its_doctype_attribute(self):
+		"""The one tile whose doctype is not guaranteed to exist must be tagged
+		so the script can hide it quietly instead of shipping a dead link."""
+		self.assertIn('data-doctype="Box Type"', self.block.html)

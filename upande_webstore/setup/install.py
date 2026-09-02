@@ -1,7 +1,22 @@
+import os
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 DEFAULT_PRESET = "mona_flowers"
+
+# The workspace body is a Custom HTML Block — a tile grid, matching the
+# navigation blocks upande_scp and upande_crm ship on the same production
+# site. It cannot ship as a module fixture: `Custom HTML Block` is not in
+# Frappe's IMPORTABLE_DOCTYPES, so `sync_all()` walks straight past it, and
+# the workspace JSON only ever references it by name. Hence this upsert.
+#
+# The markup lives in upande_webstore/custom_html_block/ as real
+# .html/.css/.js files rather than as strings in here, so it stays diffable
+# and editable without touching this module.
+NAVIGATION_BLOCK = "Webstore Navigation"
+_BLOCK_DIR = "custom_html_block"
+_BLOCK_SLUG = "webstore_navigation"
 
 WEBSTORE_CUSTOM_FIELDS = {
 	"Quotation": [
@@ -441,9 +456,51 @@ def seed_default_theme():
 	apply_preset(DEFAULT_PRESET)
 
 
+def _navigation_block_sources():
+	import upande_webstore
+
+	app_root = os.path.dirname(upande_webstore.__file__)
+	base = os.path.join(app_root, _BLOCK_DIR, _BLOCK_SLUG)
+	out = {}
+	for field, ext in (("html", "html"), ("style", "css"), ("script", "js")):
+		with open(f"{base}.{ext}", encoding="utf-8") as f:
+			out[field] = f.read()
+	return out
+
+
+def ensure_navigation_block():
+	"""Create or refresh the workspace's Custom HTML Block from the app's files.
+
+	Safe to run on a site that has never heard of `Custom HTML Block` — some
+	install profiles strip doctypes down — and safe to run twice: an existing
+	block is updated in place rather than duplicated, matching the create-only
+	discipline the rest of this module uses for fields, but here there is no
+	"someone else's data" to protect, so every migrate simply overwrites the
+	block from the shipped files. Anyone editing the block through the desk UI
+	should expect the next migrate to reset it — edit the files instead.
+	"""
+	if not frappe.db.exists("DocType", "Custom HTML Block"):
+		return
+	src = _navigation_block_sources()
+	if frappe.db.exists("Custom HTML Block", NAVIGATION_BLOCK):
+		doc = frappe.get_doc("Custom HTML Block", NAVIGATION_BLOCK)
+	else:
+		doc = frappe.new_doc("Custom HTML Block")
+		doc.name = NAVIGATION_BLOCK
+	doc.update(src)
+	# Public, and readable by anyone who can reach the workspace — matching
+	# how upande_scp and upande_crm ship theirs. The Box Type tile hides
+	# itself client-side when that doctype is absent or unreadable; roles
+	# here would hide the whole grid instead of the one tile that needs it.
+	doc.private = 0
+	doc.set("roles", [])
+	doc.save(ignore_permissions=True)
+
+
 def after_install():
 	create_webstore_custom_fields()
 	seed_default_theme()
+	ensure_navigation_block()
 
 
 def normalise_settings_docstatus():
@@ -472,3 +529,4 @@ def normalise_settings_docstatus():
 def after_migrate():
 	create_webstore_custom_fields()
 	normalise_settings_docstatus()
+	ensure_navigation_block()
