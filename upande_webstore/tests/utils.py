@@ -58,6 +58,12 @@ def setup_webstore_settings():
 	settings.set("warehouses", [])
 	settings.append("warehouses", {"warehouse": get_default_warehouse()})
 
+	# The Roles section reconciles real Custom DocPerms on save — leaving a
+	# grant from one test module set would leak permissions into whichever
+	# module runs next, same story as every other field reset above.
+	for table in ("catalogue_manager_roles", "order_manager_roles", "portal_manager_roles"):
+		settings.set(table, [])
+
 	settings.save(ignore_permissions=True)
 	reset_portal_settings()
 	from upande_webstore.services.packing import clear_box_source_cache

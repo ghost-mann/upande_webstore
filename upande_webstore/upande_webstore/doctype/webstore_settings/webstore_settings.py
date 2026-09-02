@@ -16,6 +16,34 @@ class WebstoreSettings(Document):
 		self.validate_default_box_type()
 		self.apply_feature_dependencies()
 
+	def on_update(self):
+		self.reconcile_role_permissions()
+
+	def reconcile_role_permissions(self):
+		"""Apply the Roles section to real Custom DocPerms.
+
+		Deliberately on_update, not validate: this writes Custom DocPerm
+		records for *other* doctypes, a side effect with consequences well
+		beyond this form, so it must run against the configuration that is
+		actually about to be saved — after validate has had its say on what
+		that configuration is — and exactly once per save, not once per
+		validate call. A failure here must not pass silently: it is logged
+		and re-raised, which rolls the whole save back rather than leaving
+		Webstore Settings claiming a grant that was never actually applied.
+		"""
+		from upande_webstore.services import roles
+
+		try:
+			applied = roles.reconcile(self)
+		except Exception:
+			frappe.log_error(
+				title=_("Webstore Settings role permission reconcile failed"),
+				message=frappe.get_traceback(),
+			)
+			raise
+		if applied != (self.applied_role_permissions or ""):
+			self.db_set("applied_role_permissions", applied, update_modified=False)
+
 	def validate_occasion(self):
 		if not self.occasion:
 			return

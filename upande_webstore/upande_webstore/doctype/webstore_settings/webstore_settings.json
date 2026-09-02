@@ -5,7 +5,7 @@
  "issingle": 1,
  "engine": "InnoDB",
  "creation": "2026-07-20 00:00:01.000000",
- "modified": "2026-07-28 00:00:01.000000",
+ "modified": "2026-09-01 00:00:01.000000",
  "owner": "Administrator",
  "field_order": [
   "general_tab",
@@ -24,6 +24,11 @@
   "default_lead_days",
   "checkout_mode",
   "box_source_summary",
+  "roles_section",
+  "catalogue_manager_roles",
+  "order_manager_roles",
+  "portal_manager_roles",
+  "applied_role_permissions",
   "theme_tab",
   "theme_intro",
   "brand_colors_section",
@@ -242,6 +247,42 @@
    "fieldname": "box_source_summary",
    "fieldtype": "HTML",
    "label": "Box Types On This Site"
+  },
+  {
+   "fieldname": "roles_section",
+   "fieldtype": "Section Break",
+   "label": "Roles",
+   "description": "Grant desk roles access to parts of the webstore without hand-editing the Role Permission Manager. Saving here reconciles the underlying permissions to match exactly what is ticked below — removing a role removes only what this panel granted it, never anything set by hand elsewhere."
+  },
+  {
+   "fieldname": "catalogue_manager_roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Catalogue Managers",
+   "options": "Webstore Role",
+   "description": "Full access (read, write, create, delete) to Webstore Product, plus <b>read on this site's box source</b> (the Item or Box Type doctype boxes are configured on) — the product form reads box types from it on every refresh. Read on Item/Box Type reaches beyond the webstore into the farm's item master, so grant this only to roles that should see that data."
+  },
+  {
+   "fieldname": "order_manager_roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Order Managers",
+   "options": "Webstore Role",
+   "description": "Read access to Webstore Cart and Webstore Wishlist — lets a role see what buyers currently have in their carts and wishlists."
+  },
+  {
+   "fieldname": "portal_manager_roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Portal Managers",
+   "options": "Webstore Role",
+   "description": "Read, write and create on Webstore Portal Settings, Webstore Portal Access, Webstore Claim and Webstore Claim Type — lets a role configure the customer portal, grant or revoke buyer logins, and handle claims."
+  },
+  {
+   "fieldname": "applied_role_permissions",
+   "fieldtype": "Code",
+   "label": "Applied Role Permissions",
+   "options": "JSON",
+   "hidden": 1,
+   "read_only": 1,
+   "description": "Internal record of exactly what the Roles section above has applied (doctype → role → permission types), so the next save reconciles against what this panel actually added rather than whatever else exists."
   },
   {
    "fieldname": "theme_tab",
