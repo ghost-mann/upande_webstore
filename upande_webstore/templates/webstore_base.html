@@ -45,6 +45,16 @@
 			<span data-sub="{{ webstore_branding.wordmark_subtitle }}">{{ webstore_branding.wordmark }}<b>{{ webstore_branding.wordmark_bold }}</b></span>
 		</a>
 		<div class="ws-nav">
+			{% if webstore_currency %}
+			<label class="ws-currency">
+				<span class="sr-only">{{ _("Currency") }}</span>
+				<select data-ws-currency-select aria-label="{{ _('Currency') }}">
+					{%- for option in webstore_currency.options %}
+					<option value="{{ option.price_list }}" {{ "selected" if option.price_list == webstore_currency.current else "" }}>{{ option.label }}</option>
+					{%- endfor %}
+				</select>
+			</label>
+			{% endif %}
 			{% if webstore_features.search_palette %}
 			<button type="button" class="ws-search-trigger" data-ws-palette aria-label="{{ _('Search products') }}">
 				<span>{{ _("Search products…") }}</span><kbd>⌘K</kbd>

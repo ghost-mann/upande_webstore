@@ -14,6 +14,7 @@ class WebstoreSettings(Document):
 		self.validate_font_url()
 		self.validate_occasion()
 		self.validate_default_box_type()
+		self.validate_guest_price_lists()
 		self.apply_feature_dependencies()
 
 	def on_update(self):
@@ -85,6 +86,43 @@ class WebstoreSettings(Document):
 				),
 				frappe.ValidationError,
 			)
+
+	def validate_guest_price_lists(self):
+		"""Every row offered to guests must actually be usable, and the table
+		as a whole must resolve unambiguously.
+
+		A visitor picks a *currency*, not a price list, so two rows sharing a
+		currency could never be told apart by the picker — and a row pointing
+		at a buying-only or disabled price list would let a guest choose a
+		list that was never meant to be public. Both are refused at save time
+		rather than discovered later as a silently-skipped row (see
+		pricing.get_offered_price_lists, which re-checks the same two things
+		live, since a row valid at save can still go stale afterwards).
+		"""
+		seen_currencies = {}
+		default_seen = False
+		for row in self.guest_price_lists or []:
+			info = frappe.db.get_value(
+				"Price List", row.price_list, ["enabled", "selling", "currency"], as_dict=True
+			)
+			if not info or not info.enabled or not info.selling:
+				frappe.throw(
+					_("{0} must be an enabled, selling price list to be offered to guests.").format(
+						row.price_list
+					)
+				)
+			if info.currency in seen_currencies:
+				frappe.throw(
+					_(
+						"{0} and {1} are both priced in {2}. Only one guest price list per "
+						"currency may be offered, since the visitor picks a currency."
+					).format(seen_currencies[info.currency], row.price_list, info.currency)
+				)
+			seen_currencies[info.currency] = row.price_list
+			if row.is_default:
+				if default_seen:
+					frappe.throw(_("Only one guest price list may be marked Default."))
+				default_seen = True
 
 	def apply_feature_dependencies(self):
 		# the drawer has nothing to show without a cart

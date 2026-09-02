@@ -11,6 +11,7 @@
   "general_tab",
   "company",
   "guest_price_list",
+  "guest_price_lists",
   "default_customer_group",
   "default_territory",
   "quotation_validity_days",
@@ -166,7 +167,15 @@
    "fieldtype": "Link",
    "label": "Guest Price List",
    "options": "Price List",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Used when no price list below is offered — the single-currency behaviour every site shipped with before Guest Price Lists existed."
+  },
+  {
+   "fieldname": "guest_price_lists",
+   "fieldtype": "Table",
+   "label": "Guest Price Lists (currency picker)",
+   "options": "Webstore Guest Price List",
+   "description": "One row per currency an anonymous visitor may browse in. Empty = the single Guest Price List above, no picker. Two or more rows show a currency picker in the storefront header; a visitor's choice is remembered in a cookie and re-validated against this table on every page."
   },
   {
    "fieldname": "default_customer_group",

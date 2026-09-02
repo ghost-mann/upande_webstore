@@ -283,8 +283,35 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 		if (target instanceof HTMLDialogElement) target.close();
 	});
 
+	/* ---------- currency picker ---------- */
+	async function switchCurrency(select: HTMLSelectElement): Promise<void> {
+		const priceList = select.value;
+		select.disabled = true;
+		try {
+			const result = await call<{ price_list: string; dropped: string[] }>(
+				"upande_webstore.api.pricing.set_price_list",
+				{ price_list: priceList }
+			);
+			// Every price on the page must come from one fresh resolution
+			// rather than being patched in place, so the switch always ends
+			// in a reload — after a short pause when there is a dropped-item
+			// message worth letting the visitor read first.
+			if (result.dropped.length) {
+				toast(`Removed from your basket — not priced in this currency: ${result.dropped.join(", ")}`, true);
+				window.setTimeout(() => window.location.reload(), 1400);
+			} else {
+				window.location.reload();
+			}
+		} catch (e) {
+			toast((e as Error).message, true);
+			select.disabled = false;
+		}
+	}
+
 	document.addEventListener("change", (event) => {
-		if ((event.target as HTMLElement).matches("select.webstore-attribute")) onAttributeChange();
+		const target = event.target as HTMLElement;
+		if (target.matches("select.webstore-attribute")) { onAttributeChange(); return; }
+		if (target.matches("[data-ws-currency-select]")) { switchCurrency(target as HTMLSelectElement); return; }
 	});
 
 	document.addEventListener("input", (event) => {

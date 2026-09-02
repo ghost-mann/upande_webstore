@@ -103,3 +103,7 @@ def update_website_context(context):
 	context.webstore_occasion = theme.occasion
 	# retained one release for anything still reading the old key
 	context.webstore_appearance = get_appearance()
+
+	from upande_webstore.services.pricing import get_guest_currency_picker
+
+	context.webstore_currency = get_guest_currency_picker()

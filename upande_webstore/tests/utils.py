@@ -6,6 +6,7 @@ def setup_webstore_settings():
 	settings = frappe.get_doc("Webstore Settings")
 	settings.company = frappe.defaults.get_global_default("company")
 	settings.guest_price_list = "Standard Selling"
+	settings.set("guest_price_lists", [])
 	settings.default_customer_group = "Individual"
 	settings.default_territory = "All Territories"
 	settings.quotation_validity_days = 14
@@ -328,14 +329,27 @@ def make_item_price(item_code, price_list, rate):
 	}).insert(ignore_permissions=True)
 
 
-def make_price_list(name):
+def make_price_list(name, currency=None, selling=1, enabled=1, buying=0):
+	currency = currency or frappe.get_cached_value(
+		"Company", frappe.defaults.get_global_default("company"), "default_currency"
+	)
+	# ERPNext refuses a Price List that is neither buying nor selling
+	buying = 1 if not selling and not buying else buying
 	if not frappe.db.exists("Price List", name):
 		frappe.get_doc({
 			"doctype": "Price List",
 			"price_list_name": name,
-			"selling": 1,
-			"currency": frappe.get_cached_value("Company", frappe.defaults.get_global_default("company"), "default_currency"),
+			"selling": selling,
+			"buying": buying,
+			"enabled": enabled,
+			"currency": currency,
 		}).insert(ignore_permissions=True)
+	else:
+		frappe.db.set_value(
+			"Price List",
+			name,
+			{"currency": currency, "selling": selling, "buying": buying, "enabled": enabled},
+		)
 	return name
 
 

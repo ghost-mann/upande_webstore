@@ -328,6 +328,28 @@ a:hover { color: var(--ws-ink-4); }
 	flex: none;
 	margin-left: 0.45rem;
 }
+.ws-currency {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 0.35rem;
+}
+.ws-currency select {
+	appearance: none;
+	background: var(--ws-wash);
+	border: none;
+	border-radius: 999px;
+	color: var(--ws-ink-mute);
+	font-family: var(--ws-font-sans);
+	font-size: 0.8rem;
+	font-weight: 500;
+	padding: 0.48rem 1.75rem 0.48rem 0.95rem;
+	cursor: pointer;
+	transition: background 160ms ease, color 160ms ease;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23807a6f' stroke-width='1.5' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 0.85rem center;
+}
+.ws-currency select:hover { background-color: rgba(10, 10, 10, 0.07); color: var(--ws-ink); }
 .ws-search-trigger {
 	display: inline-flex;
 	align-items: center;
