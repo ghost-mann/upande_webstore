@@ -27,7 +27,9 @@ def _get_wishlist(create=False):
 @guard("wishlist")
 def toggle(product):
 	_require_login()
-	if not frappe.db.exists("Webstore Product", product):
+	from upande_webstore.services.catalog import is_in_current_store
+
+	if not frappe.db.exists("Webstore Product", product) or not is_in_current_store(product):
 		frappe.throw(_("Product not found."), frappe.ValidationError)
 	doc = _get_wishlist(create=True)
 	existing = next((row for row in doc.items if row.product == product), None)

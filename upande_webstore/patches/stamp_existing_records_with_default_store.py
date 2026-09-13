@@ -42,10 +42,20 @@ def execute():
 
 	create_webstore_custom_fields()
 
-	for doctype in ("Quotation", "Sales Order"):
+	# Only documents a cart actually produced. A blanket update would stamp
+	# every quotation and order on the site — including ones a sales rep
+	# raised in the desk that never touched a storefront — and custom_webstore
+	# would stop meaning "this came from a shop" on its very first migration.
+	# The cart's own webstore is used rather than the default, so this stays
+	# correct if it ever runs on a site that already has several stores.
+	for doctype, link_field in (("Quotation", "quotation"), ("Sales Order", "sales_order")):
 		if not frappe.get_meta(doctype).get_field("custom_webstore"):
 			continue
 		frappe.db.sql(
-			f"update `tab{doctype}` set custom_webstore = %s where ifnull(custom_webstore, '') = ''",
-			DEFAULT_SLUG,
+			f"""
+			update `tab{doctype}` doc
+			join `tabWebstore Cart` cart on cart.{link_field} = doc.name
+			set doc.custom_webstore = cart.webstore
+			where ifnull(doc.custom_webstore, '') = '' and ifnull(cart.webstore, '') != ''
+			"""
 		)

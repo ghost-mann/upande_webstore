@@ -25,9 +25,15 @@ class TestCartIsolation(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		setup_webstore_settings()
-		make_test_product("WS-ISO-ROSE")
+		# The stores come first: a product names its store through a Link, and
+		# each product belongs to the store it is added from below — a rose
+		# that is not in the dairy catalogue is not addable to the dairy cart.
+		delete_all_webstores()
+		make_webstore("flowers", title="Flowers")
+		make_webstore("dairy", title="Dairy")
+		make_test_product("WS-ISO-ROSE", primary_store="flowers")
 		make_item_price("WS-ISO-ROSE", "Standard Selling", 40)
-		make_test_product("WS-ISO-MILK")
+		make_test_product("WS-ISO-MILK", primary_store="dairy")
 		make_item_price("WS-ISO-MILK", "Standard Selling", 5)
 		make_portal_user(USER)
 		set_stock("WS-ISO-ROSE", 50)
@@ -36,9 +42,6 @@ class TestCartIsolation(IntegrationTestCase):
 	def setUp(self):
 		frappe.set_user(USER)
 		frappe.db.delete("Webstore Cart", {"user": USER})
-		delete_all_webstores()
-		make_webstore("flowers", title="Flowers")
-		make_webstore("dairy", title="Dairy")
 		clear_store_cache()
 
 	def tearDown(self):
@@ -47,7 +50,6 @@ class TestCartIsolation(IntegrationTestCase):
 		clear_store_cache()
 		if hasattr(frappe.local, "webstore_slug"):
 			del frappe.local.webstore_slug
-		delete_all_webstores()
 
 	def _as(self, slug):
 		frappe.local.webstore_slug = slug
@@ -93,3 +95,15 @@ class TestCartIsolation(IntegrationTestCase):
 		self._as("dairy")
 		result = cart.get_cart()
 		self.assertEqual(result["items"][0]["qty"], 1)
+
+	def test_a_product_from_another_store_cannot_be_added(self):
+		"""The listing hides it; the cart has to refuse it too, or a crafted
+		call puts a dairy line into a flower order stamped with the wrong
+		shop."""
+		from upande_webstore.api import cart
+
+		self._as("flowers")
+		with self.assertRaises(frappe.ValidationError):
+			cart.add_item("WS-ISO-MILK", 1)
+		self.assertEqual(cart.get_cart()["count"], 0)
+

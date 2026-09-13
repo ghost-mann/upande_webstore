@@ -46,3 +46,52 @@ duplicated and no existing call site breaks.
 
 Full suite green; a single-store site behaves exactly as today; two stores are
 isolated in catalogue, cart and pricing; the shared portal shows both.
+
+---
+
+## Phase 1 status
+
+**Task 1 — the spine.** Done, `71db0ca`.
+
+**Task 2 — routing and isolation.** Done, `26e970c` plus review fixes.
+
+### Decisions taken while the user was away
+
+- **The default store keeps the bare paths.** `/store`, `/cart`, `/wishlist` and
+  `store/<product>` are unchanged for the migrated default store; only a
+  non-default store gets a `/<slug>/` prefix. No existing URL changes and
+  nothing redirects, which is what makes the upgrade invisible to a
+  single-store site.
+- **One product, one canonical URL.** `Webstore Product.item` and `web_title`
+  are unique site-wide, and a `WebsiteGenerator` has exactly one `route`, so a
+  product gets a `primary_store` that decides its URL and a `stores` child
+  table that decides which catalogues list it. An empty table falls back to the
+  primary store; a blank primary store means the default.
+- **Box packing is a tri-state, not a checkbox.** A `Webstore` row has to be
+  able to say "off" as well as "inherit", or a dairy store is stuck with the
+  flower store's box maths. Blank inherits `Webstore Settings`.
+- **Store membership is enforced on write, not only on read.** The listing
+  filters the catalogue, but `cart.add_item` and `wishlist.toggle` name a
+  product directly, so both check membership too — otherwise a crafted call
+  puts a dairy line into a flower order stamped with the wrong shop.
+- **The back-fill patch only stamps documents a cart produced.** A blanket
+  update would stamp every quotation a sales rep ever raised in the desk, and
+  `custom_webstore` would stop meaning "this came from a shop" on its first
+  migration.
+
+### Known gaps, deliberately left for Phase 2
+
+- **Presentation fields are still site-wide.** Branding, theme seeds, hero,
+  occasion, process steps and footer links live on `Webstore Settings` and are
+  shared by every store. Moving them is the spec's full field migration — ~100
+  fields off a 143-field Single — and is the whole of Phase 2.
+- **API calls infer their store from the `Referer` header.** A storefront page
+  carries its slug in its own path, but the JS it runs calls
+  `/api/method/...`, which does not. Referer is the only place the slug still
+  is, and a browser may withhold it. The fix is for the storefront JS to send
+  the slug explicitly and for the server to prefer that argument; until then a
+  missing Referer falls back to the single-store/default resolution.
+- **The catalogue filter materialises product names.** `_store_product_names`
+  pulls every visible product name back and passes it as an `in` filter.
+  Correct, and fine at the scale these farms run, but it should become a join
+  before any catalogue grows into the thousands.

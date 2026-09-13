@@ -140,3 +140,19 @@ class TestPrefixedStoreRouting(IntegrationTestCase):
 		product = make_test_product("WS-ROUTE-DEFAULT", web_title="Route Test Default")
 		self.assertEqual(product.route, "store/route-test-default")
 		frappe.db.delete("Webstore Product", {"item": "WS-ROUTE-DEFAULT"})
+
+	def test_a_guest_sent_to_login_comes_back_to_the_same_stores_cart(self):
+		"""The login redirect used to be the literal string "/cart", which
+		would land a shopper from /flowers/cart in the default store's cart
+		after signing in - a different shop, and an empty basket."""
+		frappe.set_user("Guest")
+		_hit("/flowers/cart")
+		self.assertEqual(
+			frappe.local.flags.redirect_location, "/login?redirect-to=/flowers/cart"
+		)
+
+	def test_the_default_stores_cart_still_redirects_to_the_bare_path(self):
+		frappe.set_user("Guest")
+		_hit("/cart")
+		self.assertEqual(frappe.local.flags.redirect_location, "/login?redirect-to=/cart")
+

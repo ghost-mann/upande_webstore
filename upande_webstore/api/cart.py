@@ -185,7 +185,15 @@ def add_item(item_code, qty=1):
 	qty = frappe.utils.flt(qty) or 1
 	if qty <= 0:
 		frappe.throw(_("Quantity must be positive."), frappe.ValidationError)
-	if not frappe.db.get_value("Webstore Product", {"item": item_code, "published": 1}):
+	product = frappe.db.get_value("Webstore Product", {"item": item_code, "published": 1})
+	if not product:
+		frappe.throw(_("This product is not available."), frappe.ValidationError)
+	# Same message as an unpublished product on purpose: which shops carry
+	# which lines is not something an unauthenticated probe should be able to
+	# map by watching the error change.
+	from upande_webstore.services.catalog import is_in_current_store
+
+	if not is_in_current_store(product):
 		frappe.throw(_("This product is not available."), frappe.ValidationError)
 	cart = _get_open_cart(create=True)
 	existing = next((row for row in cart.items if row.item_code == item_code), None)

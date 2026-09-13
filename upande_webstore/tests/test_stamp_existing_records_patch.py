@@ -114,3 +114,45 @@ class TestStampExistingRecordsPatch(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_value("Quotation", result["quotation"], "custom_webstore"), DEFAULT_SLUG
 		)
+
+
+	def test_a_quotation_no_cart_ever_produced_is_left_alone(self):
+		"""custom_webstore means "this order came from a shop". A blanket
+		back-fill would stamp every quotation a sales rep ever raised in the
+		desk and destroy that meaning on its very first migration.
+
+		The desk quotation is built by copying the storefront's own — same
+		company, currency and price list, so it is valid — and then simply
+		never linked to a cart, which is the only thing that distinguishes
+		the two.
+		"""
+		make_webstore(DEFAULT_SLUG, title="Default")
+		clear_store_cache()
+
+		from upande_webstore.api import cart, checkout
+
+		frappe.set_user(BUYER)
+		cart.add_item("WS-PATCH-QUOTE-ITEM", 1)
+		result = checkout.place_order(po_reference="PO-PATCH-DESK")
+		frappe.set_user("Administrator")
+
+		from_store = result["quotation"]
+		desk = frappe.copy_doc(frappe.get_doc("Quotation", from_store))
+		desk.custom_webstore = ""
+		desk.flags.ignore_permissions = True
+		desk.insert()
+
+		# both look like a pre-Task-2 document; only one came from a cart
+		frappe.db.set_value("Quotation", from_store, "custom_webstore", "")
+
+		execute()
+
+		self.assertEqual(
+			frappe.db.get_value("Quotation", from_store, "custom_webstore"),
+			DEFAULT_SLUG,
+			"the quotation a cart produced was not stamped",
+		)
+		self.assertFalse(
+			frappe.db.get_value("Quotation", desk.name, "custom_webstore"),
+			"a quotation raised in the desk was stamped as coming from a storefront",
+		)

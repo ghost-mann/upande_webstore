@@ -111,3 +111,18 @@ def current_store_or_404():
 	if not store or (not store.published and "System Manager" not in frappe.get_roles()):
 		raise frappe.PageDoesNotExistError
 	return store
+
+
+def storefront_path(page):
+	"""The current store's URL for one of its own pages (`cart`, `wishlist`,
+	`store`).
+
+	The default store keeps the bare `/cart`; any other store's page lives
+	under its slug. Used for the guest login redirect, which would otherwise
+	send a shopper on /flowers/cart back to the default store's cart after
+	they log in.
+	"""
+	slug = getattr(frappe.local, "webstore_slug", None)
+	if not slug or slug == DEFAULT_SLUG:
+		return f"/{page}"
+	return f"/{slug}/{page}"

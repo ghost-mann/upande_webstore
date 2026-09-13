@@ -25,7 +25,12 @@ class TestCheckoutStampsWebstore(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		setup_webstore_settings()
-		make_test_product("WS-CHKWS-ITEM")
+		# The store comes first: the product belongs to the store checkout
+		# runs in, since a product outside the current catalogue is not
+		# addable to its cart.
+		delete_all_webstores()
+		make_webstore("flowers", title="Flowers")
+		make_test_product("WS-CHKWS-ITEM", primary_store="flowers")
 		make_item_price("WS-CHKWS-ITEM", "Standard Selling", 60)
 		make_portal_user(USER, "Checkout Webstore Buyer")
 
@@ -33,8 +38,11 @@ class TestCheckoutStampsWebstore(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		frappe.db.delete("Webstore Cart", {"user": USER})
 		set_stock("WS-CHKWS-ITEM", 10)
-		delete_all_webstores()
-		make_webstore("flowers", title="Flowers")
+		# test_no_store_resolved_leaves_the_field_blank deletes every store to
+		# make its point; put the class's own store back for whichever test
+		# runs next rather than leaving the product pointing at nothing.
+		if not frappe.db.exists("Webstore", "flowers"):
+			make_webstore("flowers", title="Flowers")
 		frappe.local.webstore_slug = "flowers"
 		clear_store_cache()
 		frappe.set_user(USER)
@@ -45,7 +53,6 @@ class TestCheckoutStampsWebstore(IntegrationTestCase):
 		clear_store_cache()
 		if hasattr(frappe.local, "webstore_slug"):
 			del frappe.local.webstore_slug
-		delete_all_webstores()
 
 	def test_place_order_stamps_the_resolved_store_on_the_quotation(self):
 		from upande_webstore.api import cart, checkout

@@ -22,16 +22,22 @@ class TestWishlistIsolation(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		setup_webstore_settings()
-		cls.rose = make_test_product("WS-WISH-ISO-ROSE", web_title="Wishlist Rose")
-		cls.milk = make_test_product("WS-WISH-ISO-MILK", web_title="Wishlist Milk")
+		# Stores before products, and each product in the store it is
+		# wishlisted from — see test_cart_isolation for the same reason.
+		delete_all_webstores()
+		make_webstore("flowers", title="Flowers")
+		make_webstore("dairy", title="Dairy")
+		cls.rose = make_test_product(
+			"WS-WISH-ISO-ROSE", web_title="Wishlist Rose", primary_store="flowers"
+		)
+		cls.milk = make_test_product(
+			"WS-WISH-ISO-MILK", web_title="Wishlist Milk", primary_store="dairy"
+		)
 		make_portal_user(USER)
 
 	def setUp(self):
 		frappe.set_user(USER)
 		frappe.db.delete("Webstore Wishlist", {"user": USER})
-		delete_all_webstores()
-		make_webstore("flowers", title="Flowers")
-		make_webstore("dairy", title="Dairy")
 		clear_store_cache()
 
 	def tearDown(self):
@@ -40,7 +46,6 @@ class TestWishlistIsolation(IntegrationTestCase):
 		clear_store_cache()
 		if hasattr(frappe.local, "webstore_slug"):
 			del frappe.local.webstore_slug
-		delete_all_webstores()
 
 	def _as(self, slug):
 		frappe.local.webstore_slug = slug
@@ -82,3 +87,12 @@ class TestWishlistIsolation(IntegrationTestCase):
 		first.insert(ignore_permissions=True)
 		duplicate = frappe.get_doc({"doctype": "Webstore Wishlist", "user": USER, "webstore": "flowers"})
 		self.assertRaises(frappe.ValidationError, duplicate.insert, ignore_permissions=True)
+
+	def test_a_product_from_another_store_cannot_be_wishlisted(self):
+		"""Same rule as the cart: out of catalogue, out of reach."""
+		from upande_webstore.api import wishlist
+
+		self._as("flowers")
+		with self.assertRaises(frappe.ValidationError):
+			wishlist.toggle(self.milk.name)
+

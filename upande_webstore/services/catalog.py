@@ -39,6 +39,31 @@ def _apply_store_filter(filters):
 	return filters
 
 
+def is_in_current_store(product):
+	"""Is this `Webstore Product` (by name) part of the resolved store's
+	catalogue?
+
+	The listing pages filter the catalogue, but a cart or wishlist call names
+	a product directly, so without this a crafted request could put a dairy
+	product into the flower store's cart — the listing would hide it and the
+	cart would still carry it into a Sales Order stamped with the wrong shop.
+	Answered per product rather than by reusing _store_product_names, which
+	pulls the whole catalogue back to compare one name against it.
+	"""
+	from upande_webstore.services.store import DEFAULT_SLUG, current_store
+
+	store = current_store()
+	if not store:
+		# No store resolved at all (a site whose patch has never run): the
+		# catalogue is unfiltered, so nothing is out of store either.
+		return True
+	rows = frappe.get_all("Webstore Product Store", filters={"parent": product}, pluck="webstore")
+	if rows:
+		return store.name in rows
+	primary = frappe.db.get_value("Webstore Product", product, "primary_store") or DEFAULT_SLUG
+	return primary == store.name
+
+
 def get_products(search=None, category=None, featured_only=False, start=0, page_length=12):
 	filters = _apply_store_filter({"published": 1})
 	if category:

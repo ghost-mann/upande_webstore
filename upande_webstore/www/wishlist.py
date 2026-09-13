@@ -2,7 +2,7 @@ import frappe
 
 
 def get_context(context):
-	from upande_webstore.services.store import current_store_or_404
+	from upande_webstore.services.store import current_store_or_404, storefront_path
 	from upande_webstore.theme.features import require
 
 	# An explicit /<slug>/wishlist must 404 for an unknown or unpublished
@@ -10,7 +10,7 @@ def get_context(context):
 	current_store_or_404()
 	require("wishlist")
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect-to=/wishlist"
+		frappe.local.flags.redirect_location = f"/login?redirect-to={storefront_path('wishlist')}"
 		raise frappe.Redirect
 	from upande_webstore.api.wishlist import get_wishlist
 
