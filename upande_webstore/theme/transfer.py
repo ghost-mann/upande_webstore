@@ -142,6 +142,13 @@ def import_theme(payload):
 			settings.append(table, {k: v for k, v in row.items() if k not in ROW_META_FIELDS})
 
 	settings.flags.ignore_permissions = True
+	# A theme write touches only Theme, Branding and Features fields — whether
+	# the farm has chosen a company or a guest price list is none of its
+	# business, and both are reqd. Without this, apply_preset on a fresh
+	# install (seed_default_theme, before either is ever set) throws
+	# MandatoryError and after_install aborts partway: the app registers and
+	# its custom fields land, but the site never gets its default theme.
+	settings.flags.ignore_mandatory = True
 	settings.save()
 	frappe.clear_cache()
 

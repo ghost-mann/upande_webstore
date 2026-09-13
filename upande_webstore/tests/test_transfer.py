@@ -181,6 +181,25 @@ class TestExportImport(IntegrationTestCase):
 		self.assertEqual(settings.quotation_validity_days, 14)
 		self.assertTrue(settings.warehouses)
 
+	def test_import_theme_succeeds_with_no_company_or_guest_price_list(self):
+		"""import_theme only ever touches Theme/Branding/Feature fields, so it
+		must not be gated on mandatory fields it never writes."""
+		from upande_webstore.theme.transfer import import_theme
+
+		settings = frappe.get_doc("Webstore Settings")
+		settings.flags.ignore_mandatory = True
+		settings.company = ""
+		settings.guest_price_list = ""
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
+		import_theme({"schema": 1, "fields": {"accent": "#1e4d8c"}, "tables": {}})
+
+		restored = frappe.get_doc("Webstore Settings")
+		self.assertEqual(restored.accent, "#1e4d8c")
+		self.assertFalse(restored.company)
+		self.assertFalse(restored.guest_price_list)
+
 	def test_reports_missing_images(self):
 		from upande_webstore.theme.transfer import import_theme
 
@@ -467,6 +486,34 @@ class TestInstallSeeding(IntegrationTestCase):
 
 		after_migrate()
 		self.assertFalse(frappe.db.get_single_value("Webstore Settings", "accent"))
+
+	def test_seeds_default_preset_with_no_company_or_guest_price_list(self):
+		"""A fresh install has neither field set yet — both are reqd, but a
+		theme write must not be blocked by mandatory fields it has nothing to
+		do with. This is the exact failure seed_default_theme hit installing
+		on a real fresh site: apply_preset's settings.save() threw
+		MandatoryError on guest_price_list and after_install aborted partway,
+		with the app registered and its custom fields created but no theme
+		ever applied."""
+		from upande_webstore.setup.install import seed_default_theme
+
+		settings = frappe.get_doc("Webstore Settings")
+		settings.flags.ignore_mandatory = True
+		settings.company = ""
+		settings.guest_price_list = ""
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
+		seed_default_theme()
+
+		settings = frappe.get_doc("Webstore Settings")
+		self.assertFalse(settings.company)
+		self.assertFalse(settings.guest_price_list)
+		# the preset must actually have landed, not merely failed to raise
+		self.assertEqual(settings.accent, "#1e4d8c")
+		self.assertEqual(settings.accent_dark, "#143562")
+		self.assertEqual(settings.wordmark_bold, "flowers")
+		self.assertEqual(len(settings.category_cards), 2)
 
 
 class TestTransferPermissions(IntegrationTestCase):

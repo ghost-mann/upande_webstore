@@ -149,6 +149,25 @@ class TestCategoryImageMigration(IntegrationTestCase):
 		execute()
 		self.assertEqual(frappe.get_doc("Webstore Settings").category_cards, [])
 
+	def test_migrates_legacy_images_with_no_company_or_guest_price_list(self):
+		"""This patch runs on every migrate, including a site whose general
+		settings were never filled in yet; it writes only category_cards, so
+		it must not be blocked by mandatory fields it has nothing to do with."""
+		from upande_webstore.patches.move_category_images_to_table import execute
+
+		settings = frappe.get_doc("Webstore Settings")
+		settings.flags.ignore_mandatory = True
+		settings.company = ""
+		settings.guest_price_list = ""
+		settings.save(ignore_permissions=True)
+		frappe.clear_cache()
+
+		self._set_legacy(flowers_category_image="/files/f.jpg")
+		execute()
+
+		cards = frappe.get_doc("Webstore Settings").category_cards
+		self.assertEqual([card.label for card in cards], ["Flowers", "Coffee", "Fresh Produce"])
+
 	def test_leaves_existing_cards_alone(self):
 		from upande_webstore.patches.move_category_images_to_table import execute
 

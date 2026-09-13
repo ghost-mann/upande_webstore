@@ -39,5 +39,10 @@ def execute():
 		)
 	settings.flags.ignore_permissions = True
 	settings.flags.ignore_validate = True
+	# Same reasoning as theme/transfer.py::import_theme: this write only ever
+	# touches category_cards, never company or guest_price_list, so a site
+	# migrating before either general-settings field is filled in must not
+	# have this patch fail out from under it.
+	settings.flags.ignore_mandatory = True
 	settings.save()
 	frappe.clear_cache()
