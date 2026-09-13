@@ -9,12 +9,16 @@ from upande_webstore.theme.features import guard
 
 
 def _get_wishlist(create=False):
-	name = frappe.db.get_value("Webstore Wishlist", {"user": frappe.session.user})
+	from upande_webstore.services.store import current_store
+
+	store = current_store()
+	filters = {"user": frappe.session.user, "webstore": store.name if store else ""}
+	name = frappe.db.get_value("Webstore Wishlist", filters)
 	if name:
 		return frappe.get_doc("Webstore Wishlist", name)
 	if not create:
 		return None
-	doc = frappe.get_doc({"doctype": "Webstore Wishlist", "user": frappe.session.user})
+	doc = frappe.get_doc({"doctype": "Webstore Wishlist", **filters})
 	doc.insert(ignore_permissions=True)
 	return doc
 

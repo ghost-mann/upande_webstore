@@ -10,9 +10,22 @@ class WebstoreProduct(WebsiteGenerator):
 	)
 
 	def make_route(self):
-		return "store/" + self.scrub(self.web_title)
+		"""One product, one canonical URL: `store/<title>` for the default
+		store (unchanged from before multi-store existed), `<slug>/store/<title>`
+		for any other. A blank primary_store belongs to the default store -
+		see the field's own description."""
+		from upande_webstore.services.store import DEFAULT_SLUG
+
+		suffix = "store/" + self.scrub(self.web_title)
+		primary = (self.primary_store or DEFAULT_SLUG).strip()
+		return suffix if primary == DEFAULT_SLUG else f"{primary}/{suffix}"
 
 	def validate(self):
+		if self.has_value_changed("primary_store"):
+			# WebsiteGenerator.set_route() only computes a route while
+			# self.route is still blank; a primary store change must force
+			# that recompute or the product keeps answering at its old URL.
+			self.route = None
 		super().validate()
 		if not self.image:
 			self.image = frappe.db.get_value("Item", self.item, "image")

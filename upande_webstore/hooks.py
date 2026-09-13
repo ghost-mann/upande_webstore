@@ -59,6 +59,22 @@ update_website_context = ["upande_webstore.services.settings.update_website_cont
 # include app icons in desk
 # app_include_icons = "upande_webstore/public/icons.svg"
 
+# Website Routing
+# ----------------
+
+# A non-default store's storefront lives at /<slug>/store, /<slug>/cart and
+# /<slug>/wishlist; the default store keeps the bare /store, /cart, /wishlist
+# it has always had (no rule needed - those paths are the www/ files
+# themselves). Each rule only has to land the request on the same controller
+# the unprefixed page already uses; www/store.py's own get_context() (via
+# services.store.current_store_or_404) is what turns <slug> into a resolved
+# store or a 404 - werkzeug's route match only has to pick the right file.
+website_route_rules = [
+	{"from_route": "/<slug>/store", "to_route": "store"},
+	{"from_route": "/<slug>/cart", "to_route": "cart"},
+	{"from_route": "/<slug>/wishlist", "to_route": "wishlist"},
+]
+
 # Home Pages
 # ----------
 
@@ -230,7 +246,10 @@ doc_events = {
 # portal instead - see redirect_me_to_portal's docstring for why this is a
 # before_request hook and not the get_website_user_home_page hook above,
 # which only fires on login.
-before_request = ["upande_webstore.services.portal.redirect_me_to_portal"]
+before_request = [
+	"upande_webstore.services.store.resolve_webstore_prefix",
+	"upande_webstore.services.portal.redirect_me_to_portal",
+]
 # after_request = ["upande_webstore.utils.after_request"]
 
 # Job Events

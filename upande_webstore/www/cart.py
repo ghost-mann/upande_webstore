@@ -5,8 +5,12 @@ from upande_webstore.services.pricing import get_customer
 
 
 def get_context(context):
+	from upande_webstore.services.store import current_store_or_404
 	from upande_webstore.theme.features import require
 
+	# An explicit /<slug>/cart must 404 for an unknown or unpublished slug
+	# rather than silently showing the default store's cart.
+	current_store_or_404()
 	require("cart")
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/cart"

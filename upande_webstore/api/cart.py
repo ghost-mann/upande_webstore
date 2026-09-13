@@ -12,14 +12,20 @@ def _require_login():
 
 
 def _get_open_cart(create=False):
-	name = frappe.db.get_value(
-		"Webstore Cart", {"user": frappe.session.user, "status": "Open"}
-	)
+	from upande_webstore.services.store import current_store
+
+	store = current_store()
+	filters = {
+		"user": frappe.session.user,
+		"status": "Open",
+		"webstore": store.name if store else "",
+	}
+	name = frappe.db.get_value("Webstore Cart", filters)
 	if name:
 		return frappe.get_doc("Webstore Cart", name)
 	if not create:
 		return None
-	cart = frappe.get_doc({"doctype": "Webstore Cart", "user": frappe.session.user, "status": "Open"})
+	cart = frappe.get_doc({"doctype": "Webstore Cart", **filters})
 	cart.insert(ignore_permissions=True)
 	return cart
 

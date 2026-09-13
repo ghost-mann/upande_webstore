@@ -1,12 +1,16 @@
 import frappe
 
 from upande_webstore.services.catalog import get_categories, get_products
+from upande_webstore.services.store import current_store_or_404
 
 PAGE_LENGTH = 12
 
 
 def get_context(context):
 	context.no_cache = 1
+	# An explicit /<slug>/store must 404 for an unknown or unpublished slug
+	# rather than silently showing the default store's catalogue.
+	current_store_or_404()
 	search = frappe.form_dict.get("q") or None
 	category = frappe.form_dict.get("category") or None
 	page = max(frappe.utils.cint(frappe.form_dict.get("page")) or 1, 1)

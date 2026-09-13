@@ -15,6 +15,9 @@
   "published",
   "featured",
   "category",
+  "stores_section",
+  "primary_store",
+  "stores",
   "box_type",
   "route",
   "image",
@@ -57,6 +60,25 @@
    "fieldtype": "Link",
    "label": "Category",
    "options": "Item Group"
+  },
+  {
+   "fieldname": "stores_section",
+   "fieldtype": "Section Break",
+   "label": "Stores"
+  },
+  {
+   "fieldname": "primary_store",
+   "fieldtype": "Link",
+   "label": "Primary Store",
+   "options": "Webstore",
+   "description": "This product's one canonical URL is under this store. Blank means the default store, so a single-store site needs no change here."
+  },
+  {
+   "fieldname": "stores",
+   "fieldtype": "Table",
+   "label": "Also Listed In",
+   "options": "Webstore Product Store",
+   "description": "Which storefronts' catalogues list this product, besides its primary store. Leave empty and only the default store's catalogue lists it."
   },
   {
    "fieldname": "box_type",

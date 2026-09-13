@@ -7,9 +7,10 @@
  "creation": "2026-07-20 00:00:01.000000",
  "modified": "2026-07-20 00:00:01.000000",
  "owner": "Administrator",
- "field_order": ["user", "items"],
+ "field_order": ["user", "webstore", "items"],
  "fields": [
-  {"fieldname": "user", "fieldtype": "Link", "label": "User", "options": "User", "reqd": 1, "unique": 1},
+  {"fieldname": "user", "fieldtype": "Link", "label": "User", "options": "User", "reqd": 1},
+  {"fieldname": "webstore", "fieldtype": "Link", "label": "Webstore", "options": "Webstore", "description": "Blank on a site with no Webstore rows yet; otherwise the store this wishlist belongs to. user + webstore is unique (enforced in webstore_wishlist.py, not by the column) - one wishlist per user per store, not one per user site-wide."},
   {"fieldname": "items", "fieldtype": "Table", "label": "Items", "options": "Webstore Wishlist Item"}
  ],
  "permissions": [

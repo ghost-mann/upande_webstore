@@ -64,6 +64,17 @@ WEBSTORE_CUSTOM_FIELDS = {
 			"insert_after": "webstore_notes",
 			"read_only": 1,
 		},
+		{
+			# Which storefront this quotation came from - the one thing
+			# checkout can tell the desk that nothing else on the document
+			# does, now that one site can run more than one shop.
+			"fieldname": "custom_webstore",
+			"fieldtype": "Link",
+			"label": "Webstore",
+			"options": "Webstore",
+			"insert_after": "webstore_portal_status",
+			"read_only": 1,
+		},
 	],
 	# Direct webstore orders carry the customer's notes too. The PO reference
 	# uses Sales Order's own standard po_no field rather than a custom one.
@@ -95,6 +106,15 @@ WEBSTORE_CUSTOM_FIELDS = {
 			"label": "Mixed Box Grading",
 			"insert_after": "webstore_dropoff_points",
 			"default": "0",
+		},
+		{
+			# Which storefront this order came from - see Quotation.custom_webstore.
+			"fieldname": "custom_webstore",
+			"fieldtype": "Link",
+			"label": "Webstore",
+			"options": "Webstore",
+			"insert_after": "custom_has_mixed_boxes",
+			"read_only": 1,
 		},
 	],
 	# Line-level box detail, on both the quotation and the order. `custom_`

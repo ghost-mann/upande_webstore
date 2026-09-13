@@ -240,6 +240,8 @@ def make_test_product(item_code, **kwargs):
 		"featured": kwargs.get("featured", 0),
 		"category": item.item_group,
 		"short_description": kwargs.get("short_description", f"Short blurb for {item_code}"),
+		"primary_store": kwargs.get("primary_store"),
+		"stores": [{"webstore": slug} for slug in (kwargs.get("stores") or [])],
 	})
 	product.insert(ignore_permissions=True)
 	return product

@@ -4,8 +4,43 @@ from upande_webstore.services.pricing import get_item_price, get_variant_price_r
 from upande_webstore.services.stock import get_stock_info
 
 
+def _store_product_names(store):
+	"""Every `Webstore Product` name visible in `store` (a slug).
+
+	Membership is the `stores` child table when it has any rows at all - a
+	product listed under several storefronts. An empty table falls back to
+	the product's own `primary_store` (blank meaning the default store), so
+	an unscoped product still shows in exactly the one catalogue it always
+	has - its own, never nothing and never every store at once.
+	"""
+	from upande_webstore.services.store import DEFAULT_SLUG
+
+	explicit = frappe.get_all("Webstore Product Store", filters={"webstore": store}, pluck="parent")
+	assigned = frappe.get_all("Webstore Product Store", pluck="parent", distinct=True)
+
+	filters = {"name": ["not in", assigned]} if assigned else {}
+	filters["primary_store"] = ["in", ("", store)] if store == DEFAULT_SLUG else store
+	implicit = frappe.get_all("Webstore Product", filters=filters, pluck="name")
+
+	return list(set(explicit) | set(implicit))
+
+
+def _apply_store_filter(filters):
+	"""Narrow `filters` (a dict of Webstore Product filters, mutated in
+	place) to the resolved store's catalogue - or leave it untouched when no
+	store resolves at all, which is what keeps a site with no `Webstore` row
+	yet (before Task 1's patch has ever run) showing every product exactly
+	as it did before this feature existed."""
+	from upande_webstore.services.store import current_store
+
+	store = current_store()
+	if store:
+		filters["name"] = ["in", _store_product_names(store.name)]
+	return filters
+
+
 def get_products(search=None, category=None, featured_only=False, start=0, page_length=12):
-	filters = {"published": 1}
+	filters = _apply_store_filter({"published": 1})
 	if category:
 		filters["category"] = category
 	if featured_only:
@@ -75,7 +110,9 @@ def get_categories():
 
 	from upande_webstore.services.settings import get_settings
 
-	categories = frappe.get_all("Webstore Product", filters={"published": 1}, pluck="category")
+	categories = frappe.get_all(
+		"Webstore Product", filters=_apply_store_filter({"published": 1}), pluck="category"
+	)
 	counts = Counter(c for c in categories if c)
 
 	configured = get_settings().get("categories") or []

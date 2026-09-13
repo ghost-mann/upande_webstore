@@ -158,6 +158,20 @@ def _assert_shipping_date(shipping_date):
 		)
 
 
+def _stamp_webstore(fields, target_doctype):
+	"""Which shop this order came from - the single most useful thing
+	checkout can tell the desk now that one site can run more than one
+	storefront. Guarded like every other custom field write here: skipping
+	is always safe, the order still places without it."""
+	if not _writable(target_doctype, "custom_webstore", expect_options="Webstore", expect_fieldtype="Link"):
+		return
+	from upande_webstore.services.store import current_store
+
+	store = current_store()
+	if store:
+		fields["custom_webstore"] = store.name
+
+
 def _store_delivery_point(doc, delivery_point):
 	"""Written after insert, and only where it can be stored.
 
@@ -271,7 +285,7 @@ def _create_quotation(
 	po_reference, notes, shipping_date=None, dropoff_points=None,
 	delivery_point=None,
 ):
-	quotation = frappe.get_doc({
+	fields = {
 		"doctype": "Quotation",
 		"quotation_to": "Customer",
 		"party_name": customer,
@@ -287,7 +301,9 @@ def _create_quotation(
 		"webstore_shipping_date": shipping_date or None,
 		"webstore_dropoff_points": dropoff_points or None,
 		"items": _cart_items(cart, "Quotation Item"),
-	})
+	}
+	_stamp_webstore(fields, "Quotation")
+	quotation = frappe.get_doc(fields)
 	quotation.flags.ignore_permissions = True
 	quotation.insert()
 	quotation.submit()
@@ -306,7 +322,7 @@ def _create_sales_order(
 	# which is what ERPNext plans and picks against
 	# validated in place_order; falls back to the farm's lead time
 	delivery_date = shipping_date or _earliest_delivery_date()
-	order = frappe.get_doc({
+	fields = {
 		"doctype": "Sales Order",
 		"customer": customer,
 		"order_type": "Shopping Cart",
@@ -332,7 +348,9 @@ def _create_sales_order(
 			if _writable("Sales Order", "custom_has_mixed_boxes", expect_fieldtype="Check")
 			else {}
 		),
-	})
+	}
+	_stamp_webstore(fields, "Sales Order")
+	order = frappe.get_doc(fields)
 	order.flags.ignore_permissions = True
 	order.insert()
 	_store_delivery_point(order, delivery_point)
