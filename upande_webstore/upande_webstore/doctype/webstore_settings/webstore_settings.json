@@ -30,6 +30,7 @@
   "order_manager_roles",
   "portal_manager_roles",
   "applied_role_permissions",
+  "created_custom_fields",
   "theme_tab",
   "theme_intro",
   "brand_colors_section",
@@ -294,6 +295,15 @@
    "hidden": 1,
    "read_only": 1,
    "description": "Internal record of exactly what the Roles section above has applied (doctype → role → permission types), so the next save reconciles against what this panel actually added rather than whatever else exists."
+  },
+  {
+   "fieldname": "created_custom_fields",
+   "fieldtype": "Code",
+   "label": "Created Custom Fields",
+   "options": "JSON",
+   "hidden": 1,
+   "read_only": 1,
+   "description": "Internal record of every Custom Field (doctype → fieldnames) this app's own installer has created. custom_box_type is the one field the installer ever repoints after creation, and it must only ever repoint one it created itself — never a same-named field another app defined, which this record is how it tells the two apart."
   },
   {
    "fieldname": "theme_tab",

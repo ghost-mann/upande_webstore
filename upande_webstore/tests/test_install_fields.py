@@ -272,7 +272,8 @@ class TestBoxTypeFieldRepoint(IntegrationTestCase):
 	"""The one place create-only bends: a `custom_box_type` this app created
 	itself, still empty, gets repointed if the resolved box source moves out
 	from under it after creation. A populated one is left untouched exactly
-	like every other existing field.
+	like every other existing field, and so — regardless of rows — is a field
+	this app never created in the first place.
 
 	`Sales Order Item` is used here rather than `Quotation Item`: this site's
 	`Quotation Item.custom_box_type` already carries data from other tests'
@@ -293,6 +294,20 @@ class TestBoxTypeFieldRepoint(IntegrationTestCase):
 		self.assertEqual(
 			baseline_rows, 0, "this site already has custom_box_type data on Sales Order Item"
 		)
+
+		# This field predates the created_custom_fields tracking record, same
+		# as any site that installed upande_webstore before it shipped — so
+		# establish, as ground truth, what actually happened: this app's own
+		# installer created it, long before this test ever ran. Snapshotted
+		# raw and restored verbatim in tearDown so this write never leaks into
+		# another module.
+		from upande_webstore.setup.install import _record_created_fields
+
+		self.original_created_fields_raw = frappe.db.get_single_value(
+			"Webstore Settings", "created_custom_fields"
+		)
+		_record_created_fields({self.DT: [{"fieldname": "custom_box_type"}]})
+
 		from upande_webstore.tests.utils import drop_box_type_doctype
 
 		drop_box_type_doctype()
@@ -310,6 +325,9 @@ class TestBoxTypeFieldRepoint(IntegrationTestCase):
 		# clears whichever row a test set, without deleting the row itself —
 		# these are real Sales Order Item lines, only the probe column is ours.
 		frappe.db.sql(f"update `tab{self.DT}` set custom_box_type=NULL where custom_box_type != ''")
+		frappe.db.set_single_value(
+			"Webstore Settings", "created_custom_fields", self.original_created_fields_raw or ""
+		)
 		drop_box_type_doctype()
 		frappe.clear_cache(doctype=self.DT)
 		clear_box_source_cache()
@@ -357,6 +375,51 @@ class TestBoxTypeFieldRepoint(IntegrationTestCase):
 			0,
 			"an untouched field must not gain data as a side effect",
 		)
+
+	def test_a_field_this_app_did_not_create_is_never_repointed(self):
+		"""Regression for kaitet.local: Quotation Item, Sales Invoice Item and
+		Website Item's `custom_box_type` there all belong to another app that
+		models boxes through its own `Box Type` doctype, created long before
+		upande_webstore was ever installed, and all held zero rows — exactly
+		the shape the old "empty means safe" reasoning wrongly treated as
+		this installer's to rewrite. Simulate that here by undoing the
+		tracking setUp recorded: an untracked, empty, mismatched field must be
+		left exactly where it is, however it holds up under every other guard.
+		"""
+		from upande_webstore.setup.install import create_webstore_custom_fields
+		from upande_webstore.tests.utils import make_box_type
+
+		frappe.db.set_single_value("Webstore Settings", "created_custom_fields", "")
+
+		make_box_type("Xpol", 350)  # flips the resolved source to Box Type
+		create_webstore_custom_fields()
+
+		self.assertEqual(
+			frappe.db.get_value("Custom Field", self.name, "options"),
+			"Item",
+			"a field this app never created was repointed away from another app's target",
+		)
+
+	def test_running_the_installer_twice_is_idempotent(self):
+		"""create_webstore_custom_fields runs its own create pass twice on
+		every call (see its docstring), and every migrate calls it again on
+		top of that. Neither the repoint itself nor the tracking record it
+		reads should move on a second run over an unchanged site."""
+		from upande_webstore.setup.install import _load_created_fields, create_webstore_custom_fields
+		from upande_webstore.tests.utils import make_box_type
+
+		make_box_type("Xpol", 350)
+		create_webstore_custom_fields()
+		after_first = frappe.db.get_value("Custom Field", self.name, "options")
+		tracked_first = _load_created_fields()
+
+		create_webstore_custom_fields()
+		after_second = frappe.db.get_value("Custom Field", self.name, "options")
+		tracked_second = _load_created_fields()
+
+		self.assertEqual(after_first, "Box Type")
+		self.assertEqual(after_first, after_second)
+		self.assertEqual(tracked_first, tracked_second)
 
 
 class TestItemPackingSection(IntegrationTestCase):

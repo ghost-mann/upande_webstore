@@ -1,3 +1,4 @@
+import json
 import os
 
 import frappe
@@ -250,7 +251,66 @@ def _create_missing_fields():
 	# prevent. This makes the guarantee hold at the API boundary too, rather than
 	# resting on meta freshness alone.
 	create_custom_fields(missing, ignore_validate=True, update=False)
+	_record_created_fields(missing)
 	return notable
+
+
+def _load_created_fields():
+	"""doctype -> set of fieldnames this app's own installer has itself
+	created, as recorded by _record_created_fields below.
+
+	Never inferred from a field's current shape or from what merely exists in
+	Custom Field — only ever populated the moment create_custom_fields() has
+	just created that exact row. This is the only way _repoint_unused_box_type_fields
+	can tell "ours" from a same-named field another app defined before this
+	app was ever installed (see its own docstring for why that distinction
+	matters)."""
+	raw = frappe.db.get_single_value("Webstore Settings", "created_custom_fields")
+	if not raw:
+		return {}
+	try:
+		data = json.loads(raw)
+	except (TypeError, ValueError):
+		return {}
+	if not isinstance(data, dict):
+		return {}
+	return {
+		doctype: set(fieldnames)
+		for doctype, fieldnames in data.items()
+		if isinstance(fieldnames, list)
+	}
+
+
+def _record_created_fields(missing):
+	"""Persist that create_custom_fields() was just given `missing` and (bar
+	an error it would itself raise) created every field in it — merged with
+	whatever this app has recorded creating before, so a repeat migrate never
+	forgets an earlier pass's fields.
+
+	Written with frappe.db.set_single_value rather than through a loaded doc's
+	.save(): this runs from install/migrate, often before or alongside a
+	Webstore Settings save of its own, and a Single's tabSingles row is
+	column-level storage — the same reasoning tests/utils.py's
+	reset_portal_settings and this module's own normalise_settings_docstatus
+	already rely on to avoid contending with another save in flight.
+	"""
+	if not missing:
+		return
+	created = _load_created_fields()
+	changed = False
+	for doctype, fields in missing.items():
+		bucket = created.setdefault(doctype, set())
+		for df in fields:
+			if df["fieldname"] not in bucket:
+				bucket.add(df["fieldname"])
+				changed = True
+	if not changed:
+		return
+	frappe.db.set_single_value(
+		"Webstore Settings",
+		"created_custom_fields",
+		json.dumps({doctype: sorted(fieldnames) for doctype, fieldnames in created.items()}, sort_keys=True),
+	)
 
 
 def _resolved_fields():
@@ -400,14 +460,19 @@ def _repoint_unused_box_type_fields():
 	refuses to write box detail to it, because its `options` no longer match
 	the resolved source — silently, with only an Error Log line to notice by.
 
-	An empty Link has nothing to orphan, so this is the one place create-only
-	bends: rewrite it while it holds zero rows, leave it the moment it holds
-	one. Karen Roses' `Sales Order Item.custom_box_type` — 5,019 live values —
-	is real data pointed at a doctype this app does not own, and the row-count
-	guard below leaves it exactly where create-only already leaves it. A
-	standard DocField is left alone unconditionally: only a Custom Field row
-	can be updated here, and repointing a field another app defines outright
-	is not this installer's call to make.
+	An empty Link has nothing to orphan *of ours* — but "empty" alone used to
+	be treated as proof of that, and on a real site it is not. kaitet.local's
+	`Quotation Item.custom_box_type` holds zero rows for the mundane reason
+	that quotations have not used it yet, not because nobody owns it: another
+	app models boxes through its own `Box Type` doctype and created that field
+	long before this app was ever installed. Repointing it to `Item` would
+	silently rewrite that app's schema. So this only ever acts on a field
+	`_create_missing_fields` recorded creating itself (`created_custom_fields`
+	on Webstore Settings) — never on one merely shaped like ours, and never on
+	one this installer has only ever found already there. `Sales Order Item`
+	on that same site is protected only by the accident of holding 31,878 rows;
+	the fields that matter are the empty ones, which the row-count guard alone
+	cannot tell apart from a field this app has every right to fix.
 
 	Also restricted to a field currently pointed at `Item` or `Box Type` — the
 	only two doctypes this app itself ever resolves as a box source. A field
@@ -419,10 +484,13 @@ def _repoint_unused_box_type_fields():
 	from upande_webstore.services import packing
 
 	known_sources = ("Item", packing.BOX_TYPE_DOCTYPE)
+	created = _load_created_fields()
 	for mismatch in box_type_field_mismatches():
 		if not mismatch.is_custom_field or mismatch.rows:
 			continue
 		if mismatch.targets not in known_sources:
+			continue
+		if "custom_box_type" not in created.get(mismatch.doctype, ()):
 			continue
 		name = frappe.db.get_value(
 			"Custom Field", {"dt": mismatch.doctype, "fieldname": "custom_box_type"}, "name"
