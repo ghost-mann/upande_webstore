@@ -10,3 +10,4 @@ upande_webstore.patches.reclaim_orphan_webstore_workspace
 upande_webstore.patches.move_category_images_to_table
 upande_webstore.patches.reset_webstore_settings_docstatus
 upande_webstore.patches.migrate_issue_claims_to_webstore_claim
+upande_webstore.patches.create_default_webstore

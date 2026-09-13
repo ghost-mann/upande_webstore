@@ -404,3 +404,18 @@ def make_variant_template(template_code):
 			variant.item_code = variant_code
 			variant.insert(ignore_permissions=True)
 	return template
+
+
+def delete_all_webstores():
+	"""Remove every Webstore, children and all.
+
+	Not `frappe.db.delete("Webstore")`: that drops only the parent rows, and
+	the categories, guest price lists and warehouses under them survive with
+	their old parent name, so the next store created with the same slug
+	silently adopts them. Not a blanket delete on the child tables either —
+	Webstore Settings keeps its own rows in those same tables and clearing
+	them table-wide inside a test transaction conflicts with the Single. Going
+	through delete_doc is slower and cascades exactly the right rows.
+	"""
+	for name in frappe.get_all("Webstore", pluck="name"):
+		frappe.delete_doc("Webstore", name, force=True, ignore_permissions=True)

@@ -1,8 +1,79 @@
 import frappe
 
+# Per-store scalars a `Webstore` row may override. Listed once here rather
+# than left implicit in _merge, since it doubles as the exact set the spec
+# calls "per-store scalars" — anything else on Webstore Settings stays
+# site-wide until Task 2 moves more of it.
+_OVERLAY_SCALARS = (
+	"checkout_mode",
+	"default_box_type",
+	"minimum_order_stems",
+	"default_lead_days",
+)
+
+# Checkbox-valued overrides need three states, not two: a dairy store must be
+# able to turn box packing off while the flower store on the same site leaves
+# it on, and a Check field cannot express "off" and "inherit" at once. The
+# Webstore field is a Select whose blank option means inherit; these are the
+# two words that do not.
+_TRISTATE_SCALARS = {"enable_box_packing": {"Enabled": 1, "Disabled": 0}}
+
+# Per-store child tables. Reused verbatim from Webstore Settings — see
+# webstore.json — so a half-merged table is never possible: a store either
+# supplies the whole list or none of it.
+_OVERLAY_TABLES = ("categories", "guest_price_lists", "warehouses")
+
 
 def get_settings():
-	return frappe.get_cached_doc("Webstore Settings")
+	"""The site Single, overlaid with the resolved store's non-empty values.
+
+	Signature and return shape are unchanged on purpose: 23 call sites read
+	this via attribute and `.get()` access and iterate its child tables, and
+	must keep working whether or not `Webstore` rows exist at all. A site with
+	no store resolved (there is no Webstore row yet, or none matches) gets
+	back the Single exactly as before this feature existed — the identical
+	cached object, not a copy — which is what keeps a single-store site's
+	behaviour provably unchanged.
+	"""
+	singles = frappe.get_cached_doc("Webstore Settings")
+
+	from upande_webstore.services.store import current_store
+
+	store = current_store()
+	if not store:
+		return singles
+	return _merge(singles, store)
+
+
+def _is_set(value):
+	"""Non-empty for both text fields (blank string) and Int fields (0 is
+	their unset state) - see webstore.py's field descriptions, which document
+	0/blank as "inherit" for every one of _OVERLAY_SCALARS."""
+	return value not in (None, "", 0, "0")
+
+
+def _merge(singles, store):
+	"""A store's non-empty scalars and non-empty tables over the Single.
+
+	Built as a fresh, unsaved Document from the Single's own dict rather than
+	mutating the cached Single in place - that object is shared by every
+	request until the next cache clear, and corrupting it would leak one
+	store's overrides into every other request on the site.
+	"""
+	merged = frappe.get_doc(singles.as_dict())
+	for field in _OVERLAY_SCALARS:
+		value = store.get(field)
+		if _is_set(value):
+			merged.set(field, value)
+	for field, states in _TRISTATE_SCALARS.items():
+		choice = states.get(store.get(field))
+		if choice is not None:
+			merged.set(field, choice)
+	for field in _OVERLAY_TABLES:
+		rows = store.get(field) or []
+		if rows:
+			merged.set(field, [row.as_dict(no_default_fields=True) for row in rows])
+	return merged
 
 
 def get_warehouses():

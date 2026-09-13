@@ -1,0 +1,140 @@
+{
+ "autoname": "field:slug",
+ "creation": "2026-09-13 00:00:01.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "slug",
+  "title",
+  "published",
+  "theme_preset",
+  "catalogue_section",
+  "categories",
+  "guest_price_lists",
+  "warehouses",
+  "packing_section",
+  "checkout_mode",
+  "enable_box_packing",
+  "default_box_type",
+  "minimum_order_stems",
+  "default_lead_days"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Identity"
+  },
+  {
+   "description": "URL path segment for this storefront, e.g. \"flowers\" for /flowers/store. Lowercase letters, digits and hyphens only; cannot start with a hyphen; cannot be a word the app or site already routes on.",
+   "fieldname": "slug",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Slug",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "published",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Published"
+  },
+  {
+   "description": "The preset name applied to this store's branding.",
+   "fieldname": "theme_preset",
+   "fieldtype": "Data",
+   "label": "Theme Preset"
+  },
+  {
+   "fieldname": "catalogue_section",
+   "fieldtype": "Section Break",
+   "label": "Catalogue & Pricing"
+  },
+  {
+   "description": "Leave empty to inherit the site-wide Webstore Settings categories.",
+   "fieldname": "categories",
+   "fieldtype": "Table",
+   "label": "Categories",
+   "options": "Webstore Category"
+  },
+  {
+   "description": "Leave empty to inherit the site-wide Webstore Settings guest price lists.",
+   "fieldname": "guest_price_lists",
+   "fieldtype": "Table",
+   "label": "Guest Price Lists (currency picker)",
+   "options": "Webstore Guest Price List"
+  },
+  {
+   "description": "Leave empty to inherit the site-wide Webstore Settings warehouses.",
+   "fieldname": "warehouses",
+   "fieldtype": "Table",
+   "label": "Stock Warehouses",
+   "options": "Webstore Warehouse"
+  },
+  {
+   "fieldname": "packing_section",
+   "fieldtype": "Section Break",
+   "label": "Boxes & Order Rules"
+  },
+  {
+   "description": "Which checkout button(s) this store's cart page offers. Blank inherits Webstore Settings.",
+   "fieldname": "checkout_mode",
+   "fieldtype": "Select",
+   "label": "Checkout Mode",
+   "options": "\nBuyer chooses\nQuotation only\nSales order only"
+  },
+  {
+   "description": "Box maths and the order minimum for this store. Blank inherits Webstore Settings; Disabled turns packing off for this store even when the site-wide setting is on.",
+   "fieldname": "enable_box_packing",
+   "fieldtype": "Select",
+   "label": "Box Packing Rules",
+   "options": "\nEnabled\nDisabled"
+  },
+  {
+   "description": "Seeds each new cart line for this store. Must be a usable box from this site's box source. Blank inherits Webstore Settings.",
+   "fieldname": "default_box_type",
+   "fieldtype": "Autocomplete",
+   "label": "Default Box Type"
+  },
+  {
+   "default": "0",
+   "description": "0 = inherit Webstore Settings. Checked against the whole cart, not per line.",
+   "fieldname": "minimum_order_stems",
+   "fieldtype": "Int",
+   "label": "Minimum Order (Stems)"
+  },
+  {
+   "description": "Earliest shipping date a buyer may request, and the fallback when none is given. Blank/0 inherits Webstore Settings.",
+   "fieldname": "default_lead_days",
+   "fieldtype": "Int",
+   "label": "Delivery Lead Time (Days)"
+  }
+ ],
+ "modified": "2026-09-13 00:00:01.000000",
+ "module": "Upande Webstore",
+ "name": "Webstore",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
