@@ -565,10 +565,57 @@ def ensure_navigation_block():
 	doc.save(ignore_permissions=True)
 
 
+DESKTOP_ICON = "Upande Webstore"
+
+
+def ensure_desktop_icon():
+	"""Create the app's tile on the desk's Apps screen.
+
+	The tile is a `Desktop Icon` row — not the Workspace, not the Workspace
+	Sidebar, and not the `add_to_apps_screen` hook. All three of those can be
+	perfectly well formed and the Apps screen still shows nothing, because it
+	renders from this doctype alone. Without a row here an installed app is
+	reachable only by typing its route.
+
+	Modelled on how the sibling apps ship theirs: an App-type icon linking to
+	the same `/desk/...` route as the apps-screen hook, so the tile and the
+	hook cannot disagree about where the app lives.
+
+	Idempotent, and tolerant of a site whose install profile has no
+	`Desktop Icon` doctype. An existing row is refreshed rather than
+	duplicated; `hidden` is deliberately not reset, so a user who hid the tile
+	keeps it hidden through the next migrate.
+	"""
+	if not frappe.db.exists("DocType", "Desktop Icon"):
+		return
+	route = next(
+		(entry.get("route") for entry in (frappe.get_hooks("add_to_apps_screen", app_name="upande_webstore") or [])),
+		"/desk/upande-webstore",
+	)
+	if frappe.db.exists("Desktop Icon", DESKTOP_ICON):
+		doc = frappe.get_doc("Desktop Icon", DESKTOP_ICON)
+	else:
+		doc = frappe.new_doc("Desktop Icon")
+		doc.name = DESKTOP_ICON
+		doc.hidden = 0
+	doc.update({
+		"label": DESKTOP_ICON,
+		"standard": 1,
+		"app": "upande_webstore",
+		"icon_type": "App",
+		"link_type": "External",
+		"link": route,
+		"logo_url": "/assets/upande_webstore/images/upande-logo.png",
+		"bg_color": "gray",
+	})
+	doc.save(ignore_permissions=True)
+
+
 def after_install():
 	create_webstore_custom_fields()
 	seed_default_theme()
 	ensure_navigation_block()
+	ensure_desktop_icon()
 
 
 def normalise_settings_docstatus():
@@ -598,3 +645,4 @@ def after_migrate():
 	create_webstore_custom_fields()
 	normalise_settings_docstatus()
 	ensure_navigation_block()
+	ensure_desktop_icon()

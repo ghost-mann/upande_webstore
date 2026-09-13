@@ -351,3 +351,53 @@ class TestNavigationBlockTiles(IntegrationTestCase):
 		"""The one tile whose doctype is not guaranteed to exist must be tagged
 		so the script can hide it quietly instead of shipping a dead link."""
 		self.assertIn('data-doctype="Box Type"', self.block.html)
+
+
+class TestDesktopIcon(IntegrationTestCase):
+	"""The Apps screen renders from the Desktop Icon doctype alone.
+
+	A correct Workspace, Workspace Sidebar and add_to_apps_screen hook are all
+	insufficient on their own — without a row here the app has no tile and is
+	reachable only by typing its route. That gap shipped once; this pins it.
+	"""
+
+	def test_install_creates_the_desktop_icon(self):
+		from upande_webstore.setup.install import DESKTOP_ICON, ensure_desktop_icon
+
+		if not frappe.db.exists("DocType", "Desktop Icon"):
+			self.skipTest("site has no Desktop Icon doctype")
+		existed = frappe.db.exists("Desktop Icon", DESKTOP_ICON)
+		if existed:
+			frappe.delete_doc("Desktop Icon", DESKTOP_ICON, force=1, ignore_permissions=True)
+		try:
+			ensure_desktop_icon()
+			self.assertTrue(frappe.db.exists("Desktop Icon", DESKTOP_ICON))
+			row = frappe.db.get_value(
+				"Desktop Icon", DESKTOP_ICON, ["link", "logo_url", "app", "hidden"], as_dict=True
+			)
+			self.assertEqual(row.app, "upande_webstore")
+			self.assertEqual(row.link, "/desk/upande-webstore")
+			self.assertIn("upande_webstore", row.logo_url)
+			self.assertFalse(row.hidden)
+		finally:
+			frappe.db.commit()
+
+	def test_it_is_idempotent(self):
+		from upande_webstore.setup.install import DESKTOP_ICON, ensure_desktop_icon
+
+		if not frappe.db.exists("DocType", "Desktop Icon"):
+			self.skipTest("site has no Desktop Icon doctype")
+		ensure_desktop_icon()
+		before = frappe.db.count("Desktop Icon")
+		ensure_desktop_icon()
+		self.assertEqual(frappe.db.count("Desktop Icon"), before)
+
+	def test_the_tile_route_matches_the_apps_screen_hook(self):
+		"""Tile and hook must not disagree about where the app lives."""
+		from upande_webstore.setup.install import DESKTOP_ICON, ensure_desktop_icon
+
+		if not frappe.db.exists("DocType", "Desktop Icon"):
+			self.skipTest("site has no Desktop Icon doctype")
+		ensure_desktop_icon()
+		hook_route = frappe.get_hooks("add_to_apps_screen", app_name="upande_webstore")[0]["route"]
+		self.assertEqual(frappe.db.get_value("Desktop Icon", DESKTOP_ICON, "link"), hook_route)
