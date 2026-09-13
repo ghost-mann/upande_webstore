@@ -99,6 +99,12 @@ def desired_grants(settings):
 	catalogue_roles = _roles_of(settings, CATALOGUE_FIELD)
 	add("Webstore Product", catalogue_roles, CATALOGUE_PTYPES)
 	add(_box_source_doctype(), catalogue_roles, ("read",))
+	# Read, not write: a product names the storefront it belongs to through a
+	# Link, and Link searches are permission-checked — without this a catalogue
+	# manager can edit a product but cannot pick which shop it sells in. Write
+	# stays with System Manager, because a storefront's branding and theme are
+	# not a merchandising job.
+	add("Webstore", catalogue_roles, ("read",))
 
 	order_roles = _roles_of(settings, ORDER_FIELD)
 	for doctype in ORDER_DOCTYPES:

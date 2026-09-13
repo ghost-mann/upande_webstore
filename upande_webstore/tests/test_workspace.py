@@ -347,6 +347,13 @@ class TestNavigationBlockTiles(IntegrationTestCase):
 				checked += 1
 		self.assertTrue(checked, "no internal tiles were actually checked")
 
+	def test_the_storefronts_tile_is_present(self):
+		"""A storefront is where a shop's look, catalogue and prices now live,
+		so the workspace has to offer a way in — the Single beside it holds
+		only the site-wide defaults a storefront inherits."""
+		self.assertIn('href="/app/webstore"', self.block.html)
+		self.assertIn("Storefronts", self.block.html)
+
 	def test_the_optional_box_type_tile_carries_its_doctype_attribute(self):
 		"""The one tile whose doctype is not guaranteed to exist must be tagged
 		so the script can hide it quietly instead of shipping a dead link."""

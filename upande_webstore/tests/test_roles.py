@@ -170,6 +170,24 @@ class TestRoles(IntegrationTestCase):
 				frappe.db.get_value("Custom DocPerm", {"parent": source_doctype, "role": role}, ptype)
 			)
 
+	def test_catalogue_manager_role_grants_read_on_the_storefront(self):
+		"""A product names its storefront through a Link, and Link searches are
+		permission-checked — without read here a catalogue manager can edit a
+		product but cannot pick which shop it sells in."""
+		role = self._make_role("WS Test Catalogue Store")
+
+		self.settings.set("catalogue_manager_roles", [{"role": role}])
+		self.settings.save(ignore_permissions=True)
+
+		self.assertTrue(
+			frappe.db.get_value("Custom DocPerm", {"parent": "Webstore", "role": role}, "read")
+		)
+		# read only: a shop's branding and theme are not a merchandising job
+		for ptype in ("write", "create", "delete"):
+			self.assertFalse(
+				frappe.db.get_value("Custom DocPerm", {"parent": "Webstore", "role": role}, ptype)
+			)
+
 	def test_removing_a_role_revokes_exactly_those_permissions(self):
 		make_box_type("Xpol", 350)
 		source_doctype = roles._box_source_doctype()

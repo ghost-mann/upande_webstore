@@ -95,3 +95,66 @@ isolated in catalogue, cart and pricing; the shared portal shows both.
   pulls every visible product name back and passes it as an `in` filter.
   Correct, and fine at the scale these farms run, but it should become a join
   before any catalogue grows into the thousands.
+
+---
+
+## Phase 2 — the field migration
+
+Phase 1 made a store a real thing with its own catalogue, cart and orders, but
+every shop still rendered in one theme under one name, which is most of what
+makes two shops two shops. Phase 2 moves the presentation surface.
+
+### What moved, and how
+
+Not by copying ~60 field definitions by hand — that is how options, labels and
+link targets drift apart. `services/store_fields.py` is the one list of which
+fields a store may override, and `scripts/generate_webstore_fields.py` builds
+the `Webstore` doctype's fields from `Webstore Settings`' own definitions.
+`tests/test_store_field_parity.py` fails if the committed result stops
+matching, and names the script in its failure message.
+
+Per store: theme seeds (colour, type, shape, custom CSS), the occasion
+campaign, identity and wordmark, hero, all the marketing copy and its four
+tables, guest price list, stock display, and the ten storefront feature flags.
+
+Site-wide: company, customer group, territory, quotation validity, the
+notification list, the role grants, and the ten **portal** feature flags — the
+portal is shared, so switching Invoices off for one shop and not the other
+would describe a customer experience that does not exist.
+
+### Two mechanisms, one rule
+
+Blank inherits. A store fills in what differs and leaves the rest alone, which
+is why a site with one storefront needed **no data migration at all**: its
+store row is blank and it renders exactly what it always did.
+
+Checkboxes are the exception, because a Check cannot say "off" and "inherit"
+at the same time. Every per-store checkbox is a blank/Enabled/Disabled Select
+on the store — twelve of them, listed in `PER_STORE_TRISTATE`.
+
+### Navigation
+
+Every storefront link in the templates was the literal string `/store`,
+`/cart` or `/wishlist`, which on `/flowers/store` navigates the shopper into
+the default store. They now read `webstore_urls`, set per request from the
+resolved store. The default store's values are the bare paths, so a
+single-store site's markup is unchanged.
+
+### Transfer
+
+`apply_preset`, `export_theme` and `import_theme` take an optional `webstore`.
+Export returns a store's *effective* look — its overrides on top of what it
+inherits — because "copy this shop's appearance" means the appearance a
+visitor sees, not the half of it the shop happens to state itself. Import
+resets absent fields to blank on a store (inherit) rather than to the DocType
+default (what it means on the Single). The `Webstore` form carries the same
+three Theme buttons, scoped to the one shop.
+
+### Still deliberately out
+
+- **Per-store portals, customers or books.** Non-goals in the spec and
+  unchanged here.
+- **Subdomains.** Path prefix only; host-based routing can layer on later
+  without changing the store model.
+- The two Phase 1 gaps above (Referer-derived store for API calls, and the
+  catalogue filter's `IN` clause) are untouched by Phase 2 and still stand.

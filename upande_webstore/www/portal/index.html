@@ -4,7 +4,7 @@
 {% block portal_title %}{{ _("Welcome") }}, {{ customer }}{% endblock %}
 {% block portal_sub %}{{ _("Your orders, quotations and account — all in one place.") }}{% endblock %}
 {% block portal_tools %}
-<a href="/store" class="btn btn-primary btn-sm">{{ _("Keep shopping") }}</a>
+<a href="{{ webstore_urls.store }}" class="btn btn-primary btn-sm">{{ _("Keep shopping") }}</a>
 {% endblock %}
 
 {% block portal_body %}
@@ -92,7 +92,7 @@
 			{% endfor %}
 		</svg>
 		{% else %}
-		<div class="ws-empty">{{ _("Once your first invoice lands, your spend history draws itself here.") }} <a href="/store">{{ _("Start in the store") }}</a></div>
+		<div class="ws-empty">{{ _("Once your first invoice lands, your spend history draws itself here.") }} <a href="{{ webstore_urls.store }}">{{ _("Start in the store") }}</a></div>
 		{% endif %}
 	</div>
 
@@ -112,7 +112,7 @@
 			{% endfor %}
 		</div>
 		{% else %}
-		<div class="ws-empty">{{ _("Your most-ordered items will rank themselves here.") }} <a href="/store">{{ _("Browse products") }}</a></div>
+		<div class="ws-empty">{{ _("Your most-ordered items will rank themselves here.") }} <a href="{{ webstore_urls.store }}">{{ _("Browse products") }}</a></div>
 		{% endif %}
 	</div>
 </div>
@@ -141,7 +141,7 @@
 			{% endfor %}
 		</div>
 		{% else %}
-		<div class="ws-empty">{{ _("No quotations yet — your first basket becomes one.") }} <a href="/store">{{ _("Build a basket") }}</a></div>
+		<div class="ws-empty">{{ _("No quotations yet — your first basket becomes one.") }} <a href="{{ webstore_urls.store }}">{{ _("Build a basket") }}</a></div>
 		{% endif %}
 	</div>
 
@@ -160,7 +160,7 @@
 			{% endfor %}
 		</div>
 		{% else %}
-		<div class="ws-empty">{{ _("No orders yet — your first order starts in the store.") }} <a href="/store">{{ _("Browse products") }}</a></div>
+		<div class="ws-empty">{{ _("No orders yet — your first order starts in the store.") }} <a href="{{ webstore_urls.store }}">{{ _("Browse products") }}</a></div>
 		{% endif %}
 	</div>
 </div>

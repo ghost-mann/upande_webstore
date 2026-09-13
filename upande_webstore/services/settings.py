@@ -1,27 +1,11 @@
 import frappe
 
-# Per-store scalars a `Webstore` row may override. Listed once here rather
-# than left implicit in _merge, since it doubles as the exact set the spec
-# calls "per-store scalars" — anything else on Webstore Settings stays
-# site-wide until Task 2 moves more of it.
-_OVERLAY_SCALARS = (
-	"checkout_mode",
-	"default_box_type",
-	"minimum_order_stems",
-	"default_lead_days",
+from upande_webstore.services.store_fields import (
+	PER_STORE_SCALARS,
+	PER_STORE_TABLES,
+	PER_STORE_TRISTATE,
+	TRISTATE_OPTIONS,
 )
-
-# Checkbox-valued overrides need three states, not two: a dairy store must be
-# able to turn box packing off while the flower store on the same site leaves
-# it on, and a Check field cannot express "off" and "inherit" at once. The
-# Webstore field is a Select whose blank option means inherit; these are the
-# two words that do not.
-_TRISTATE_SCALARS = {"enable_box_packing": {"Enabled": 1, "Disabled": 0}}
-
-# Per-store child tables. Reused verbatim from Webstore Settings — see
-# webstore.json — so a half-merged table is never possible: a store either
-# supplies the whole list or none of it.
-_OVERLAY_TABLES = ("categories", "guest_price_lists", "warehouses")
 
 
 def get_settings():
@@ -42,13 +26,25 @@ def get_settings():
 	store = current_store()
 	if not store:
 		return singles
-	return _merge(singles, store)
+
+	# Merging builds a whole Document out of ~140 fields and seven child
+	# tables, and a single page render asks for the settings dozens of times.
+	# Keyed on both documents' timestamps rather than just the store name, so
+	# a save to either one invalidates it without anything having to remember
+	# to clear a cache.
+	key = (store.name, str(store.modified), str(singles.modified))
+	cached = getattr(frappe.local, "webstore_merged_settings", None)
+	if cached and cached[0] == key:
+		return cached[1]
+	merged = _merge(singles, store)
+	frappe.local.webstore_merged_settings = (key, merged)
+	return merged
 
 
 def _is_set(value):
 	"""Non-empty for both text fields (blank string) and Int fields (0 is
-	their unset state) - see webstore.py's field descriptions, which document
-	0/blank as "inherit" for every one of _OVERLAY_SCALARS."""
+	their unset state) — every per-store field's own description documents
+	0/blank as "inherit"."""
 	return value not in (None, "", 0, "0")
 
 
@@ -61,15 +57,15 @@ def _merge(singles, store):
 	store's overrides into every other request on the site.
 	"""
 	merged = frappe.get_doc(singles.as_dict())
-	for field in _OVERLAY_SCALARS:
+	for field in PER_STORE_SCALARS:
 		value = store.get(field)
 		if _is_set(value):
 			merged.set(field, value)
-	for field, states in _TRISTATE_SCALARS.items():
-		choice = states.get(store.get(field))
+	for field in PER_STORE_TRISTATE:
+		choice = TRISTATE_OPTIONS.get(store.get(field))
 		if choice is not None:
 			merged.set(field, choice)
-	for field in _OVERLAY_TABLES:
+	for field in PER_STORE_TABLES:
 		rows = store.get(field) or []
 		if rows:
 			merged.set(field, [row.as_dict(no_default_fields=True) for row in rows])
@@ -178,3 +174,16 @@ def update_website_context(context):
 	from upande_webstore.services.pricing import get_guest_currency_picker
 
 	context.webstore_currency = get_guest_currency_picker()
+
+	# Every storefront link used to be the literal "/store". On /flowers/store
+	# that navigates the shopper into the default store's catalogue — a
+	# different shop — so the templates read these instead of hardcoding a
+	# path. The default store's values are the bare paths, so nothing about a
+	# single-store site's markup changes.
+	from upande_webstore.services.store import storefront_path
+
+	context.webstore_urls = frappe._dict(
+		store=storefront_path("store"),
+		cart=storefront_path("cart"),
+		wishlist=storefront_path("wishlist"),
+	)

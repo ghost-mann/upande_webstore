@@ -56,10 +56,94 @@ def all_fields():
 	return THEME_FIELDS + BRANDING_FIELDS + _feature_fields()
 
 
+
+def _target(webstore=None):
+	"""The document a transfer reads from or writes to.
+
+	Without a store this is the site-wide Single, exactly as before multi-store
+	existed. With one it is that `Webstore` row, so a preset can dress the
+	flower shop without touching the dairy one beside it.
+	"""
+	if not webstore:
+		return frappe.get_doc("Webstore Settings")
+	if not frappe.db.exists("Webstore", webstore):
+		frappe.throw(_("No storefront with slug {0}.").format(webstore))
+	return frappe.get_doc("Webstore", webstore)
+
+
+
+def _effective(webstore):
+	"""`get_settings()` as the given store would see it, resolved off to one
+	side so exporting one shop's look never changes what the current request
+	is rendering."""
+	from upande_webstore.services.settings import get_settings
+	from upande_webstore.services.store import clear_store_cache
+
+	previous_slug = getattr(frappe.local, "webstore_slug", None)
+	previous_merged = getattr(frappe.local, "webstore_merged_settings", None)
+	frappe.local.webstore_slug = webstore
+	frappe.local.webstore_merged_settings = None
+	clear_store_cache()
+	try:
+		return get_settings()
+	finally:
+		frappe.local.webstore_slug = previous_slug
+		frappe.local.webstore_merged_settings = previous_merged
+		clear_store_cache()
+
+
+def _permission_doctype(webstore=None):
+	return "Webstore" if webstore else "Webstore Settings"
+
+
+def _writable_fields(target):
+	"""The transfer's own field list, narrowed to what this target actually
+	has. A `Webstore` carries no portal feature flags — the portal is shared
+	across every store — so a payload naming one has nothing to write it to."""
+	meta = frappe.get_meta(target.doctype)
+	return tuple(name for name in all_fields() if meta.get_field(name))
+
+
+def _to_target_value(target, fieldname, value):
+	"""A checkbox on the Single is a three-state Select on a store, so 1 and 0
+	have to become Enabled and Disabled on the way in — see
+	services/store_fields.py for why a store needs the third state at all."""
+	from upande_webstore.services.store_fields import PER_STORE_TRISTATE
+
+	if target.doctype == "Webstore" and fieldname in PER_STORE_TRISTATE:
+		if value in (None, ""):
+			return ""
+		return "Enabled" if str(value) not in ("0", "False") else "Disabled"
+	return value
+
+
+def _reset_value(target, meta, fieldname):
+	"""What a field absent from the payload becomes.
+
+	On the Single: the DocType default, so "reset" means what it does on a
+	fresh record. On a store: blank, which is how a store says "inherit the
+	site" — a preset that sets no hero heading should leave the shop showing
+	the site's, not an empty one.
+	"""
+	if target.doctype == "Webstore":
+		return ""
+	return _field_default(meta, fieldname)
+
 @frappe.whitelist()
-def export_theme():
-	require_permission("Webstore Settings")
-	settings = frappe.get_doc("Webstore Settings")
+def export_theme(webstore=None):
+	"""The theme as a storefront actually renders it.
+
+	With a store, that is its *effective* look — its own overrides on top of
+	whatever it inherits — because "copy this shop's appearance" means the
+	appearance a visitor sees, not the half of it the shop happens to state
+	itself.
+	"""
+	require_permission(_permission_doctype(webstore))
+	if webstore:
+		_target(webstore)  # 404s an unknown slug before anything is read
+		settings = _effective(webstore)
+	else:
+		settings = frappe.get_doc("Webstore Settings")
 
 	fields = {}
 	for fieldname in all_fields():
@@ -112,31 +196,34 @@ def _field_default(meta, fieldname):
 
 
 @frappe.whitelist()
-def import_theme(payload):
-	"""Replace the theme wholesale.
+def import_theme(payload, webstore=None):
+	"""Replace the theme wholesale, site-wide or for one storefront.
 
-	Fields and tables absent from the payload are reset to their DocType
-	defaults rather than left as they were — otherwise switching presets would
-	leave residue from the previous one, and the desk button promises this
-	overwrites every Theme, Branding and Features value.
+	Fields and tables absent from the payload are reset rather than left as
+	they were — otherwise switching presets would leave residue from the
+	previous one, and the desk button promises this overwrites every Theme,
+	Branding and Features value. "Reset" means the DocType default on the
+	Single and blank on a store, blank being how a store inherits.
 	"""
-	require_permission("Webstore Settings", "write")
+	require_permission(_permission_doctype(webstore), "write")
 	payload = _resolve_payload(payload)
 
-	settings = frappe.get_doc("Webstore Settings")
-	meta = frappe.get_meta("Webstore Settings")
+	settings = _target(webstore)
+	meta = frappe.get_meta(settings.doctype)
 	incoming = payload.get("fields") or {}
 	applied_fields = []
 
-	for fieldname in all_fields():
+	for fieldname in _writable_fields(settings):
 		if fieldname in incoming:
-			settings.set(fieldname, incoming[fieldname])
+			settings.set(fieldname, _to_target_value(settings, fieldname, incoming[fieldname]))
 			applied_fields.append(fieldname)
 		else:
-			settings.set(fieldname, _field_default(meta, fieldname))
+			settings.set(fieldname, _reset_value(settings, meta, fieldname))
 
 	incoming_tables = payload.get("tables") or {}
 	for table in TABLE_FIELDS:
+		if not meta.get_field(table):
+			continue
 		settings.set(table, [])
 		for row in incoming_tables.get(table) or []:
 			settings.append(table, {k: v for k, v in row.items() if k not in ROW_META_FIELDS})
@@ -151,6 +238,12 @@ def import_theme(payload):
 	settings.flags.ignore_mandatory = True
 	settings.save()
 	frappe.clear_cache()
+	# the resolved store is cached on frappe.local for the request, so a write
+	# to it has to be re-read or the page rendering next still shows the old look
+	from upande_webstore.services.store import clear_store_cache
+
+	clear_store_cache()
+	frappe.local.webstore_merged_settings = None
 
 	return {
 		"applied": len(applied_fields),
@@ -187,8 +280,8 @@ def list_presets():
 
 
 @frappe.whitelist()
-def apply_preset(name):
-	require_permission("Webstore Settings", "write")
+def apply_preset(name, webstore=None):
+	require_permission(_permission_doctype(webstore), "write")
 	# the regex rejects '/', '.' and '%' outright, so no path can escape PRESET_DIR
 	if not isinstance(name, str) or not PRESET_NAME_RE.match(name):
 		frappe.throw(_("Invalid preset name."))
@@ -196,4 +289,10 @@ def apply_preset(name):
 	if not os.path.isfile(path):
 		frappe.throw(_("No shipped preset named {0}.").format(name))
 	with open(path, encoding="utf-8") as handle:
-		return import_theme(json.load(handle))
+		result = import_theme(json.load(handle), webstore=webstore)
+	if webstore:
+		# recorded on the store so the desk can say which preset a shop is
+		# wearing — import_theme resets theme_preset along with everything else
+		frappe.db.set_value("Webstore", webstore, "theme_preset", name)
+		frappe.clear_cache()
+	return result

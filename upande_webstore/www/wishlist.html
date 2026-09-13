@@ -7,10 +7,10 @@
 		<span class="ws-eyebrow">{{ _("Saved for later") }}</span>
 		<h1 class="ws-pagehead-title">{{ _("Wishlist") }}</h1>
 	</div>
-	<div class="ws-pagehead-tools"><a href="/store" class="btn btn-outline-secondary btn-sm">{{ _("Keep browsing") }}</a></div>
+	<div class="ws-pagehead-tools"><a href="{{ webstore_urls.store }}" class="btn btn-outline-secondary btn-sm">{{ _("Keep browsing") }}</a></div>
 </div>
 {% if not wishlist["items"] %}
-<div class="ws-empty">{{ _("Nothing saved yet.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+<div class="ws-empty">{{ _("Nothing saved yet.") }} <a href="{{ webstore_urls.store }}">{{ _("Browse the store") }}</a></div>
 {% else %}
 <div class="row" id="wishlist-grid">
 	{% for entry in wishlist["items"] %}

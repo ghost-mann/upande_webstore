@@ -9,7 +9,7 @@
 <div class="ws-panel">
 	<div class="ws-panel-head"><h3>{{ _("All orders") }}</h3><div class="meta">{{ orders | length }} {{ _("shown") }}</div></div>
 	{% if not orders %}
-	<div class="ws-empty">{{ _("No orders yet — accepted quotations become orders here.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+	<div class="ws-empty">{{ _("No orders yet — accepted quotations become orders here.") }} <a href="{{ webstore_urls.store }}">{{ _("Browse the store") }}</a></div>
 	{% else %}
 	<div class="ws-list">
 		{% for o in orders %}

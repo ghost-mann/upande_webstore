@@ -40,7 +40,7 @@
 {%- endif %}
 <nav class="ws-navbar">
 	<div class="container">
-		<a class="ws-brand" href="/store" title="{{ webstore_branding.site_name }}">
+		<a class="ws-brand" href="{{ webstore_urls.store }}" title="{{ webstore_branding.site_name }}">
 			<img src="{{ webstore_branding.brand_logo }}" alt="{{ webstore_branding.site_name }}">
 			<span data-sub="{{ webstore_branding.wordmark_subtitle }}">{{ webstore_branding.wordmark }}<b>{{ webstore_branding.wordmark_bold }}</b></span>
 		</a>
@@ -60,18 +60,18 @@
 				<span>{{ _("Search products…") }}</span><kbd>⌘K</kbd>
 			</button>
 			{% endif %}
-			<a href="/store" class="{{ 'active' if pathname and pathname.startswith('store') else '' }}">{{ _("Store") }}</a>
+			<a href="{{ webstore_urls.store }}" class="{{ 'active' if pathname and pathname.startswith('store') else '' }}">{{ _("Store") }}</a>
 			{% if frappe.session.user != "Guest" %}
 			{% if webstore_features.wishlist %}
-			<a href="/wishlist" class="{{ 'active' if pathname and pathname.startswith('wishlist') else '' }}">{{ _("Wishlist") }}</a>
+			<a href="{{ webstore_urls.wishlist }}" class="{{ 'active' if pathname and pathname.startswith('wishlist') else '' }}">{{ _("Wishlist") }}</a>
 			{% endif %}
 			<a href="#" data-webstore-logout>{{ _("Log out") }}</a>
 			{% if webstore_features.cart %}
-			<a href="/cart" class="ws-cart-link" data-ws-cart-drawer>{{ _("Basket") }}<span id="webstore-cart-badge"></span></a>
+			<a href="{{ webstore_urls.cart }}" class="ws-cart-link" data-ws-cart-drawer>{{ _("Basket") }}<span id="webstore-cart-badge"></span></a>
 			{% endif %}
 			{% if webstore_features.portal %}
 			{% if path and path.startswith("portal") %}
-			<a href="/store" class="ws-member-btn">{{ _("Store") }}</a>
+			<a href="{{ webstore_urls.store }}" class="ws-member-btn">{{ _("Store") }}</a>
 			{% else %}
 			<a href="/portal" class="ws-member-btn">{{ _("My Portal") }}</a>
 			{% endif %}

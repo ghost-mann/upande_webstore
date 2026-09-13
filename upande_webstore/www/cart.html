@@ -16,7 +16,7 @@
 </div>
 <div id="webstore-cart-wrapper">
 {% if not cart["items"] %}
-<div class="ws-empty">{{ _("Your cart is empty.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+<div class="ws-empty">{{ _("Your cart is empty.") }} <a href="{{ webstore_urls.store }}">{{ _("Browse the store") }}</a></div>
 {% else %}
 <div class="ws-row-2">
 	<div class="ws-panel">

@@ -84,7 +84,10 @@ def _card_href(row):
 	if row.get("url"):
 		return row.get("url")
 	category = row.get("category")
-	return f"/store?category={quote(category)}" if category else "/store"
+	from upande_webstore.services.store import storefront_path
+
+	base = storefront_path("store")
+	return f"{base}?category={quote(category)}" if category else base
 
 
 def get_branding(settings=None, occasion=None):

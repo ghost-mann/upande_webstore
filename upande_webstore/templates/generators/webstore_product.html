@@ -2,7 +2,7 @@
 {% block title %}{{ web_title }}{% endblock %}
 {% block page_content %}
 <div class="ws-storefront-band">
-<a class="ws-backbtn" href="/store">← {{ _("All products") }}</a>
+<a class="ws-backbtn" href="{{ webstore_urls.store }}">← {{ _("All products") }}</a>
 <div class="row" id="webstore-product" data-product="{{ name }}" data-item="{{ item }}" data-is-template="{{ 1 if is_template else 0 }}">
 	{% if image %}
 	<div class="col-md-5 mb-4">

@@ -3,14 +3,14 @@
 
 {% block portal_title %}{{ _("Quotations") }}{% endblock %}
 {% block portal_sub %}{{ _("Review, accept or decline — accepted quotations become orders.") }}{% endblock %}
-{% block portal_tools %}<a href="/cart" class="btn btn-primary btn-sm">{{ _("Request a new quotation") }}</a>{% endblock %}
+{% block portal_tools %}<a href="{{ webstore_urls.cart }}" class="btn btn-primary btn-sm">{{ _("Request a new quotation") }}</a>{% endblock %}
 
 {% block portal_body %}
 {% from "templates/includes/webstore_macros.html" import status_badge %}
 <div class="ws-panel">
 	<div class="ws-panel-head"><h3>{{ _("All quotations") }}</h3><div class="meta">{{ quotations | length }} {{ _("shown") }}</div></div>
 	{% if not quotations %}
-	<div class="ws-empty">{{ _("No quotations yet — add products to your cart and request one.") }} <a href="/store">{{ _("Browse the store") }}</a></div>
+	<div class="ws-empty">{{ _("No quotations yet — add products to your cart and request one.") }} <a href="{{ webstore_urls.store }}">{{ _("Browse the store") }}</a></div>
 	{% else %}
 	<div class="ws-list">
 		{% for q in quotations %}
