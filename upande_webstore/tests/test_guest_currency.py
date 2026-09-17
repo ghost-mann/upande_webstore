@@ -325,3 +325,74 @@ class TestGuestCurrencyCartSwitch(IntegrationTestCase):
 		frappe.local.request = frappe._dict(cookies={})
 		frappe.local.cookie_manager = CookieManager()
 		self.assertRaises(frappe.ValidationError, pricing.set_price_list, "Standard Selling")
+
+
+class TestForeignCurrencyPriceIsNotConverted(IntegrationTestCase):
+	"""A price list in a currency other than the company's is quoted as entered.
+
+	The storefront always quotes in the price list's own currency, so there is
+	nothing to convert — but ERPNext's `get_item_details` rewrites
+	`conversion_rate` whenever it is passed as 1 and the transaction currency
+	differs from the company's (get_item_details.py, `validate_conversion_rate`),
+	then divides the price list rate by it while `plc_conversion_rate` stays 1.
+	On Karen Roses — a KES company selling from EUR/USD/GBP lists — that quoted
+	a 0.15 EUR stem at EUR 0.001, a 150x error on a public page.
+
+	Every existing currency test runs price lists whose currency matches the
+	company's, which is why this never showed up: the bug needs the mismatch.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.company_currency = frappe.get_cached_value(
+			"Company", frappe.defaults.get_global_default("company"), "default_currency"
+		)
+		cls.foreign = "EUR" if cls.company_currency != "EUR" else "GBP"
+		cls.rate = 0.15
+		cls.fx = 150.2
+		make_price_list("Webstore Foreign", currency=cls.foreign)
+		make_test_product("WS-FX-STEM")
+		make_item_price("WS-FX-STEM", "Webstore Foreign", cls.rate)
+		set_stock("WS-FX-STEM", 100)
+		if not frappe.db.exists(
+			"Currency Exchange",
+			{"from_currency": cls.foreign, "to_currency": cls.company_currency},
+		):
+			frappe.get_doc({
+				"doctype": "Currency Exchange",
+				"from_currency": cls.foreign,
+				"to_currency": cls.company_currency,
+				"exchange_rate": cls.fx,
+				"date": frappe.utils.nowdate(),
+				"for_selling": 1,
+				"for_buying": 1,
+			}).insert(ignore_permissions=True)
+
+	def setUp(self):
+		self.settings = setup_webstore_settings()
+		_append_row(self.settings, "Webstore Foreign", label=self.foreign, is_default=1)
+		self.settings.save()
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		_clear_request()
+
+	def test_rate_is_the_price_list_rate_not_divided_by_the_exchange_rate(self):
+		from upande_webstore.services.pricing import get_item_price
+
+		priced = get_item_price("WS-FX-STEM")
+
+		self.assertEqual(priced["currency"], self.foreign)
+		self.assertAlmostEqual(priced["rate"], self.rate, places=6)
+
+	def test_the_exchange_rate_exists_so_the_test_is_not_vacuous(self):
+		"""Guards the test itself: with no Currency Exchange row ERPNext falls
+		back to 1.0 and the assertion above would pass even unfixed."""
+		from erpnext.setup.utils import get_exchange_rate
+
+		self.assertAlmostEqual(
+			get_exchange_rate(self.foreign, self.company_currency, frappe.utils.nowdate()),
+			self.fx,
+			places=2,
+		)

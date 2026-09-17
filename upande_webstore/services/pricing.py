@@ -170,6 +170,17 @@ def get_item_price(item_code, qty=1, user=None):
 		"price_list_currency": currency,
 		"conversion_rate": 1,
 		"plc_conversion_rate": 1,
+		# The storefront quotes in the price list's own currency, so there is
+		# nothing to convert. Without this flag ERPNext does convert: passing
+		# conversion_rate=1 is exactly what trips `validate_conversion_rate`
+		# (erpnext/stock/get_item_details.py) into replacing it with the
+		# currency -> company-currency rate, while plc_conversion_rate stays
+		# the 1 we passed, and the rate is then computed as
+		# `price_list_rate * plc_conversion_rate / conversion_rate`. On a KES
+		# company selling from a EUR list that quoted a 0.15 EUR stem at
+		# EUR 0.001. Only sites whose company currency differs from the price
+		# list's were affected, which is why single-currency tests missed it.
+		"ignore_conversion_rate": 1,
 		"ignore_pricing_rule": 0,
 		"transaction_date": frappe.utils.nowdate(),
 	})
