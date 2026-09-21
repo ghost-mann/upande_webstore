@@ -40,7 +40,8 @@
   },
   {
    "fieldname": "claim_type",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
+   "options": "Webstore Claim Type",
    "label": "Claim Type",
    "reqd": 1,
    "in_list_view": 1,

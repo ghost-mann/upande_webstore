@@ -107,7 +107,7 @@ def reset_portal_settings():
 	for fieldname, value in PORTAL_SETTING_DEFAULTS.items():
 		frappe.db.set_single_value("Webstore Portal Settings", fieldname, value)
 	frappe.db.delete(
-		"Webstore Claim Type",
+		"Webstore Portal Claim Type",
 		{"parent": "Webstore Portal Settings", "parentfield": "claim_types"},
 	)
 	frappe.clear_cache(doctype="Webstore Portal Settings")

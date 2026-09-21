@@ -83,14 +83,39 @@ def is_on(fieldname):
 	return bool(get(fieldname))
 
 
+CLAIM_TYPE_DOCTYPE = "Webstore Claim Type"
+
+
 def get_claim_types():
-	"""Configured claim types, or the shipped list when none are set."""
+	"""The claim types the **portal** offers, in order.
+
+	The `Webstore Claim Type` master holds every type that exists; the
+	selector table in Portal Settings narrows which of them the portal shows.
+	An empty selector means "offer all of them" — the same spirit as before,
+	where empty meant "do not restrict" — so a site that never opens Portal
+	Settings still has a working claim form.
+
+	This is deliberately not what validates a claim. A claim is valid if its
+	type *exists*, which the Link field enforces; narrowing this list retires
+	a type from the portal without blocking the desk from using it or an old
+	claim of that type from being re-saved.
+
+	The shipped names remain as a last resort for a site whose master has not
+	been seeded yet (install and migrate both seed it), so this never returns
+	empty and leaves the portal with a picker of nothing.
+	"""
 	rows = [
 		(row.claim_type or "").strip()
 		for row in (get_portal_settings().get("claim_types") or [])
 		if (row.claim_type or "").strip()
 	]
-	return tuple(rows) if rows else SHIPPED_CLAIM_TYPES
+	if rows:
+		return tuple(rows)
+	if frappe.db.exists("DocType", CLAIM_TYPE_DOCTYPE):
+		names = frappe.get_all(CLAIM_TYPE_DOCTYPE, pluck="name", order_by="name asc")
+		if names:
+			return tuple(names)
+	return SHIPPED_CLAIM_TYPES
 
 
 def get_landing_route():

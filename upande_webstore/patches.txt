@@ -4,6 +4,9 @@
 # must precede sync_all: a hand-made workspace with a newer `modified` would
 # make import_file skip the standard one this app ships
 upande_webstore.patches.reclaim_orphan_webstore_workspace
+# must precede sync_all: the standalone `Webstore Claim Type` master cannot be
+# created while the old child table of that name still holds it
+upande_webstore.patches.rename_claim_type_child_to_portal_claim_type
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated

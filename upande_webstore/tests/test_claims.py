@@ -428,3 +428,132 @@ class TestClaimDeskEntry(IntegrationTestCase):
 
 		with self.assertRaises(frappe.exceptions.ValidationError):
 			claim.save(ignore_permissions=True)
+
+
+class TestClaimTypeMaster(IntegrationTestCase):
+	"""claim_type is a Link to a real master, so the desk gets a picker.
+
+	It used to be Data: the list lived in Portal Settings and only the portal
+	page rendered it as a <select>, so the desk form was a free-text box that
+	could not show the configured types at all — the only feedback was the
+	validation error after saving. A Select could not fix that, because its
+	options are fixed in the doctype JSON while the list has to stay
+	configurable.
+
+	The Portal Settings table is now a selector over that master, and it gates
+	the portal picker only. Validation asks whether the type exists, not
+	whether it is currently offered, so narrowing the portal list cannot block
+	the sales team from filing that type in the desk, nor stop an old claim of
+	a retired type being re-saved.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-CLM-TYPE-ITEM")
+		make_item_price("WS-CLM-TYPE-ITEM", "Standard Selling", 50)
+		set_stock("WS-CLM-TYPE-ITEM", 50)
+		make_portal_user("claim.type@example.com", "Claim Type Ltd")
+		cls.invoice = make_submitted_invoice("Claim Type Ltd", "WS-CLM-TYPE-ITEM").name
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		from upande_webstore.tests.utils import reset_portal_settings
+
+		reset_portal_settings()
+
+	def _make_type(self, name, description=None):
+		if not frappe.db.exists("Webstore Claim Type", name):
+			frappe.get_doc({
+				"doctype": "Webstore Claim Type",
+				"claim_type": name,
+				"description": description,
+			}).insert(ignore_permissions=True)
+		return name
+
+	def _offer(self, *names):
+		settings = frappe.get_doc("Webstore Portal Settings")
+		settings.set("claim_types", [])
+		for n in names:
+			settings.append("claim_types", {"claim_type": n})
+		settings.flags.ignore_mandatory = True
+		settings.save(ignore_permissions=True)
+
+	def test_the_master_is_a_standalone_doctype(self):
+		meta = frappe.get_meta("Webstore Claim Type")
+		self.assertFalse(meta.istable, "the Link target cannot be a child table")
+
+	def test_the_portal_selector_is_a_child_table_linking_to_the_master(self):
+		meta = frappe.get_meta("Webstore Portal Claim Type")
+		self.assertTrue(meta.istable)
+		field = meta.get_field("claim_type")
+		self.assertEqual(field.fieldtype, "Link")
+		self.assertEqual(field.options, "Webstore Claim Type")
+
+	def test_portal_settings_points_at_the_selector_not_the_master(self):
+		field = frappe.get_meta("Webstore Portal Settings").get_field("claim_types")
+		self.assertEqual(field.options, "Webstore Portal Claim Type")
+
+	def test_claim_type_is_a_link_so_the_desk_can_offer_a_picker(self):
+		"""The whole point: a Data field can never render a dropdown."""
+		field = frappe.get_meta("Webstore Claim").get_field("claim_type")
+		self.assertEqual(field.fieldtype, "Link")
+		self.assertEqual(field.options, "Webstore Claim Type")
+		self.assertTrue(field.reqd)
+
+	def test_an_empty_selector_offers_every_master_record(self):
+		from upande_webstore.services.portal_settings import get_claim_types
+
+		self._make_type("WS Spoilage")
+		self._offer()
+
+		self.assertIn("WS Spoilage", get_claim_types())
+
+	def test_a_populated_selector_narrows_the_offer(self):
+		from upande_webstore.services.portal_settings import get_claim_types
+
+		self._make_type("WS Offered")
+		self._make_type("WS Retired")
+		self._offer("WS Offered")
+
+		offered = get_claim_types()
+		self.assertIn("WS Offered", offered)
+		self.assertNotIn("WS Retired", offered)
+
+	def test_a_desk_claim_may_use_a_type_the_portal_no_longer_offers(self):
+		"""Retiring a type from the portal must not block the sales team."""
+		self._make_type("WS Offered")
+		self._make_type("WS Retired")
+		self._offer("WS Offered")
+
+		claim = frappe.get_doc({
+			"doctype": "Webstore Claim",
+			"customer": "Claim Type Ltd",
+			"claim_type": "WS Retired",
+			"description": "Filed at the counter against a retired type.",
+			"against_doctype": "Sales Invoice",
+			"against_document": self.invoice,
+		})
+		claim.insert(ignore_permissions=True)
+
+		self.assertEqual(claim.claim_type, "WS Retired")
+
+	def test_a_type_that_does_not_exist_is_still_refused(self):
+		claim = frappe.get_doc({
+			"doctype": "Webstore Claim",
+			"customer": "Claim Type Ltd",
+			"claim_type": "WS Nonsense Type",
+			"description": "Body.",
+		})
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			claim.insert(ignore_permissions=True)
+
+	def test_the_shipped_types_are_seeded_as_master_records(self):
+		from upande_webstore.services.portal_settings import SHIPPED_CLAIM_TYPES
+
+		for name in SHIPPED_CLAIM_TYPES:
+			self.assertTrue(
+				frappe.db.exists("Webstore Claim Type", name),
+				f"{name} was not seeded into the master",
+			)

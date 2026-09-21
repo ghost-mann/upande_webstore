@@ -194,8 +194,8 @@
   {
    "fieldname": "claim_types",
    "fieldtype": "Table",
-   "label": "Claim Types",
-   "options": "Webstore Claim Type"
+   "label": "Claim Types Offered On The Portal",
+   "options": "Webstore Portal Claim Type"
   },
   {
    "fieldname": "account_tab",

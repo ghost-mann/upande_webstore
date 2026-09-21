@@ -631,8 +631,72 @@ def ensure_desktop_icon():
 	doc.save(ignore_permissions=True)
 
 
+CLAIM_TYPE_DOCTYPE = "Webstore Claim Type"
+
+
+def seed_claim_types():
+	"""Make sure every claim type a site already refers to exists as a record.
+
+	`Webstore Claim.claim_type` is a Link, so a value that has no master record
+	is a dangling link: the claim cannot be re-saved and the desk picker cannot
+	show it. Three sources have to be covered, and the first is the one that
+	matters most — miss it and every historical claim breaks:
+
+	  1. types already used on existing `Webstore Claim` rows,
+	  2. types the Portal Settings selector still lists,
+	  3. the shipped five, so a fresh site has a usable list on day one.
+
+	Idempotent, and run from both after_install and after_migrate rather than
+	as a one-time patch: a site that gains claims through an import later needs
+	the same guarantee.
+	"""
+	if not frappe.db.exists("DocType", CLAIM_TYPE_DOCTYPE):
+		return
+	from upande_webstore.services.portal_settings import SHIPPED_CLAIM_TYPES
+
+	wanted = []
+	for row in _existing_claim_type_values():
+		if row and row not in wanted:
+			wanted.append(row)
+	for name in SHIPPED_CLAIM_TYPES:
+		if name not in wanted:
+			wanted.append(name)
+
+	for name in wanted:
+		if frappe.db.exists(CLAIM_TYPE_DOCTYPE, name):
+			continue
+		doc = frappe.get_doc({"doctype": CLAIM_TYPE_DOCTYPE, "claim_type": name})
+		doc.flags.ignore_permissions = True
+		doc.insert()
+
+
+def _existing_claim_type_values():
+	"""Claim type strings this site already stores, claims first.
+
+	Read straight from the tables rather than through the ORM: this runs during
+	migrate, when the selector's own doctype may have just been renamed and the
+	Link it now declares does not resolve yet.
+	"""
+	values = []
+	for doctype, column in (
+		("Webstore Claim", "claim_type"),
+		("Webstore Portal Claim Type", "claim_type"),
+	):
+		if not frappe.db.table_exists(doctype):
+			continue
+		try:
+			rows = frappe.db.sql(
+				f"select distinct `{column}` from `tab{doctype}` where ifnull(`{column}`, '') != ''"
+			)
+		except Exception:
+			continue
+		values.extend((r[0] or "").strip() for r in rows)
+	return [v for v in values if v]
+
+
 def after_install():
 	create_webstore_custom_fields()
+	seed_claim_types()
 	seed_default_theme()
 	ensure_navigation_block()
 	ensure_desktop_icon()
@@ -680,6 +744,7 @@ def normalise_settings_docstatus():
 
 def after_migrate():
 	create_webstore_custom_fields()
+	seed_claim_types()
 	normalise_settings_docstatus()
 	ensure_navigation_block()
 	ensure_desktop_icon()
