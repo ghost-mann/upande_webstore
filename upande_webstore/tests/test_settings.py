@@ -65,43 +65,90 @@ class TestAppearance(IntegrationTestCase):
 
 
 class TestSettingsDocstatus(IntegrationTestCase):
-	def _stored(self):
+	"""Both of this app's Singles, not just Webstore Settings.
+
+	The repair used to name one doctype, so Webstore Portal Settings kept a
+	stray docstatus of 2 indefinitely — the desk then rendered it as a
+	cancelled document and offered Amend instead of Save, on a doctype that is
+	not submittable at all. tabSingles is column storage that persists, so once
+	the 2 is written, loading the doc reads it back and the next save rewrites
+	it: nothing has to keep re-setting it for it to survive every migrate.
+	"""
+
+	def _stored(self, doctype):
 		rows = frappe.db.sql(
 			"select value from tabSingles where doctype = %s and field = 'docstatus'",
-			"Webstore Settings",
+			doctype,
 		)
 		return str(rows[0][0]) if rows else None
 
-	def test_doctype_is_not_submittable(self):
-		"""No submit workflow exists, so the desk must never offer Submit,
-		Cancel or Amend on this form."""
-		self.assertFalse(frappe.get_meta("Webstore Settings").get("is_submittable"))
-
-	def test_patch_resets_a_cancelled_docstatus(self):
-		"""A stray docstatus 2 makes the desk treat the settings Single as a
-		cancelled document and offer Amend."""
-		from upande_webstore.patches.reset_webstore_settings_docstatus import execute
-
+	def _set_cancelled(self, doctype):
 		frappe.db.sql(
 			"update tabSingles set value = '2' where doctype = %s and field = 'docstatus'",
-			"Webstore Settings",
+			doctype,
 		)
-		if self._stored() is None:
-			self.skipTest("no docstatus row stored for this Single")
 
-		execute()
-		self.assertEqual(self._stored(), "0")
+	def test_neither_doctype_is_submittable(self):
+		"""No submit workflow exists, so the desk must never offer Submit,
+		Cancel or Amend on either form."""
+		from upande_webstore.setup.install import NON_SUBMITTABLE_SINGLES
 
-	def test_patch_is_a_noop_when_already_clean(self):
+		for doctype in NON_SUBMITTABLE_SINGLES:
+			self.assertFalse(
+				frappe.get_meta(doctype).get("is_submittable"), f"{doctype} is submittable"
+			)
+
+	def test_repair_resets_a_cancelled_docstatus_on_every_single(self):
+		from upande_webstore.setup.install import (
+			NON_SUBMITTABLE_SINGLES,
+			normalise_settings_docstatus,
+		)
+
+		stored = [dt for dt in NON_SUBMITTABLE_SINGLES if self._stored(dt) is not None]
+		if not stored:
+			self.skipTest("no docstatus rows stored for these Singles")
+		for doctype in stored:
+			self._set_cancelled(doctype)
+
+		normalise_settings_docstatus()
+
+		for doctype in stored:
+			self.assertEqual(self._stored(doctype), "0", f"{doctype} still cancelled")
+
+	def test_portal_settings_is_repaired_too(self):
+		"""The regression this fixes: the repair named only Webstore Settings."""
+		from upande_webstore.setup.install import normalise_settings_docstatus
+
+		if self._stored("Webstore Portal Settings") is None:
+			self.skipTest("no docstatus row stored for Webstore Portal Settings")
+		self._set_cancelled("Webstore Portal Settings")
+
+		normalise_settings_docstatus()
+
+		self.assertEqual(self._stored("Webstore Portal Settings"), "0")
+
+	def test_repair_is_a_noop_when_already_clean(self):
+		from upande_webstore.setup.install import (
+			NON_SUBMITTABLE_SINGLES,
+			normalise_settings_docstatus,
+		)
+
+		normalise_settings_docstatus()
+		normalise_settings_docstatus()
+		for doctype in NON_SUBMITTABLE_SINGLES:
+			self.assertIn(self._stored(doctype), ("0", None))
+
+	def test_the_shipped_patch_still_repairs(self):
+		"""patches.txt already ran on existing sites; after_migrate is what
+		carries the fix to them, but the patch entry must not break."""
 		from upande_webstore.patches.reset_webstore_settings_docstatus import execute
 
 		execute()
-		execute()
-		self.assertIn(self._stored(), ("0", None))
+		self.assertIn(self._stored("Webstore Settings"), ("0", None))
 
 	def test_saving_settings_keeps_docstatus_zero(self):
 		setup_webstore_settings()
-		self.assertIn(self._stored(), ("0", None))
+		self.assertIn(self._stored("Webstore Settings"), ("0", None))
 
 
 class TestCategoryImageMigration(IntegrationTestCase):

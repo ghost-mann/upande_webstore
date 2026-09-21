@@ -638,27 +638,44 @@ def after_install():
 	ensure_desktop_icon()
 
 
-def normalise_settings_docstatus():
-	"""Force Webstore Settings' docstatus back to 0.
+#: Every Single this app owns. None is submittable, so none may carry a
+#: non-zero docstatus — see normalise_settings_docstatus.
+NON_SUBMITTABLE_SINGLES = ("Webstore Settings", "Webstore Portal Settings")
 
-	The doctype is not submittable, but a stray docstatus of 2 in tabSingles
+
+def normalise_settings_docstatus():
+	"""Force each of this app's Singles back to docstatus 0.
+
+	Neither doctype is submittable, but a stray docstatus of 2 in tabSingles
 	makes the desk treat the record as a cancelled document and offer Amend
-	instead of a plain Save. Something in the migrate path keeps re-setting it,
-	so this runs on every migrate rather than as a one-time patch.
+	instead of a plain Save — with no way to get back, because a form that was
+	never submittable offers no path out of Cancelled.
+
+	It survives every migrate because tabSingles is column storage that simply
+	persists: once the 2 is there, loading the document reads it back and the
+	next save rewrites it. Nothing has to keep re-setting it, which is why this
+	is a repair run on every migrate rather than a one-time patch. What first
+	writes the 2 is still unknown; no code in this bench outside frappe itself
+	writes docstatus to a Single.
+
+	Looping rather than naming one doctype is the point: the earlier version
+	hardcoded Webstore Settings, so Webstore Portal Settings stayed cancelled
+	indefinitely on any site that had picked up a 2.
 	"""
-	if not frappe.db.exists("DocType", "Webstore Settings"):
-		return
-	current = frappe.db.sql(
-		"select value from tabSingles where doctype = %s and field = 'docstatus'",
-		"Webstore Settings",
-	)
-	if not current or str(current[0][0]) == "0":
-		return
-	frappe.db.sql(
-		"update tabSingles set value = '0' where doctype = %s and field = 'docstatus'",
-		"Webstore Settings",
-	)
-	frappe.clear_cache(doctype="Webstore Settings")
+	for doctype in NON_SUBMITTABLE_SINGLES:
+		if not frappe.db.exists("DocType", doctype):
+			continue
+		current = frappe.db.sql(
+			"select value from tabSingles where doctype = %s and field = 'docstatus'",
+			doctype,
+		)
+		if not current or str(current[0][0]) == "0":
+			continue
+		frappe.db.sql(
+			"update tabSingles set value = '0' where doctype = %s and field = 'docstatus'",
+			doctype,
+		)
+		frappe.clear_cache(doctype=doctype)
 
 
 def after_migrate():
