@@ -331,3 +331,100 @@ class TestClaimWindow(IntegrationTestCase):
 			from upande_webstore.tests.utils import reset_portal_settings
 
 			reset_portal_settings()
+
+
+class TestClaimDeskEntry(IntegrationTestCase):
+	"""A claim can be raised in the desk, not only from the portal.
+
+	`customer` shipped as read_only AND reqd with no default and no fetch_from.
+	Frappe's read_only is a form-level restriction, so the portal API and every
+	test here — all of which insert server-side — were unaffected, while the
+	desk's New Webstore Claim form had no way to fill the one field it could not
+	save without. `raised_by` was read_only for the same reason.
+
+	Both are set_only_once instead: supplied when the claim is created, fixed
+	afterwards, so a portal-filed claim cannot have its customer or its origin
+	rewritten later.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-CLM-DESK-ITEM")
+		make_item_price("WS-CLM-DESK-ITEM", "Standard Selling", 50)
+		set_stock("WS-CLM-DESK-ITEM", 50)
+		make_portal_user("claim.desk@example.com", "Claim Desk Ltd")
+		cls.invoice = make_submitted_invoice("Claim Desk Ltd", "WS-CLM-DESK-ITEM").name
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+	def _claim_type(self):
+		from upande_webstore.services.portal_settings import get_claim_types
+
+		return get_claim_types()[0]
+
+	def _new_claim(self, **overrides):
+		doc = frappe.get_doc({
+			"doctype": "Webstore Claim",
+			"customer": "Claim Desk Ltd",
+			"claim_type": self._claim_type(),
+			"description": "Filed at the counter.",
+			"against_doctype": "Sales Invoice",
+			"against_document": self.invoice,
+			**overrides,
+		})
+		doc.insert(ignore_permissions=True)
+		return doc
+
+	def test_customer_is_fillable_on_the_desk_form(self):
+		"""read_only would leave the desk with a required field it cannot set."""
+		field = frappe.get_meta("Webstore Claim").get_field("customer")
+		self.assertTrue(field.reqd, "customer is still required")
+		self.assertFalse(field.read_only, "customer cannot be filled in the desk")
+
+	def test_raised_by_is_fillable_on_the_desk_form(self):
+		field = frappe.get_meta("Webstore Claim").get_field("raised_by")
+		self.assertFalse(field.read_only, "raised_by cannot be filled in the desk")
+
+	def test_customer_cannot_be_switched_after_creation(self):
+		field = frappe.get_meta("Webstore Claim").get_field("customer")
+		self.assertTrue(field.set_only_once, "customer must be fixed once set")
+
+	def test_raised_by_cannot_be_switched_after_creation(self):
+		field = frappe.get_meta("Webstore Claim").get_field("raised_by")
+		self.assertTrue(field.set_only_once, "raised_by must be fixed once set")
+
+	def test_a_desk_claim_saves_and_keeps_its_customer(self):
+		claim = self._new_claim()
+
+		self.assertEqual(claim.customer, "Claim Desk Ltd")
+		self.assertEqual(claim.status, "Open")
+		self.assertTrue(claim.posting_date, "posting_date is still server-filled")
+
+	def test_raised_by_still_defaults_to_the_session_user_when_left_blank(self):
+		"""set_only_once must not stop validate() filling a blank raised_by."""
+		claim = self._new_claim()
+
+		self.assertEqual(claim.raised_by, "Administrator")
+
+	def test_raised_by_is_honoured_when_supplied(self):
+		claim = self._new_claim(raised_by="claim.desk@example.com")
+
+		self.assertEqual(claim.raised_by, "claim.desk@example.com")
+
+	def test_switching_the_customer_afterwards_is_refused(self):
+		"""Deliberately a claim with no document reference.
+
+		With one, validate_references() would refuse the switch anyway and the
+		test would pass whether or not set_only_once is set. Without one, the
+		only thing that can refuse it is set_only_once itself.
+		"""
+		claim = self._new_claim(against_doctype=None, against_document=None)
+		make_portal_user("claim.desk2@example.com", "Claim Desk Two Ltd")
+
+		claim.customer = "Claim Desk Two Ltd"
+
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			claim.save(ignore_permissions=True)
