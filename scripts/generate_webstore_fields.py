@@ -101,66 +101,87 @@ IDENTITY = [
 ]
 
 
-def build(source):
-	"""The doctype's fields, laid out the way someone setting up a shop works:
-	who it is, what it looks like, what it says, what it sells, what it offers."""
-	scalars = {name: copy_field(source[name], name) for name in registry.PER_STORE_SCALARS}
-	tables = {name: copy_field(source[name], name) for name in registry.PER_STORE_TABLES}
-	tristates = {name: tristate_field(source[name], name) for name in registry.PER_STORE_TRISTATE}
+def build(fields):
+	"""The store's fields, laid out the way `Webstore Settings` lays out its own.
 
-	features = [
-		tristates[name]
-		for name in registry.PER_STORE_TRISTATE
-		if name not in ("accent_drives_primary", "enable_box_packing")
-	]
+	Derived from the Single's field order rather than a layout invented here:
+	walk its tabs, sections and columns, keep the per-store fields and drop
+	everything else, then drop any section or tab left empty. An admin
+	configuring a shop then sees the same tabs in the same order with the same
+	headings as the site-wide form, minus the parts that cannot differ per
+	shop — which is the whole reason the two forms should not be laid out
+	independently.
+	"""
+	per_store = set(registry.ALL_PER_STORE_FIELDS)
+	tristate = set(registry.PER_STORE_TRISTATE)
+	source = {field["fieldname"]: field for field in fields}
 
-	groups = (
-		(section("identity_section", "Identity"), IDENTITY),
-		(
-			section("theme_section", "Theme", f"Colour, type and shape seeds for this store. {INHERIT}"),
-			[scalars[name] for name in registry.THEME_SEEDS] + [tristates["accent_drives_primary"]],
-		),
-		(
-			section("occasion_section", "Occasion", f"A seasonal campaign for this store alone. {INHERIT}"),
-			[scalars[name] for name in registry.OCCASION_FIELDS],
-		),
-		(
-			section("branding_section", "Branding & Copy", f"What this shop calls itself and says. {INHERIT}"),
-			[
-				scalars[name]
-				for name in registry.IDENTITY_FIELDS + registry.HERO_FIELDS + registry.COPY_FIELDS
-			]
-			+ [tables[name] for name in registry.BRANDING_TABLES],
-		),
-		(
-			section("commerce_section", "Catalogue & Pricing", f"What this shop sells and for how much. {INHERIT}"),
-			[scalars[name] for name in registry.COMMERCE_FIELDS]
-			+ [tables[name] for name in registry.COMMERCE_TABLES]
-			+ [tristates["enable_box_packing"]],
-		),
-		(
-			section(
-				"features_section",
-				"Features",
-				"Turn a storefront feature on or off for this store alone. "
-				f"{INHERIT} The portal is shared across every store, so its own "
-				"features are not listed here.",
-			),
-			features,
-		),
-	)
+	out = []
+	for field in fields:
+		kind = field["fieldtype"]
+		if kind in ("Tab Break", "Section Break", "Column Break"):
+			# structure is copied verbatim, then pruned below if nothing
+			# per-store ended up inside it
+			carried = {"fieldname": field["fieldname"], "fieldtype": kind}
+			if field.get("label"):
+				carried["label"] = field["label"]
+			if field.get("description") and kind != "Column Break":
+				carried["description"] = field["description"]
+			out.append(carried)
+		elif field["fieldname"] in per_store:
+			name = field["fieldname"]
+			out.append(
+				tristate_field(source[name], name) if name in tristate else copy_field(source[name], name)
+			)
 
-	fields = []
-	for header, members in groups:
-		fields.append(header)
-		fields.extend(members)
-	return fields
+	# An explicit first tab, so the store's own identity reads as a tab beside
+	# the inherited ones rather than as a stray block above them.
+	identity_tab = {"fieldname": "storefront_tab", "fieldtype": "Tab Break", "label": "Storefront"}
+	return [identity_tab] + IDENTITY + _prune(out)
+
+
+def _prune(fields):
+	"""Drop structure that ends up holding nothing.
+
+	Repeated until nothing more drops, because emptying a section can leave the
+	tab above it empty in turn.
+	"""
+	def once(items):
+		kept, changed = [], False
+		for index, field in enumerate(items):
+			kind = field["fieldtype"]
+			if kind in ("Tab Break", "Section Break", "Column Break"):
+				rest = items[index + 1 :]
+				# what follows before the next break of the same or wider scope
+				wider = {
+					"Column Break": ("Column Break", "Section Break", "Tab Break"),
+					"Section Break": ("Section Break", "Tab Break"),
+					"Tab Break": ("Tab Break",),
+				}[kind]
+				holds = False
+				for later in rest:
+					if later["fieldtype"] in wider:
+						break
+					if later["fieldtype"] not in ("Tab Break", "Section Break", "Column Break"):
+						holds = True
+						break
+				if not holds:
+					changed = True
+					continue
+			kept.append(field)
+		return kept, changed
+
+	while True:
+		fields, changed = once(fields)
+		if not changed:
+			return fields
 
 
 def main():
 	with open(SETTINGS) as handle:
-		source = {field["fieldname"]: field for field in json.load(handle)["fields"]}
+		settings_fields = json.load(handle)["fields"]
 
+	source = {field["fieldname"]: field for field in settings_fields}
 	missing = [name for name in registry.ALL_PER_STORE_FIELDS if name not in source]
 	if missing:
 		raise SystemExit(f"not on Webstore Settings: {', '.join(missing)}")
@@ -168,7 +189,7 @@ def main():
 	with open(WEBSTORE) as handle:
 		doctype = json.load(handle)
 
-	fields = build(source)
+	fields = build(settings_fields)
 	doctype["fields"] = fields
 	doctype["field_order"] = [field["fieldname"] for field in fields]
 

@@ -4,95 +4,119 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "identity_section",
+  "storefront_tab",
   "slug",
   "title",
   "published",
   "theme_preset",
-  "theme_section",
+  "general_tab",
+  "guest_price_list",
+  "guest_price_lists",
+  "stock_display",
+  "warehouses",
+  "packing_section",
+  "enable_box_packing",
+  "default_box_type",
+  "minimum_order_stems",
+  "default_lead_days",
+  "checkout_mode",
+  "theme_tab",
+  "brand_colors_section",
   "accent",
   "accent_dark",
   "accent_soft",
+  "accent_drives_primary",
+  "neutral_cb",
   "ink",
   "ink_muted",
   "canvas",
   "wash",
   "border",
   "border_strong",
+  "status_colors_section",
   "success",
   "warning",
+  "status_cb",
   "danger",
   "info",
+  "typography_section",
   "font_sans",
   "font_sans_name",
   "font_display",
   "font_display_name",
+  "font_cb",
   "font_mono",
   "font_mono_name",
   "google_fonts_url",
+  "shape_section",
   "radius",
   "radius_card",
   "radius_panel",
-  "custom_css",
-  "primary_color",
-  "accent_drives_primary",
   "occasion_section",
   "occasion",
   "occasion_runs_until",
+  "occasion_cb",
   "occasion_banner_text",
   "occasion_banner_cta_label",
   "occasion_banner_cta_url",
-  "branding_section",
+  "advanced_section",
+  "custom_css",
+  "primary_color",
+  "appearance_tab",
+  "identity_section",
   "site_name",
   "wordmark",
   "wordmark_bold",
-  "wordmark_subtitle",
   "brand_logo",
+  "identity_cb",
+  "wordmark_subtitle",
   "favicon",
+  "hero_section",
   "hero_image",
   "hero_eyebrow",
   "hero_heading",
   "hero_heading_em",
   "hero_body",
+  "hero_cta_cb",
   "hero_cta_primary",
   "hero_cta_secondary_guest",
   "hero_cta_secondary_member",
+  "hero_stats_section",
+  "hero_stats",
+  "categories_section",
+  "categories",
+  "category_cards_section",
+  "category_cards",
+  "process_section",
   "process_eyebrow",
   "process_heading",
   "process_heading_em",
+  "process_steps",
+  "footer_section",
   "footer_tagline",
+  "footer_links",
   "footer_contact_email",
   "footer_hours",
+  "footer_contact_cb",
   "footer_location",
   "footer_website",
   "footer_copyright",
   "footer_note",
+  "portal_branding_section",
   "portal_eyebrow",
+  "category_images_section",
   "flowers_category_image",
   "coffee_category_image",
   "produce_category_image",
-  "category_cards",
-  "hero_stats",
-  "process_steps",
-  "footer_links",
-  "commerce_section",
-  "guest_price_list",
-  "stock_display",
-  "default_box_type",
-  "minimum_order_stems",
-  "default_lead_days",
-  "checkout_mode",
-  "categories",
-  "guest_price_lists",
-  "warehouses",
-  "enable_box_packing",
-  "features_section",
+  "features_tab",
+  "storefront_features_section",
   "enable_cart",
   "enable_direct_order",
   "enable_wishlist",
   "enable_signup",
   "enable_search_palette",
   "enable_cart_drawer",
+  "storefront_features_cb",
   "enable_hero",
   "enable_hero_stats",
   "enable_category_cards",
@@ -100,9 +124,9 @@
  ],
  "fields": [
   {
-   "fieldname": "identity_section",
-   "fieldtype": "Section Break",
-   "label": "Identity"
+   "fieldname": "storefront_tab",
+   "fieldtype": "Tab Break",
+   "label": "Storefront"
   },
   {
    "description": "Lowercase URL prefix for this storefront \u2014 <code>flowers</code> serves /flowers/store. The default store's slug is <code>store</code>, which is what keeps /store working unchanged.",
@@ -133,10 +157,85 @@
    "read_only": 1
   },
   {
-   "description": "Colour, type and shape seeds for this store. Blank inherits Webstore Settings.",
-   "fieldname": "theme_section",
+   "fieldname": "general_tab",
+   "fieldtype": "Tab Break",
+   "label": "General"
+  },
+  {
+   "description": "Used when no price list below is offered \u2014 the single-currency behaviour every site shipped with before Guest Price Lists existed. Blank inherits Webstore Settings.",
+   "fieldname": "guest_price_list",
+   "fieldtype": "Link",
+   "label": "Guest Price List",
+   "options": "Price List"
+  },
+  {
+   "description": "One row per currency an anonymous visitor may browse in. Empty = the single Guest Price List above, no picker. Two or more rows show a currency picker in the storefront header; a visitor's choice is remembered in a cookie and re-validated against this table on every page. Blank inherits Webstore Settings.",
+   "fieldname": "guest_price_lists",
+   "fieldtype": "Table",
+   "label": "Guest Price Lists (currency picker)",
+   "options": "Webstore Guest Price List"
+  },
+  {
+   "description": "Blank inherits Webstore Settings.",
+   "fieldname": "stock_display",
+   "fieldtype": "Select",
+   "label": "Stock Display",
+   "options": "In/Out Badge\nExact Quantity"
+  },
+  {
+   "description": "Blank inherits Webstore Settings.",
+   "fieldname": "warehouses",
+   "fieldtype": "Table",
+   "label": "Stock Warehouses",
+   "options": "Webstore Warehouse"
+  },
+  {
+   "fieldname": "packing_section",
    "fieldtype": "Section Break",
+   "label": "Boxes & Order Rules"
+  },
+  {
+   "description": "Off = no box maths and no order minimum. Turn on only after pack rates are entered on your box Items. Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
+   "fieldname": "enable_box_packing",
+   "fieldtype": "Select",
+   "label": "Box Packing Rules",
+   "options": "\nEnabled\nDisabled"
+  },
+  {
+   "description": "Seeds each new cart line. Must be a usable box from this site's box source. Blank inherits Webstore Settings.",
+   "fieldname": "default_box_type",
+   "fieldtype": "Autocomplete",
+   "label": "Default Box Type"
+  },
+  {
+   "description": "0 = no minimum. Checked against the whole cart, not per line. Blank inherits Webstore Settings.",
+   "fieldname": "minimum_order_stems",
+   "fieldtype": "Int",
+   "label": "Minimum Order (Stems)"
+  },
+  {
+   "description": "Earliest shipping date a buyer may request, and the fallback when none is given. Blank inherits Webstore Settings.",
+   "fieldname": "default_lead_days",
+   "fieldtype": "Int",
+   "label": "Delivery Lead Time (Days)"
+  },
+  {
+   "description": "Which checkout button(s) the cart page offers. Blank behaves as Buyer chooses. Blank inherits Webstore Settings.",
+   "fieldname": "checkout_mode",
+   "fieldtype": "Select",
+   "label": "Checkout Mode",
+   "options": "\nBuyer chooses\nQuotation only\nSales order only"
+  },
+  {
+   "fieldname": "theme_tab",
+   "fieldtype": "Tab Break",
    "label": "Theme"
+  },
+  {
+   "description": "Set a few source colours; the rest of the palette is worked out from them. Every field is optional \u2014 blank means the shipped default, and a site with none set sends no overrides at all. <b>These colours apply to the storefront AND the customer portal.</b>",
+   "fieldname": "brand_colors_section",
+   "fieldtype": "Section Break",
+   "label": "Brand Colors"
   },
   {
    "description": "Price chips, badges, the bold half of the wordmark, the basket count, chart series, hero italics and focus rings. With <b>Accent Drives Primary Actions</b> ticked it also paints every primary button, the active nav pill and the avatar. Blank = shipped gold. Blank inherits Webstore Settings.",
@@ -155,6 +254,17 @@
    "fieldname": "accent_soft",
    "fieldtype": "Color",
    "label": "Accent Soft (tint)"
+  },
+  {
+   "description": "Off: the accent is trim only and near-black paints buttons, the active nav pill and avatars. On: those take the accent instead, while headings and body text stay ink. Tick this when the client's brand colour is their action colour. Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
+   "fieldname": "accent_drives_primary",
+   "fieldtype": "Select",
+   "label": "Accent Drives Primary Actions",
+   "options": "\nEnabled\nDisabled"
+  },
+  {
+   "fieldname": "neutral_cb",
+   "fieldtype": "Column Break"
   },
   {
    "description": "Headings and body text \u2014 and the source of the whole 7-step grey scale plus every card shadow, so this single field re-tints most of the page. Storefront and portal both. Blank inherits Webstore Settings.",
@@ -193,6 +303,12 @@
    "label": "Border (strong)"
   },
   {
+   "description": "Each one fills out a whole family: the flat colour, a darker or brighter partner, and a soft translucent tint for badge backgrounds.",
+   "fieldname": "status_colors_section",
+   "fieldtype": "Section Break",
+   "label": "Status Colors"
+  },
+  {
    "description": "\u201cIn stock\u201d badges, paid invoices, accepted quotations, resolved claims. Blank inherits Webstore Settings.",
    "fieldname": "success",
    "fieldtype": "Color",
@@ -205,6 +321,10 @@
    "label": "Warning"
   },
   {
+   "fieldname": "status_cb",
+   "fieldtype": "Column Break"
+  },
+  {
    "description": "\u201cOut of stock\u201d, overdue invoices, declined quotations, rejected claims. Blank inherits Webstore Settings.",
    "fieldname": "danger",
    "fieldtype": "Color",
@@ -215,6 +335,12 @@
    "fieldname": "info",
    "fieldtype": "Color",
    "label": "Info"
+  },
+  {
+   "description": "Bundled families need no internet connection. Choose <b>Custom</b> to use any Google font \u2014 you must give both the family name and the stylesheet URL.",
+   "fieldname": "typography_section",
+   "fieldtype": "Section Break",
+   "label": "Typography"
   },
   {
    "description": "Body text, buttons, labels, tables \u2014 nearly everything. Blank inherits Webstore Settings.",
@@ -243,6 +369,10 @@
    "label": "Display Font Family"
   },
   {
+   "fieldname": "font_cb",
+   "fieldtype": "Column Break"
+  },
+  {
    "description": "Numbers and codes: SKUs, eyebrow labels, document numbers, KPI figures. Blank inherits Webstore Settings.",
    "fieldname": "font_mono",
    "fieldtype": "Select",
@@ -260,6 +390,12 @@
    "fieldname": "google_fonts_url",
    "fieldtype": "Data",
    "label": "Google Fonts URL"
+  },
+  {
+   "description": "Corner rounding. Any CSS length: <code>4px</code>, <code>0.75rem</code>, or <code>0</code> for square corners.",
+   "fieldname": "shape_section",
+   "fieldtype": "Section Break",
+   "label": "Shape"
   },
   {
    "description": "Inputs, buttons, badges and small controls. Blank = 0.75rem. Blank inherits Webstore Settings.",
@@ -280,27 +416,6 @@
    "label": "Panel Radius"
   },
   {
-   "description": "Applied last, inside :root, so it overrides anything above. Use it to pin one specific token rather than fighting the derivation \u2014 e.g. <code>--ws-ink-4: #54586b;</code> Blank inherits Webstore Settings.",
-   "fieldname": "custom_css",
-   "fieldtype": "Code",
-   "label": "Custom CSS",
-   "options": "CSS"
-  },
-  {
-   "description": "Superseded by Accent. Retained for one release. Blank inherits Webstore Settings.",
-   "fieldname": "primary_color",
-   "fieldtype": "Color",
-   "label": "Primary Color (legacy)"
-  },
-  {
-   "description": "Off: the accent is trim only and near-black paints buttons, the active nav pill and avatars. On: those take the accent instead, while headings and body text stay ink. Tick this when the client's brand colour is their action colour. Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
-   "fieldname": "accent_drives_primary",
-   "fieldtype": "Select",
-   "label": "Accent Drives Primary Actions",
-   "options": "\nEnabled\nDisabled"
-  },
-  {
-   "description": "A seasonal campaign for this store alone. Blank inherits Webstore Settings.",
    "fieldname": "occasion_section",
    "fieldtype": "Section Break",
    "label": "Occasion"
@@ -316,6 +431,10 @@
    "fieldname": "occasion_runs_until",
    "fieldtype": "Date",
    "label": "Runs Until"
+  },
+  {
+   "fieldname": "occasion_cb",
+   "fieldtype": "Column Break"
   },
   {
    "description": "Overrides the occasion's own wording \u2014 put your order cutoff date here. Blank inherits Webstore Settings.",
@@ -336,10 +455,33 @@
    "label": "Banner CTA Link"
   },
   {
-   "description": "What this shop calls itself and says. Blank inherits Webstore Settings.",
-   "fieldname": "branding_section",
+   "fieldname": "advanced_section",
    "fieldtype": "Section Break",
-   "label": "Branding & Copy"
+   "label": "Advanced"
+  },
+  {
+   "description": "Applied last, inside :root, so it overrides anything above. Use it to pin one specific token rather than fighting the derivation \u2014 e.g. <code>--ws-ink-4: #54586b;</code> Blank inherits Webstore Settings.",
+   "fieldname": "custom_css",
+   "fieldtype": "Code",
+   "label": "Custom CSS",
+   "options": "CSS"
+  },
+  {
+   "description": "Superseded by Accent. Retained for one release. Blank inherits Webstore Settings.",
+   "fieldname": "primary_color",
+   "fieldtype": "Color",
+   "label": "Primary Color (legacy)"
+  },
+  {
+   "fieldname": "appearance_tab",
+   "fieldtype": "Tab Break",
+   "label": "Branding"
+  },
+  {
+   "description": "Who the site belongs to: the name and marks that appear in the navigation bar and footer.",
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Identity"
   },
   {
    "description": "Blank inherits Webstore Settings.",
@@ -360,22 +502,32 @@
    "label": "Wordmark (bold)"
   },
   {
-   "description": "Blank inherits Webstore Settings.",
-   "fieldname": "wordmark_subtitle",
-   "fieldtype": "Data",
-   "label": "Wordmark Subtitle"
-  },
-  {
    "description": "Shown in the navigation bar and, on a white plate, in the footer. Square marks and wide wordmarks both work. Blank = the shipped Upande logo. Blank inherits Webstore Settings.",
    "fieldname": "brand_logo",
    "fieldtype": "Attach Image",
    "label": "Brand Logo"
   },
   {
+   "fieldname": "identity_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Blank inherits Webstore Settings.",
+   "fieldname": "wordmark_subtitle",
+   "fieldtype": "Data",
+   "label": "Wordmark Subtitle"
+  },
+  {
    "description": "The small icon in the browser tab. Square, ideally 64&times;64px or larger. Blank inherits Webstore Settings.",
    "fieldname": "favicon",
    "fieldtype": "Attach Image",
    "label": "Favicon"
+  },
+  {
+   "description": "The large banner across the top of the storefront \u2014 background photo, headline and buttons. Switch the whole band off in <b>Features &rarr; Hero</b>.",
+   "fieldname": "hero_section",
+   "fieldtype": "Section Break",
+   "label": "Hero"
   },
   {
    "description": "Background photo of the hero banner on /store. Landscape works best, around 2000&times;1000px; it is cropped to fill and darkened so the headline stays readable. Blank = the shipped photo. Blank inherits Webstore Settings.",
@@ -408,6 +560,10 @@
    "label": "Body"
   },
   {
+   "fieldname": "hero_cta_cb",
+   "fieldtype": "Column Break"
+  },
+  {
    "description": "Blank inherits Webstore Settings.",
    "fieldname": "hero_cta_primary",
    "fieldtype": "Data",
@@ -424,6 +580,51 @@
    "fieldname": "hero_cta_secondary_member",
    "fieldtype": "Data",
    "label": "Secondary CTA (member)"
+  },
+  {
+   "description": "Empty = the stat row is omitted.",
+   "fieldname": "hero_stats_section",
+   "fieldtype": "Section Break",
+   "label": "Hero Stats"
+  },
+  {
+   "description": "Blank inherits Webstore Settings.",
+   "fieldname": "hero_stats",
+   "fieldtype": "Table",
+   "label": "Hero Stats",
+   "options": "Webstore Hero Stat"
+  },
+  {
+   "description": "Curated filter list for the storefront sidebar. Leave empty to keep today's automatic behaviour: every Item Group with a published product, alphabetically.",
+   "fieldname": "categories_section",
+   "fieldtype": "Section Break",
+   "label": "Categories"
+  },
+  {
+   "description": "Blank inherits Webstore Settings.",
+   "fieldname": "categories",
+   "fieldtype": "Table",
+   "label": "Categories",
+   "options": "Webstore Category"
+  },
+  {
+   "description": "Empty = the card grid is omitted.",
+   "fieldname": "category_cards_section",
+   "fieldtype": "Section Break",
+   "label": "Category Cards"
+  },
+  {
+   "description": "Blank inherits Webstore Settings.",
+   "fieldname": "category_cards",
+   "fieldtype": "Table",
+   "label": "Category Cards",
+   "options": "Webstore Category Card"
+  },
+  {
+   "description": "The three-step explainer band beneath the catalogue on /store. Leave the table empty to hide the whole band.",
+   "fieldname": "process_section",
+   "fieldtype": "Section Break",
+   "label": "How Ordering Works"
   },
   {
    "description": "Blank inherits Webstore Settings.",
@@ -444,10 +645,29 @@
    "label": "Heading (emphasis)"
   },
   {
+   "description": "Numbered in table order \u2014 01, 02, 03. Three fits the layout best. Blank inherits Webstore Settings.",
+   "fieldname": "process_steps",
+   "fieldtype": "Table",
+   "label": "Steps",
+   "options": "Webstore Process Step"
+  },
+  {
+   "fieldname": "footer_section",
+   "fieldtype": "Section Break",
+   "label": "Footer"
+  },
+  {
    "description": "Blank inherits Webstore Settings.",
    "fieldname": "footer_tagline",
    "fieldtype": "Small Text",
    "label": "Tagline"
+  },
+  {
+   "description": "Blank inherits Webstore Settings.",
+   "fieldname": "footer_links",
+   "fieldtype": "Table",
+   "label": "Footer Links",
+   "options": "Webstore Footer Link"
   },
   {
    "description": "Blank inherits Webstore Settings.",
@@ -460,6 +680,10 @@
    "fieldname": "footer_hours",
    "fieldtype": "Data",
    "label": "Hours"
+  },
+  {
+   "fieldname": "footer_contact_cb",
+   "fieldtype": "Column Break"
   },
   {
    "description": "Blank inherits Webstore Settings.",
@@ -486,10 +710,21 @@
    "label": "Footer Note"
   },
   {
+   "fieldname": "portal_branding_section",
+   "fieldtype": "Section Break",
+   "label": "Portal"
+  },
+  {
    "description": "Blank inherits Webstore Settings.",
    "fieldname": "portal_eyebrow",
    "fieldtype": "Data",
    "label": "Portal Eyebrow"
+  },
+  {
+   "description": "Superseded by the Category Cards table. Migrated automatically; retained one release.",
+   "fieldname": "category_images_section",
+   "fieldtype": "Section Break",
+   "label": "Category Card Images (legacy)"
   },
   {
    "description": "Blank inherits Webstore Settings.",
@@ -510,111 +745,15 @@
    "label": "Fresh Produce Card Image"
   },
   {
-   "description": "Blank inherits Webstore Settings.",
-   "fieldname": "category_cards",
-   "fieldtype": "Table",
-   "label": "Category Cards",
-   "options": "Webstore Category Card"
-  },
-  {
-   "description": "Blank inherits Webstore Settings.",
-   "fieldname": "hero_stats",
-   "fieldtype": "Table",
-   "label": "Hero Stats",
-   "options": "Webstore Hero Stat"
-  },
-  {
-   "description": "Numbered in table order \u2014 01, 02, 03. Three fits the layout best. Blank inherits Webstore Settings.",
-   "fieldname": "process_steps",
-   "fieldtype": "Table",
-   "label": "Steps",
-   "options": "Webstore Process Step"
-  },
-  {
-   "description": "Blank inherits Webstore Settings.",
-   "fieldname": "footer_links",
-   "fieldtype": "Table",
-   "label": "Footer Links",
-   "options": "Webstore Footer Link"
-  },
-  {
-   "description": "What this shop sells and for how much. Blank inherits Webstore Settings.",
-   "fieldname": "commerce_section",
-   "fieldtype": "Section Break",
-   "label": "Catalogue & Pricing"
-  },
-  {
-   "description": "Used when no price list below is offered \u2014 the single-currency behaviour every site shipped with before Guest Price Lists existed. Blank inherits Webstore Settings.",
-   "fieldname": "guest_price_list",
-   "fieldtype": "Link",
-   "label": "Guest Price List",
-   "options": "Price List"
-  },
-  {
-   "description": "Blank inherits Webstore Settings.",
-   "fieldname": "stock_display",
-   "fieldtype": "Select",
-   "label": "Stock Display",
-   "options": "In/Out Badge\nExact Quantity"
-  },
-  {
-   "description": "Seeds each new cart line. Must be a usable box from this site's box source. Blank inherits Webstore Settings.",
-   "fieldname": "default_box_type",
-   "fieldtype": "Autocomplete",
-   "label": "Default Box Type"
-  },
-  {
-   "description": "0 = no minimum. Checked against the whole cart, not per line. Blank inherits Webstore Settings.",
-   "fieldname": "minimum_order_stems",
-   "fieldtype": "Int",
-   "label": "Minimum Order (Stems)"
-  },
-  {
-   "description": "Earliest shipping date a buyer may request, and the fallback when none is given. Blank inherits Webstore Settings.",
-   "fieldname": "default_lead_days",
-   "fieldtype": "Int",
-   "label": "Delivery Lead Time (Days)"
-  },
-  {
-   "description": "Which checkout button(s) the cart page offers. Blank behaves as Buyer chooses. Blank inherits Webstore Settings.",
-   "fieldname": "checkout_mode",
-   "fieldtype": "Select",
-   "label": "Checkout Mode",
-   "options": "\nBuyer chooses\nQuotation only\nSales order only"
-  },
-  {
-   "description": "Blank inherits Webstore Settings.",
-   "fieldname": "categories",
-   "fieldtype": "Table",
-   "label": "Categories",
-   "options": "Webstore Category"
-  },
-  {
-   "description": "One row per currency an anonymous visitor may browse in. Empty = the single Guest Price List above, no picker. Two or more rows show a currency picker in the storefront header; a visitor's choice is remembered in a cookie and re-validated against this table on every page. Blank inherits Webstore Settings.",
-   "fieldname": "guest_price_lists",
-   "fieldtype": "Table",
-   "label": "Guest Price Lists (currency picker)",
-   "options": "Webstore Guest Price List"
-  },
-  {
-   "description": "Blank inherits Webstore Settings.",
-   "fieldname": "warehouses",
-   "fieldtype": "Table",
-   "label": "Stock Warehouses",
-   "options": "Webstore Warehouse"
-  },
-  {
-   "description": "Off = no box maths and no order minimum. Turn on only after pack rates are entered on your box Items. Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
-   "fieldname": "enable_box_packing",
-   "fieldtype": "Select",
-   "label": "Box Packing Rules",
-   "options": "\nEnabled\nDisabled"
-  },
-  {
-   "description": "Turn a storefront feature on or off for this store alone. Blank inherits Webstore Settings. The portal is shared across every store, so its own features are not listed here.",
-   "fieldname": "features_section",
-   "fieldtype": "Section Break",
+   "fieldname": "features_tab",
+   "fieldtype": "Tab Break",
    "label": "Features"
+  },
+  {
+   "description": "Unticking hides the UI, 404s the route and rejects the API.",
+   "fieldname": "storefront_features_section",
+   "fieldtype": "Section Break",
+   "label": "Storefront"
   },
   {
    "description": "Off = browse-only catalog. Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
@@ -657,6 +796,10 @@
    "fieldtype": "Select",
    "label": "Cart Drawer",
    "options": "\nEnabled\nDisabled"
+  },
+  {
+   "fieldname": "storefront_features_cb",
+   "fieldtype": "Column Break"
   },
   {
    "description": "Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",

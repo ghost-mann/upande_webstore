@@ -81,6 +81,50 @@ class TestStoreFieldParity(IntegrationTestCase):
 			with self.subTest(fieldname=fieldname):
 				self.assertFalse(self.webstore.get_field(fieldname).reqd, fieldname)
 
+	def test_the_form_is_organised_into_the_same_tabs_as_the_single(self):
+		"""A store is configured on the same mental map as the site: same tabs,
+		same order, same headings, minus what cannot differ per shop. The
+		layout is derived from Webstore Settings' own field order rather than
+		invented, so the two forms cannot drift into different shapes."""
+		def tabs(meta):
+			return [f.label for f in meta.fields if f.fieldtype == "Tab Break" and f.label]
+
+		settings_tabs = tabs(self.settings)
+		store_tabs = tabs(self.webstore)
+
+		self.assertEqual(store_tabs[0], "Storefront", "the store's own identity comes first")
+		inherited = store_tabs[1:]
+		self.assertTrue(inherited, f"expected inherited tabs — {REGENERATE}")
+		# every remaining tab exists on the Single, in the Single's own order
+		self.assertEqual(
+			inherited,
+			[t for t in settings_tabs if t in inherited],
+			f"tab order diverged from Webstore Settings — {REGENERATE}",
+		)
+
+	def test_no_tab_or_section_is_left_empty(self):
+		"""Dropping the site-wide fields empties some sections — Roles, the
+		portal feature flags — and an empty heading on a form is a dead end."""
+		fields = list(self.webstore.fields)
+		breaks = ("Tab Break", "Section Break", "Column Break")
+		for index, field in enumerate(fields):
+			if field.fieldtype not in breaks:
+				continue
+			wider = {
+				"Column Break": breaks,
+				"Section Break": ("Section Break", "Tab Break"),
+				"Tab Break": ("Tab Break",),
+			}[field.fieldtype]
+			holds = False
+			for later in fields[index + 1 :]:
+				if later.fieldtype in wider:
+					break
+				if later.fieldtype not in breaks:
+					holds = True
+					break
+			with self.subTest(fieldname=field.fieldname):
+				self.assertTrue(holds, f"{field.fieldname} holds nothing — {REGENERATE}")
+
 	def test_the_registry_has_no_duplicates(self):
 		self.assertEqual(
 			len(ALL_PER_STORE_FIELDS),
