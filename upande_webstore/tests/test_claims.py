@@ -10,7 +10,7 @@ from upande_webstore.tests.utils import (
 )
 
 
-def make_submitted_invoice(customer, item_code):
+def make_submitted_invoice(customer, item_code, posting_date=None):
 	company = frappe.defaults.get_global_default("company")
 	invoice = frappe.get_doc(
 		{
@@ -20,6 +20,7 @@ def make_submitted_invoice(customer, item_code):
 			"selling_price_list": "Standard Selling",
 			"due_date": frappe.utils.add_days(frappe.utils.nowdate(), 14),
 			"items": [{"item_code": item_code, "qty": 1, "rate": 50}],
+			**({"set_posting_time": 1, "posting_date": posting_date} if posting_date else {}),
 		}
 	)
 	invoice.flags.ignore_permissions = True
@@ -557,3 +558,109 @@ class TestClaimTypeMaster(IntegrationTestCase):
 				frappe.db.exists("Webstore Claim Type", name),
 				f"{name} was not seeded into the master",
 			)
+
+
+class TestClaimInvoicePicker(IntegrationTestCase):
+	"""The desk picker offers only this customer's own submitted invoices.
+
+	`assert_belongs_to` has always refused another customer's invoice, but that
+	is a check on save: the Link field itself had no query, so the desk offered
+	every invoice on the site and the sales user found out only after filling
+	the form in. The query below is what the form script binds to
+	`against_document` and to the child grid's `reference_name`.
+
+	Documents outside the claim window are returned, not hidden, and flagged in
+	the description instead — the same choice get_claimable_documents already
+	makes, for the same reason: a buyer has to be able to tell an expired
+	invoice from one that has gone missing.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-CLM-PICK-ITEM")
+		make_item_price("WS-CLM-PICK-ITEM", "Standard Selling", 50)
+		set_stock("WS-CLM-PICK-ITEM", 50)
+		make_portal_user("pick.mine@example.com", "Pick Mine Ltd")
+		make_portal_user("pick.other@example.com", "Pick Other Ltd")
+		cls.fresh = make_submitted_invoice("Pick Mine Ltd", "WS-CLM-PICK-ITEM").name
+		cls.stale = make_submitted_invoice(
+			"Pick Mine Ltd", "WS-CLM-PICK-ITEM",
+			posting_date=frappe.utils.add_days(frappe.utils.nowdate(), -90),
+		).name
+		cls.theirs = make_submitted_invoice("Pick Other Ltd", "WS-CLM-PICK-ITEM").name
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+	def _query(self, customer, txt=""):
+		from upande_webstore.api.claims import claimable_invoice_query
+
+		return claimable_invoice_query(
+			"Sales Invoice", txt, "name", 0, 20, {"customer": customer}
+		)
+
+	def _names(self, rows):
+		return [r[0] for r in rows]
+
+	def test_only_the_named_customers_invoices_are_offered(self):
+		names = self._names(self._query("Pick Mine Ltd"))
+
+		self.assertIn(self.fresh, names)
+		self.assertNotIn(self.theirs, names, "another customer's invoice was offered")
+
+	def test_an_out_of_window_invoice_is_still_offered(self):
+		"""Hiding it would leave an expired invoice indistinguishable from a
+		missing one."""
+		self.assertIn(self.stale, self._names(self._query("Pick Mine Ltd")))
+
+	def test_an_out_of_window_invoice_is_marked_in_the_description(self):
+		rows = {r[0]: " ".join(str(c) for c in r[1:]) for r in self._query("Pick Mine Ltd")}
+
+		self.assertIn("window", rows[self.stale].lower(), "expired invoice is not flagged")
+		self.assertNotIn("window", rows[self.fresh].lower(), "fresh invoice wrongly flagged")
+
+	def test_no_customer_offers_nothing(self):
+		"""A blank customer must not fall back to every invoice on the site."""
+		self.assertEqual(self._query(None), [])
+		self.assertEqual(self._query(""), [])
+
+	def test_a_draft_invoice_is_not_offered(self):
+		draft = frappe.get_doc({
+			"doctype": "Sales Invoice",
+			"customer": "Pick Mine Ltd",
+			"company": frappe.defaults.get_global_default("company"),
+			"selling_price_list": "Standard Selling",
+			"due_date": frappe.utils.add_days(frappe.utils.nowdate(), 14),
+			"items": [{"item_code": "WS-CLM-PICK-ITEM", "qty": 1, "rate": 50}],
+		})
+		draft.flags.ignore_permissions = True
+		draft.insert()
+
+		self.assertNotIn(draft.name, self._names(self._query("Pick Mine Ltd")))
+
+	def test_the_search_text_narrows_the_list(self):
+		self.assertEqual(self._names(self._query("Pick Mine Ltd", txt=self.fresh)), [self.fresh])
+
+
+class TestClaimFormAffordances(IntegrationTestCase):
+	def test_related_documents_is_an_editable_grid(self):
+		"""Rows are typed in place; opening a dialog per row to set two fields
+		is friction the sales team feels on every claim."""
+		self.assertTrue(frappe.get_meta("Webstore Claim Document").editable_grid)
+
+	def test_claim_type_description_does_not_misstate_the_rule(self):
+		"""It used to say the value "must be one of the types listed in
+		Webstore Portal Settings". Since claim_type became a Link that is
+		wrong: the master decides validity and the desk may use any type;
+		Portal Settings only narrows what the portal offers.
+
+		Asserting the absence of the phrase "Portal Settings" would be the
+		wrong test — naming it is fine, and the corrected wording does. What
+		must not survive is the claim that the list constrains the value.
+		"""
+		description = frappe.get_meta("Webstore Claim").get_field("claim_type").description or ""
+
+		self.assertNotIn("must be one of", description.lower())
+		self.assertIn("desk", description.lower(), "the description should say the desk is unrestricted")

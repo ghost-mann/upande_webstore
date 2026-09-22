@@ -8,7 +8,11 @@ import frappe
 from frappe import _
 
 from upande_webstore.api.cart import _require_login
-from upande_webstore.services.claims import get_claim_window_days, get_claimable_documents
+from upande_webstore.services.claims import (
+	get_claim_window_days,
+	get_claimable_documents,
+	is_within_window,
+)
 from upande_webstore.services.portal_settings import get, get_claim_types, is_on
 from upande_webstore.services.portal import get_current_customer
 from upande_webstore.theme.features import guard
@@ -102,3 +106,53 @@ def get_claim_options():
 		"max_attachment_mb": get("max_attachment_mb"),
 		"support_note": get("support_note"),
 	}
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def claimable_invoice_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Link query behind a claim's Sales Invoice fields, in the desk.
+
+	`assert_belongs_to` has always refused another customer's invoice, but that
+	is a check on save. The Link field itself carried no query, so the desk
+	offered every invoice on the site and a sales user learned their mistake
+	only after filling the form in. Bound to `against_document` and to the
+	child grid's `reference_name`, this narrows the picker to the claim's own
+	customer up front.
+
+	Reads through `frappe.get_all` rather than ignoring permissions: a user who
+	cannot see a Sales Invoice should not be offered it here either.
+
+	Documents outside the claim window are returned and flagged rather than
+	hidden, matching `get_claimable_documents` — hiding them leaves an expired
+	invoice indistinguishable from one that has gone missing. The server still
+	refuses them on save; this is a label, not a permission.
+	"""
+	customer = (filters or {}).get("customer")
+	if not customer:
+		# never fall back to every invoice on the site
+		return []
+
+	rows = frappe.get_all(
+		"Sales Invoice",
+		filters={
+			"customer": customer,
+			"docstatus": 1,
+			"name": ["like", f"%{txt or ''}%"],
+		},
+		fields=["name", "posting_date", "grand_total", "currency"],
+		order_by="posting_date desc",
+		limit_start=start or 0,
+		limit_page_length=page_len or 20,
+	)
+
+	window = get_claim_window_days()
+	out = []
+	for row in rows:
+		parts = [frappe.utils.formatdate(row.posting_date)]
+		if row.grand_total:
+			parts.append(frappe.utils.fmt_money(row.grand_total, currency=row.currency))
+		if not is_within_window(row.posting_date):
+			parts.append(_("outside the {0}-day claim window").format(window))
+		out.append((row.name, " · ".join(parts)))
+	return out

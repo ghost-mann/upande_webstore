@@ -46,7 +46,7 @@
    "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "description": "Must be one of the types listed in Webstore Portal Settings."
+   "description": "Any claim type on record. Webstore Portal Settings decides which of them the customer portal offers; the desk can use any."
   },
   {
    "fieldname": "status",
