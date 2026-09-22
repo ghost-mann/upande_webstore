@@ -481,3 +481,136 @@ class TestClaimPortalPayload(IntegrationTestCase):
 
 		self.assertNotIn("proposed_total", CLAIM_FIELDS)
 		self.assertNotIn("lines", CLAIM_FIELDS)
+
+
+class TestClaimPortalRender(IntegrationTestCase):
+	"""The membership tests above only prove the field names are on the
+	payload — they would keep passing even if the template never printed
+	them, which is exactly how the missing render survived four reviews.
+	These render the real /portal/claim route end to end and assert on the
+	HTML the customer actually receives.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_portal_user("cr.render@example.com", "CR Render Ltd")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _claim(self, customer="CR Render Ltd"):
+		claim_type = frappe.get_all("Webstore Claim Type", pluck="name")[0]
+		doc = frappe.get_doc({
+			"doctype": "Webstore Claim",
+			"customer": customer,
+			"claim_type": claim_type,
+			"description": "Two boxes crushed in transit.",
+		})
+		doc.flags.ignore_permissions = True
+		doc.insert()
+		return doc
+
+	def _render(self, claim_name):
+		"""Render the real /portal/claim route, query string and all.
+
+		`get_html_for_route` builds the request but never calls
+		`make_form_dict`, so `frappe.form_dict` — what `claim.py` reads the
+		`name` argument from — stays empty and the page 301s to
+		/portal/claims before the template runs at all. Reproduce the same
+		two-step pipeline the real WSGI app performs instead.
+		"""
+		from frappe.app import make_form_dict
+		from frappe.utils import set_request
+		from frappe.website.serve import get_response
+
+		frappe.set_user("cr.render@example.com")
+		try:
+			set_request(method="GET", path=f"portal/claim?name={claim_name}")
+			make_form_dict(frappe.local.request)
+			response = get_response()
+			self.assertEqual(
+				response.status_code, 200,
+				f"expected the claim page to render, got {response.status_code}",
+			)
+			return frappe.safe_decode(response.get_data())
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_a_non_credit_note_outcome_is_rendered(self):
+		"""A claim settled as Replacement, with no credit note and no
+		free-text resolution, must not fall back to "reviewing" — that was
+		the whole bug: action and approved_total were fetched but never
+		printed, so the only two other signals the template checked were
+		both blank."""
+		claim = self._claim()
+		frappe.db.set_value(
+			"Webstore Claim", claim.name,
+			{"action": "Replacement", "approved_total": 400},
+		)
+
+		html = self._render(claim.name)
+
+		self.assertIn("Replacement", html)
+		expected = frappe.utils.fmt_money(400, currency=self._currency())
+		self.assertIn(expected, html, "the approved total must be currency-formatted, not a bare float")
+		self.assertNotIn("400.0<", html)
+		self.assertNotIn(
+			"reviewing this claim", html,
+			"a settled claim with a non-credit-note action must not show the pending message",
+		)
+
+	def test_an_approved_total_of_zero_is_not_dropped(self):
+		"""approved_total may legitimately be settled at zero (Goodwill, No
+		action). A bare truthiness check on approved_total would make that
+		figure disappear even though the claim was in fact decided."""
+		claim = self._claim()
+		frappe.db.set_value(
+			"Webstore Claim", claim.name,
+			{"action": "No action", "approved_total": 0},
+		)
+
+		html = self._render(claim.name)
+
+		self.assertIn("No action", html)
+		zero = frappe.utils.fmt_money(0, currency=self._currency())
+		self.assertIn(zero, html, "an approved total of zero must still be rendered")
+		self.assertNotIn("reviewing this claim", html)
+
+	def test_an_unresolved_claim_still_shows_the_pending_message(self):
+		"""No regression: a claim with no action, no approved figure, no
+		credit note and no resolution must still read as pending."""
+		claim = self._claim()
+
+		html = self._render(claim.name)
+
+		self.assertIn("reviewing this claim", html)
+
+	def test_the_internal_fields_are_never_rendered(self):
+		"""proposed_total, the lines table and approval_note are not in the
+		portal payload at all, and must never reach the customer's page."""
+		claim = self._claim()
+		frappe.db.set_value(
+			"Webstore Claim", claim.name,
+			{
+				"action": "Discount on next order",
+				"approved_total": 250,
+				"proposed_total": 999,
+				"approval_note": "Internal-only: settle low, buyer overstated damage.",
+			},
+		)
+
+		html = self._render(claim.name)
+
+		self.assertNotIn("999", html)
+		self.assertNotIn("Internal-only", html)
+		self.assertNotIn("overstated", html)
+
+	def _currency(self):
+		return frappe.get_cached_value(
+			"Company", frappe.defaults.get_global_default("company"), "default_currency"
+		)

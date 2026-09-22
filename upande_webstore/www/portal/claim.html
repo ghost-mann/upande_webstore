@@ -43,9 +43,23 @@
 	{% endif %}
 </div>
 
-{% if doc.credit_note or doc.resolution %}
+{% if doc.action or doc.approved_total or doc.credit_note or doc.resolution %}
 <div class="ws-panel">
 	<div class="ws-panel-head"><h3>{{ _("Outcome") }}</h3></div>
+	{% if doc.action or doc.approved_total %}
+	<div class="ws-facts">
+		{% if doc.action %}
+		<div><small>{{ _("Resolution") }}</small><b>{{ _(doc.action) }}</b></div>
+		{% endif %}
+		{# doc.action being set means finance settled this claim, so the agreed
+		   figure belongs here even when it was settled at zero (Goodwill, No
+		   action) — a bare truthiness check on approved_total would make a
+		   genuine 0 vanish. #}
+		{% if doc.action or doc.approved_total %}
+		<div><small>{{ _("Approved amount") }}</small><b>{{ frappe.utils.fmt_money(doc.approved_total, currency=portal_currency) }}</b></div>
+		{% endif %}
+	</div>
+	{% endif %}
 	{% if doc.credit_note %}
 	<div class="ws-facts">
 		<div><small>{{ _("Credit note issued") }}</small><b>{{ doc.credit_note }}</b></div>

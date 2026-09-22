@@ -48,7 +48,7 @@ frappe.ui.form.on("Webstore Claim", {
 	},
 
 	refresh(frm) {
-		if (frm.is_new() || !frm.doc.against_document) {
+		if (frm.is_new() || !frm.doc.against_document || frm.doc.docstatus !== 0) {
 			return;
 		}
 		frm.add_custom_button(__("Fetch Invoice Lines"), () => {
