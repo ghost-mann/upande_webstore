@@ -174,6 +174,13 @@ def fetch_invoice_lines(claim):
 			frappe.ValidationError,
 		)
 
+	if doc.approved_total:
+		frappe.throw(
+			_("This claim has an approved value. Withdraw the approval before "
+			  "changing the lines it was given for."),
+			frappe.ValidationError,
+		)
+
 	from upande_webstore.services.claim_lines import snapshot_rows
 
 	doc.set("lines", [])

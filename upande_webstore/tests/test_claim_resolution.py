@@ -192,6 +192,17 @@ class TestClaimLines(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			claim.save(ignore_permissions=True)
 
+	def test_fetch_is_refused_once_finance_has_approved(self):
+		"""Otherwise an approval silently detaches from the lines it was for."""
+		from upande_webstore.api.claims import fetch_invoice_lines
+
+		claim = self._claim()
+		fetch_invoice_lines(claim.name)
+		frappe.db.set_value("Webstore Claim", claim.name, "approved_total", 250)
+
+		with self.assertRaises(frappe.ValidationError):
+			fetch_invoice_lines(claim.name)
+
 	def test_the_snapshot_does_not_follow_the_invoice(self):
 		"""The whole point of storing rows rather than reading them live."""
 		claim = self._claim()
@@ -205,3 +216,49 @@ class TestClaimLines(IntegrationTestCase):
 		claim.reload()
 
 		self.assertEqual(claim.lines[0].invoiced_qty, before)
+
+
+class TestFinanceApproval(IntegrationTestCase):
+	"""Commerce proposes; finance approves. Frappe's permlevel is what makes
+	that a rule rather than an agreement.
+
+	Note how the permlevel assertion is written. Frappe does not raise when a
+	user without permlevel access changes a higher-permlevel field — it
+	silently restores the stored value. Asserting an exception would fail
+	against correct behaviour.
+	"""
+
+	def test_the_finance_fields_sit_at_permlevel_1(self):
+		meta = frappe.get_meta("Webstore Claim")
+
+		self.assertEqual(meta.get_field("approved_total").permlevel, 1)
+		self.assertEqual(meta.get_field("approval_note").permlevel, 1)
+
+	def test_proposed_total_stays_at_permlevel_0(self):
+		"""Commerce must still be able to fill in what it is asking for."""
+		self.assertEqual(frappe.get_meta("Webstore Claim").get_field("proposed_total").permlevel, 0)
+
+	def test_a_finance_role_grants_permlevel_1(self):
+		from upande_webstore.services.roles import desired_grants
+
+		settings = frappe._dict({
+			"claim_finance_roles": [frappe._dict({"role": "Accounts Manager"})],
+		})
+
+		grants = desired_grants(settings)
+
+		self.assertIn("Webstore Claim#1", grants)
+		self.assertIn("Accounts Manager", grants["Webstore Claim#1"])
+
+	def test_the_other_role_fields_stay_at_permlevel_0(self):
+		"""Widening one must not accidentally widen finance access."""
+		from upande_webstore.services.roles import desired_grants
+
+		settings = frappe._dict({
+			"portal_manager_roles": [frappe._dict({"role": "Sales User"})],
+		})
+
+		grants = desired_grants(settings)
+
+		self.assertIn("Webstore Claim", grants)
+		self.assertNotIn("Webstore Claim#1", grants)

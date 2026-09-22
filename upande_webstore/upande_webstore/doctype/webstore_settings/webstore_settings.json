@@ -29,6 +29,7 @@
   "catalogue_manager_roles",
   "order_manager_roles",
   "portal_manager_roles",
+  "claim_finance_roles",
   "applied_role_permissions",
   "created_custom_fields",
   "theme_tab",
@@ -286,6 +287,13 @@
    "label": "Portal Managers",
    "options": "Webstore Role",
    "description": "Read, write and create on Webstore Portal Settings, Webstore Portal Access, Webstore Claim and Webstore Claim Type — lets a role configure the customer portal, grant or revoke buyer logins, and handle claims."
+  },
+  {
+   "fieldname": "claim_finance_roles",
+   "fieldtype": "Table MultiSelect",
+   "options": "Webstore Role",
+   "label": "Claim Finance Roles",
+   "description": "Roles allowed to set the approved value on a claim. This is the only setting that grants permlevel 1 — the other role lists stay at permlevel 0."
   },
   {
    "fieldname": "applied_role_permissions",

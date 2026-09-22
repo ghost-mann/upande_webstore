@@ -23,6 +23,8 @@
   "lines_section",
   "lines",
   "proposed_total",
+  "approved_total",
+  "approval_note",
   "detail_section",
   "description",
   "resolution_section",
@@ -123,6 +125,19 @@
    "label": "Proposed Total",
    "read_only": 1,
    "description": "Summed from the claimed lines."
+  },
+  {
+   "fieldname": "approved_total",
+   "fieldtype": "Currency",
+   "label": "Approved Total",
+   "permlevel": 1,
+   "description": "Set by finance. No arithmetic ties this to the credit note — a settlement may be paid as a replacement or a discount, and one credit note may cover several claims."
+  },
+  {
+   "fieldname": "approval_note",
+   "fieldtype": "Small Text",
+   "label": "Approval Note",
+   "permlevel": 1
   },
   {
    "fieldname": "detail_section",
