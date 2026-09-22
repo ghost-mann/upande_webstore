@@ -24,6 +24,10 @@ CLAIM_FIELDS = (
 	"posting_date",
 	"against_doctype",
 	"against_document",
+	# The outcome and the agreed figure, but never the proposed one: a customer
+	# should see what was decided, not commerce's opening position.
+	"action",
+	"approved_total",
 	"credit_note",
 	"resolution",
 	"description",

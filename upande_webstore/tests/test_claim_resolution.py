@@ -466,3 +466,18 @@ class TestFinanceApproval(IntegrationTestCase):
 		# and the projection is still the page's payload, not an empty shell
 		self.assertEqual(seen.name, claim.name)
 		self.assertEqual(seen.description, "Short delivery.")
+
+
+class TestClaimPortalPayload(IntegrationTestCase):
+	def test_the_customer_sees_the_outcome_and_the_agreed_figure(self):
+		from upande_webstore.api.claims import CLAIM_FIELDS
+
+		self.assertIn("action", CLAIM_FIELDS)
+		self.assertIn("approved_total", CLAIM_FIELDS)
+
+	def test_the_customer_does_not_see_the_opening_position(self):
+		"""Publishing commerce's proposed figure would be hard to walk back."""
+		from upande_webstore.api.claims import CLAIM_FIELDS
+
+		self.assertNotIn("proposed_total", CLAIM_FIELDS)
+		self.assertNotIn("lines", CLAIM_FIELDS)

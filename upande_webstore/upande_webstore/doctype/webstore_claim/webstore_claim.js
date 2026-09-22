@@ -46,4 +46,24 @@ frappe.ui.form.on("Webstore Claim", {
 			});
 		}
 	},
+
+	refresh(frm) {
+		if (frm.is_new() || !frm.doc.against_document) {
+			return;
+		}
+		frm.add_custom_button(__("Fetch Invoice Lines"), () => {
+			frappe.confirm(
+				__("Replace the claimed lines with the invoice's current lines?"),
+				() => {
+					frappe
+						.call({
+							method: "upande_webstore.api.claims.fetch_invoice_lines",
+							args: { claim: frm.doc.name },
+							freeze: true,
+						})
+						.then(() => frm.reload_doc());
+				}
+			);
+		});
+	},
 });
