@@ -156,3 +156,28 @@ def claimable_invoice_query(doctype, txt, searchfield, start, page_len, filters)
 			parts.append(_("outside the {0}-day claim window").format(window))
 		out.append((row.name, " · ".join(parts)))
 	return out
+
+
+@frappe.whitelist(methods=["POST"])
+def fetch_invoice_lines(claim):
+	"""Copy the referenced invoice's lines onto the claim, replacing any there.
+
+	Deliberately a button rather than automatic: it is an act with a
+	consequence, and re-running it discards whatever was filled in.
+	"""
+	doc = frappe.get_doc("Webstore Claim", claim)
+	doc.check_permission("write")
+
+	if not doc.against_document:
+		frappe.throw(
+			_("Pick the invoice this claim is about before fetching its lines."),
+			frappe.ValidationError,
+		)
+
+	from upande_webstore.services.claim_lines import snapshot_rows
+
+	doc.set("lines", [])
+	for row in snapshot_rows(doc.against_document):
+		doc.append("lines", row)
+	doc.save()
+	return {"lines": len(doc.lines)}

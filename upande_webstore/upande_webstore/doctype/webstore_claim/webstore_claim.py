@@ -3,6 +3,7 @@ from frappe.model.document import Document
 from frappe.utils import now_datetime
 
 from upande_webstore.services.claims import assert_belongs_to, assert_credit_note
+from upande_webstore.services.claim_lines import assert_claimable_quantities, claimed_total
 
 
 class WebstoreClaim(Document):
@@ -12,6 +13,13 @@ class WebstoreClaim(Document):
 		if not self.raised_by:
 			self.raised_by = frappe.session.user
 		self.validate_references()
+		self.validate_lines()
+
+	def validate_lines(self):
+		"""The totals are ours, not the client's — the stance services/packing.py
+		takes on box counts, for the same reason."""
+		assert_claimable_quantities(self.lines or [])
+		self.proposed_total = claimed_total(self.lines or [])
 
 	def validate_references(self):
 		"""Every referenced document must belong to this claim's customer.

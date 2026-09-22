@@ -1,0 +1,26 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Claim Line",
+ "module": "Upande Webstore",
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "creation": "2026-09-22 00:00:01.000000",
+ "modified": "2026-09-22 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": ["item_code", "item_name", "uom", "invoiced_qty", "rate", "invoiced_amount", "is_claimed", "claimed_qty", "proposed_value"],
+ "fields": [
+  {"fieldname": "item_code", "fieldtype": "Data", "label": "Item", "read_only": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "item_name", "fieldtype": "Data", "label": "Name", "read_only": 1},
+  {"fieldname": "uom", "fieldtype": "Data", "label": "UOM", "read_only": 1},
+  {"fieldname": "invoiced_qty", "fieldtype": "Float", "label": "Invoiced Qty", "read_only": 1, "in_list_view": 1, "columns": 1},
+  {"fieldname": "rate", "fieldtype": "Currency", "label": "Rate", "read_only": 1},
+  {"fieldname": "invoiced_amount", "fieldtype": "Currency", "label": "Invoiced", "read_only": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "is_claimed", "fieldtype": "Check", "label": "Claimed", "in_list_view": 1, "columns": 1},
+  {"fieldname": "claimed_qty", "fieldtype": "Float", "label": "Claimed Qty", "in_list_view": 1, "columns": 1},
+  {"fieldname": "proposed_value", "fieldtype": "Currency", "label": "Proposed", "in_list_view": 1, "columns": 2}
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

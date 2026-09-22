@@ -20,6 +20,9 @@
   "against_doctype",
   "against_document",
   "related_documents",
+  "lines_section",
+  "lines",
+  "proposed_total",
   "detail_section",
   "description",
   "resolution_section",
@@ -101,6 +104,25 @@
    "fieldtype": "Table",
    "label": "Other Related Documents",
    "options": "Webstore Claim Document"
+  },
+  {
+   "fieldname": "lines_section",
+   "fieldtype": "Section Break",
+   "label": "Claimed Lines",
+   "description": "Fetched from the invoice above. A snapshot — later changes to the invoice do not move these rows."
+  },
+  {
+   "fieldname": "lines",
+   "fieldtype": "Table",
+   "options": "Webstore Claim Line",
+   "label": "Lines"
+  },
+  {
+   "fieldname": "proposed_total",
+   "fieldtype": "Currency",
+   "label": "Proposed Total",
+   "read_only": 1,
+   "description": "Summed from the claimed lines."
   },
   {
    "fieldname": "detail_section",
