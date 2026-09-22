@@ -23,6 +23,7 @@
   "detail_section",
   "description",
   "resolution_section",
+  "action",
   "credit_note",
   "resolution",
   "legacy_issue"
@@ -117,6 +118,13 @@
    "fieldtype": "Section Break",
    "label": "Resolution",
    "description": "Filled in by the sales team. The customer sees both fields on their claim."
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Link",
+   "options": "Webstore Claim Action",
+   "label": "Action Taken",
+   "description": "What was done about this claim. The credit note, if any, is linked below."
   },
   {
    "fieldname": "credit_note",

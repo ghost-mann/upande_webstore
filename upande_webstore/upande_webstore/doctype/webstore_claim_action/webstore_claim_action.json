@@ -1,0 +1,27 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Claim Action",
+ "module": "Upande Webstore",
+ "istable": 0,
+ "engine": "InnoDB",
+ "autoname": "field:action",
+ "naming_rule": "By fieldname",
+ "creation": "2026-09-22 00:00:01.000000",
+ "modified": "2026-09-22 00:00:01.000000",
+ "owner": "Administrator",
+ "description": "What was done about a claim — a credit note, a replacement, a discount. The farm may add its own.",
+ "field_order": ["action", "description"],
+ "fields": [
+  {"fieldname": "action", "fieldtype": "Data", "label": "Action", "reqd": 1, "unique": 1, "in_list_view": 1},
+  {"fieldname": "description", "fieldtype": "Data", "label": "Description", "in_list_view": 1}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Sales Manager", "read": 1, "write": 1, "create": 1},
+  {"role": "Sales User", "read": 1},
+  {"role": "Customer", "read": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
