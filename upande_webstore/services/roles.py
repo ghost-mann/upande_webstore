@@ -6,10 +6,10 @@ grants Item read to Sales User but not Sales Manager (this app's box-type
 reads go through `services/access.py::require_permission`, which defers to
 `frappe.has_permission`, so a farm that wants a different role in has nowhere
 to say so short of the Role Permission Manager). This module is that "where":
-three role multi-selects on Webstore Settings, reconciled to Custom DocPerms
+four role multi-selects on Webstore Settings, reconciled to Custom DocPerms
 on save.
 
-Three rules shape every function here:
+Four rules shape every function here:
 
 1. Webstore Settings itself is never touched. Only System Manager may write
    it — letting this feature grant write on it would let anyone holding a
@@ -26,6 +26,15 @@ Three rules shape every function here:
    *previously applied* record, not "whatever Custom DocPerms currently
    exist" — a Custom DocPerm an admin created by hand for some other role is
    never in that record, so it is never inspected, let alone changed.
+4. A permlevel is part of a grant's identity, not a property of it. Grants are
+   keyed by doctype at permlevel 0 and by `<doctype>#<permlevel>` above it, so
+   the two levels are diffed and reconciled independently and a level-0 revoke
+   can never disturb a level-1 row. Webstore Claim is the only doctype with a
+   level above 0 today, and the two lists that reach it are deliberately
+   unequal: `portal_manager_roles` gets level-1 *read*, so commerce can see the
+   approved value rather than a blank field, and `claim_finance_roles` alone
+   gets level-1 *write*. Read is not authority; write is. Nothing else in this
+   module ever passes a non-zero permlevel.
 """
 
 import json
@@ -51,6 +60,13 @@ PORTAL_DOCTYPES = (
 	"Webstore Claim Type",
 )
 PORTAL_PTYPES = ("read", "write", "create")
+#: Commerce must be able to *read* the approved value. Frappe strips every
+#: permlevel-1 field from a user with no permlevel-1 read access
+#: (`Document.apply_fieldlevel_read_permissions`), so without this a Portal
+#: Manager opens a claim and sees Approved Total blank — indistinguishable from
+#: "finance has not decided yet". Read only, and never anything more: the point
+#: of the permlevel is that only finance may write it.
+PORTAL_FINANCE_PTYPES = ("read",)
 
 # The only setting that grants a permlevel above 0. Kept separate from the
 # three lists above so that widening any of them can never widen finance
@@ -138,9 +154,17 @@ def desired_grants(settings):
 	portal_roles = _roles_of(settings, PORTAL_FIELD)
 	for doctype in PORTAL_DOCTYPES:
 		add(doctype, portal_roles, PORTAL_PTYPES)
+	# Read at permlevel 1, so the finance fields are visible to commerce rather
+	# than silently blank. Never write: see PORTAL_FINANCE_PTYPES.
+	add(
+		FINANCE_DOCTYPE,
+		portal_roles,
+		PORTAL_FINANCE_PTYPES,
+		permlevel=FINANCE_PERMLEVEL,
+	)
 
-	# The only permlevel-1 grant in the module: read and write on the two
-	# finance fields of Webstore Claim, and nothing else, for nobody else.
+	# The only grant of *write* at permlevel 1 anywhere in this module. It
+	# merges with the read above when a role appears in both lists.
 	add(
 		FINANCE_DOCTYPE,
 		_roles_of(settings, FINANCE_FIELD),

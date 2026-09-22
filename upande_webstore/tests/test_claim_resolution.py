@@ -244,19 +244,28 @@ class TestFinanceApproval(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		self._users = []
 		self._roles = []
+		self._reconciled = False
 
 	def tearDown(self):
 		"""Unconditional, on every path: a leaked session user or a leaked
 		Custom DocPerm would silently change the meaning of every test that
-		runs after this one."""
+		runs after this one.
+
+		The permission reset is skipped unless a test actually reconciled, and
+		`_reconciled` is set *before* reconcile() is called so a half-finished
+		grant is still cleaned up. It is the expensive half of this teardown and
+		most tests in this class never touch a permission.
+		"""
 		frappe.set_user("Administrator")
-		for doctype in ("Webstore Claim", *roles_service.PORTAL_DOCTYPES):
-			frappe.permissions.reset_perms(doctype)
+		if self._reconciled:
+			for doctype in ("Webstore Claim", *roles_service.PORTAL_DOCTYPES):
+				frappe.permissions.reset_perms(doctype)
 		for email in self._users:
 			frappe.delete_doc("User", email, force=True, ignore_permissions=True)
 		for role in self._roles:
 			frappe.delete_doc("Role", role, force=True, ignore_permissions=True)
-		frappe.clear_cache()
+		if self._reconciled or self._users or self._roles:
+			frappe.clear_cache()
 
 	def _role(self, name):
 		"""A throwaway Role carrying nothing of its own, so the assertions can
@@ -280,6 +289,7 @@ class TestFinanceApproval(IntegrationTestCase):
 			field: [frappe._dict({"role": role}) for role in names]
 			for field, names in role_lists.items()
 		})
+		self._reconciled = True
 		roles_service.reconcile(settings)
 		frappe.clear_cache()
 
@@ -317,10 +327,16 @@ class TestFinanceApproval(IntegrationTestCase):
 		grants = desired_grants(settings)
 
 		self.assertIn("Webstore Claim#1", grants)
-		self.assertIn("Accounts Manager", grants["Webstore Claim#1"])
+		self.assertEqual(grants["Webstore Claim#1"]["Accounts Manager"], ["read", "write"])
 
-	def test_the_other_role_fields_stay_at_permlevel_0(self):
-		"""Widening one must not accidentally widen finance access."""
+	def test_a_portal_role_reads_permlevel_1_but_never_writes_it(self):
+		"""Commerce has to be able to see what finance decided.
+
+		Frappe strips every permlevel-1 field from a user without permlevel-1
+		read, so without this grant a Portal Manager opens a claim and finds
+		Approved Total blank — which reads as "not approved yet" rather than
+		"you may not see this". Read is not authority; write is.
+		"""
 		from upande_webstore.services.roles import desired_grants
 
 		settings = frappe._dict({
@@ -329,8 +345,21 @@ class TestFinanceApproval(IntegrationTestCase):
 
 		grants = desired_grants(settings)
 
-		self.assertIn("Webstore Claim", grants)
-		self.assertNotIn("Webstore Claim#1", grants)
+		self.assertEqual(grants["Webstore Claim"]["Sales User"], ["create", "read", "write"])
+		self.assertEqual(grants["Webstore Claim#1"]["Sales User"], ["read"])
+
+	def test_no_other_role_list_grants_write_at_permlevel_1(self):
+		"""The constraint that actually matters: widening any other list must
+		never hand out the authority to change an approved value."""
+		from upande_webstore.services.roles import desired_grants
+
+		for field in ("catalogue_manager_roles", "order_manager_roles", "portal_manager_roles"):
+			grants = desired_grants(frappe._dict({field: [frappe._dict({"role": "Sales User"})]}))
+			self.assertNotIn(
+				"write",
+				grants.get("Webstore Claim#1", {}).get("Sales User", []),
+				f"{field} must never grant write at permlevel 1",
+			)
 
 	def test_only_a_finance_role_can_change_the_approved_value(self):
 		"""The end-to-end proof, and the only test here that reaches the
@@ -388,3 +417,52 @@ class TestFinanceApproval(IntegrationTestCase):
 			400,
 			"the finance role must be able to set the value it is there to set",
 		)
+
+		# The other half of the same rule, and the one a permlevel makes easy
+		# to get wrong: commerce must be able to *read* what finance decided.
+		# apply_fieldlevel_read_permissions is what the desk form calls
+		# (frappe/desk/form/load.py), and it deletes every permlevel-1 field
+		# from a user without permlevel-1 read — leaving a blank that reads as
+		# "not approved yet" rather than "not yours to see".
+		frappe.set_user(commerce)
+		seen = frappe.get_doc("Webstore Claim", claim.name)
+		seen.apply_fieldlevel_read_permissions()
+		seen_total = seen.get("approved_total")
+		frappe.set_user("Administrator")
+
+		self.assertEqual(
+			seen_total,
+			400,
+			"commerce must see the approved value, not a field stripped to blank",
+		)
+
+	def test_the_portal_never_sees_the_approval_note(self):
+		"""get_claim returns a projection, not the document.
+
+		Frappe's own field-level read filtering does not run for a custom
+		whitelisted method, so returning the Document would hand a logged-in
+		buyer the internal finance commentary on their own claim.
+		"""
+		from upande_webstore.api.claims import CLAIM_FIELDS, get_claim
+
+		claim = self._claim()
+		frappe.db.set_value("Webstore Claim", claim.name, {
+			"approved_total": 250,
+			"approval_note": "Settle at 250; the third box turned up in the cold room.",
+		})
+
+		frappe.set_user("fa.buyer@example.com")
+		try:
+			seen = get_claim(claim.name)
+		finally:
+			frappe.set_user("Administrator")
+
+		# Checked first, and deliberately: a Document is not a container, so
+		# without this a regression to `return claim` fails with an opaque
+		# TypeError from assertNotIn rather than saying what went wrong.
+		self.assertIsInstance(seen, dict, "get_claim must return a projection, not the Document")
+		self.assertNotIn("approval_note", CLAIM_FIELDS)
+		self.assertNotIn("approval_note", seen)
+		# and the projection is still the page's payload, not an empty shell
+		self.assertEqual(seen.name, claim.name)
+		self.assertEqual(seen.description, "Short delivery.")

@@ -81,16 +81,38 @@ def get_claims(limit=50):
 	)
 
 
+#: The child rows the claim page renders, and the only two columns of them it
+#: is given. Projected explicitly for the same reason as CLAIM_FIELDS.
+CLAIM_RELATED_FIELDS = ("reference_doctype", "reference_name")
+
+
 @frappe.whitelist()
 @guard("portal", "claims")
 def get_claim(name):
-	"""One claim, only if it belongs to the session user's customer."""
+	"""One claim, only if it belongs to the session user's customer.
+
+	Returns a projection, never the Document. Frappe's own field-level read
+	filtering (`Document.apply_fieldlevel_read_permissions`) runs for
+	`frappe.client` and `run_doc_method`, not for a custom whitelisted method
+	like this one, so returning the doc would hand a logged-in buyer every
+	field on it — including `approval_note`, which is internal finance
+	commentary at permlevel 1. Building the payload from CLAIM_FIELDS makes the
+	buyer-visible set an explicit whitelist: a field added to the doctype later
+	cannot leak here by default, it has to be named.
+	"""
 	_require_login()
 	customer = get_current_customer()
 	claim = frappe.get_doc("Webstore Claim", name)
 	if claim.customer != customer:
 		frappe.throw(_("Not permitted."), frappe.PermissionError)
-	return claim
+
+	out = frappe._dict({field: claim.get(field) for field in CLAIM_FIELDS})
+	# The one child table the claim page renders, projected column by column.
+	out.related_documents = [
+		frappe._dict({column: row.get(column) for column in CLAIM_RELATED_FIELDS})
+		for row in (claim.related_documents or [])
+	]
+	return out
 
 
 def get_claim_options():

@@ -302,7 +302,7 @@
    "options": "JSON",
    "hidden": 1,
    "read_only": 1,
-   "description": "Internal record of exactly what the Roles section above has applied (doctype → role → permission types), so the next save reconciles against what this panel actually added rather than whatever else exists."
+   "description": "Internal record of exactly what the Roles section above has applied, so the next save reconciles against what this panel actually added rather than whatever else exists. The shape is key → role → permission types, where the key is the doctype name for ordinary (permlevel 0) permissions and <doctype>#<permlevel> for a higher level — so Webstore Claim and Webstore Claim#1 are two separate, independently reconciled entries."
   },
   {
    "fieldname": "created_custom_fields",
