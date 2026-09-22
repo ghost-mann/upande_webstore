@@ -6,7 +6,9 @@ See docs/superpowers/specs/2026-09-22-claim-resolution-and-value-adjustment-desi
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from upande_webstore.services import roles as roles_service
 from upande_webstore.tests.utils import (
+	make_desk_user,
 	make_item_price,
 	make_portal_user,
 	make_test_product,
@@ -224,9 +226,76 @@ class TestFinanceApproval(IntegrationTestCase):
 
 	Note how the permlevel assertion is written. Frappe does not raise when a
 	user without permlevel access changes a higher-permlevel field — it
-	silently restores the stored value. Asserting an exception would fail
+	silently restores the stored value (see
+	`Document.validate_higher_perm_levels`). Asserting an exception would fail
 	against correct behaviour.
 	"""
+
+	COMMERCE_ROLE = "WS Test Claim Commerce"
+	FINANCE_ROLE = "WS Test Claim Finance"
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_portal_user("fa.buyer@example.com", "FA Buyer Ltd")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self._users = []
+		self._roles = []
+
+	def tearDown(self):
+		"""Unconditional, on every path: a leaked session user or a leaked
+		Custom DocPerm would silently change the meaning of every test that
+		runs after this one."""
+		frappe.set_user("Administrator")
+		for doctype in ("Webstore Claim", *roles_service.PORTAL_DOCTYPES):
+			frappe.permissions.reset_perms(doctype)
+		for email in self._users:
+			frappe.delete_doc("User", email, force=True, ignore_permissions=True)
+		for role in self._roles:
+			frappe.delete_doc("Role", role, force=True, ignore_permissions=True)
+		frappe.clear_cache()
+
+	def _role(self, name):
+		"""A throwaway Role carrying nothing of its own, so the assertions can
+		only be explained by what this feature granted it."""
+		if not frappe.db.exists("Role", name):
+			frappe.get_doc({"doctype": "Role", "role_name": name, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
+		self._roles.append(name)
+		return name
+
+	def _user(self, email, role):
+		self._users.append(email)
+		return make_desk_user(email, [role])
+
+	def _reconcile(self, **role_lists):
+		"""Drive the real grant path — reconcile() against an unsaved settings
+		dict — rather than hand-writing a Custom DocPerm, so this test fails if
+		the permlevel ever stops reaching the database."""
+		settings = frappe._dict({
+			field: [frappe._dict({"role": role}) for role in names]
+			for field, names in role_lists.items()
+		})
+		roles_service.reconcile(settings)
+		frappe.clear_cache()
+
+	def _claim(self):
+		"""No referenced invoice: this test is about the permlevel, and a
+		reference would drag Sales Invoice read permissions into it."""
+		claim_type = frappe.get_all("Webstore Claim Type", pluck="name")[0]
+		doc = frappe.get_doc({
+			"doctype": "Webstore Claim",
+			"customer": "FA Buyer Ltd",
+			"claim_type": claim_type,
+			"description": "Short delivery.",
+		})
+		doc.flags.ignore_permissions = True
+		doc.insert()
+		return doc
 
 	def test_the_finance_fields_sit_at_permlevel_1(self):
 		meta = frappe.get_meta("Webstore Claim")
@@ -262,3 +331,60 @@ class TestFinanceApproval(IntegrationTestCase):
 
 		self.assertIn("Webstore Claim", grants)
 		self.assertNotIn("Webstore Claim#1", grants)
+
+	def test_only_a_finance_role_can_change_the_approved_value(self):
+		"""The end-to-end proof, and the only test here that reaches the
+		database. The metadata and grant-shape tests above say the permlevel is
+		declared and asked for; this one says Frappe actually enforces it on a
+		real save, by a real user, through a Custom DocPerm this feature wrote.
+		It is also the test that will notice if a future Frappe changes how a
+		permlevel above 0 on a Custom DocPerm behaves.
+		"""
+		claim = self._claim()
+		frappe.db.set_value("Webstore Claim", claim.name, "approved_total", 250)
+
+		# Commerce: permlevel 0 on the claim through Portal Managers, and
+		# nothing at permlevel 1.
+		commerce_role = self._role(self.COMMERCE_ROLE)
+		self._reconcile(portal_manager_roles=[commerce_role])
+		commerce = self._user("fa.commerce@example.com", commerce_role)
+
+		frappe.set_user(commerce)
+		doc = frappe.get_doc("Webstore Claim", claim.name)
+		doc.description = "Short delivery, three boxes."
+		doc.approved_total = 9999
+		doc.save()
+		frappe.set_user("Administrator")
+
+		self.assertEqual(
+			frappe.db.get_value("Webstore Claim", claim.name, "approved_total"),
+			250,
+			"a role without permlevel 1 must not be able to move the approved value",
+		)
+		self.assertEqual(
+			frappe.db.get_value("Webstore Claim", claim.name, "description"),
+			"Short delivery, three boxes.",
+			"and its permlevel 0 edit in the same save must still have gone through",
+		)
+
+		# Finance: permlevel 1 as well. It needs permlevel 0 too — a role
+		# granted only permlevel 1 cannot open the claim at all — which is
+		# exactly what the field's description tells an administrator.
+		finance_role = self._role(self.FINANCE_ROLE)
+		self._reconcile(
+			portal_manager_roles=[commerce_role, finance_role],
+			claim_finance_roles=[finance_role],
+		)
+		finance = self._user("fa.finance@example.com", finance_role)
+
+		frappe.set_user(finance)
+		doc = frappe.get_doc("Webstore Claim", claim.name)
+		doc.approved_total = 400
+		doc.save()
+		frappe.set_user("Administrator")
+
+		self.assertEqual(
+			frappe.db.get_value("Webstore Claim", claim.name, "approved_total"),
+			400,
+			"the finance role must be able to set the value it is there to set",
+		)
