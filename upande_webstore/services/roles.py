@@ -6,10 +6,10 @@ grants Item read to Sales User but not Sales Manager (this app's box-type
 reads go through `services/access.py::require_permission`, which defers to
 `frappe.has_permission`, so a farm that wants a different role in has nowhere
 to say so short of the Role Permission Manager). This module is that "where":
-three role multi-selects on Webstore Settings, reconciled to Custom DocPerms
+four role multi-selects on Webstore Settings, reconciled to Custom DocPerms
 on save.
 
-Three rules shape every function here:
+Four rules shape every function here:
 
 1. Webstore Settings itself is never touched. Only System Manager may write
    it — letting this feature grant write on it would let anyone holding a
@@ -26,6 +26,15 @@ Three rules shape every function here:
    *previously applied* record, not "whatever Custom DocPerms currently
    exist" — a Custom DocPerm an admin created by hand for some other role is
    never in that record, so it is never inspected, let alone changed.
+4. A permlevel is part of a grant's identity, not a property of it. Grants are
+   keyed by doctype at permlevel 0 and by `<doctype>#<permlevel>` above it, so
+   the two levels are diffed and reconciled independently and a level-0 revoke
+   can never disturb a level-1 row. Webstore Claim is the only doctype with a
+   level above 0 today, and the two lists that reach it are deliberately
+   unequal: `portal_manager_roles` gets level-1 *read*, so commerce can see the
+   approved value rather than a blank field, and `claim_finance_roles` alone
+   gets level-1 *write*. Read is not authority; write is. Nothing else in this
+   module ever passes a non-zero permlevel.
 """
 
 import json
@@ -51,6 +60,21 @@ PORTAL_DOCTYPES = (
 	"Webstore Claim Type",
 )
 PORTAL_PTYPES = ("read", "write", "create")
+#: Commerce must be able to *read* the approved value. Frappe strips every
+#: permlevel-1 field from a user with no permlevel-1 read access
+#: (`Document.apply_fieldlevel_read_permissions`), so without this a Portal
+#: Manager opens a claim and sees Approved Total blank — indistinguishable from
+#: "finance has not decided yet". Read only, and never anything more: the point
+#: of the permlevel is that only finance may write it.
+PORTAL_FINANCE_PTYPES = ("read",)
+
+# The only setting that grants a permlevel above 0. Kept separate from the
+# three lists above so that widening any of them can never widen finance
+# access: nothing else in this module ever passes a non-zero permlevel.
+FINANCE_FIELD = "claim_finance_roles"
+FINANCE_DOCTYPE = "Webstore Claim"
+FINANCE_PTYPES = ("read", "write")
+FINANCE_PERMLEVEL = 1
 
 # Every flag a Custom DocPerm row can carry. Used only to tell whether a row
 # this feature has just cleared its own flags on is now carrying nothing else
@@ -78,8 +102,24 @@ def _roles_of(settings, fieldname):
 	return [row.role for row in (settings.get(fieldname) or []) if row.role]
 
 
+def _grant_key(doctype, permlevel):
+	"""Permlevel 0 keeps the bare doctype name, so a record written by an
+	earlier release still reads back unchanged and needs no migration."""
+	return doctype if not permlevel else f"{doctype}#{permlevel}"
+
+
+def _split_key(key):
+	doctype, _, level = key.partition("#")
+	return doctype, int(level or 0)
+
+
 def desired_grants(settings):
-	"""doctype -> role -> sorted list of ptypes the Roles section wants applied.
+	"""grant key -> role -> sorted list of ptypes the Roles section wants applied.
+
+	The key is the doctype name for permlevel 0 and `<doctype>#<permlevel>`
+	above it; `_split_key` turns it back into the pair. Anything reading a key
+	out of this mapping — or out of the `applied_role_permissions` record it is
+	diffed against — must split it before using it as a doctype.
 
 	`settings` need only support `.get(fieldname)` returning a list of rows
 	with a `.role` attribute — a real Webstore Settings doc works, and so does
@@ -88,13 +128,14 @@ def desired_grants(settings):
 	"""
 	grants = {}
 
-	def add(doctype, roles, ptypes):
+	def add(doctype, roles, ptypes, permlevel=0):
 		if not doctype or doctype == FORBIDDEN_DOCTYPE:
 			return
 		if not frappe.db.exists("DocType", doctype):
 			return
+		key = _grant_key(doctype, permlevel)
 		for role in roles:
-			grants.setdefault(doctype, {}).setdefault(role, set()).update(ptypes)
+			grants.setdefault(key, {}).setdefault(role, set()).update(ptypes)
 
 	catalogue_roles = _roles_of(settings, CATALOGUE_FIELD)
 	add("Webstore Product", catalogue_roles, CATALOGUE_PTYPES)
@@ -113,10 +154,27 @@ def desired_grants(settings):
 	portal_roles = _roles_of(settings, PORTAL_FIELD)
 	for doctype in PORTAL_DOCTYPES:
 		add(doctype, portal_roles, PORTAL_PTYPES)
+	# Read at permlevel 1, so the finance fields are visible to commerce rather
+	# than silently blank. Never write: see PORTAL_FINANCE_PTYPES.
+	add(
+		FINANCE_DOCTYPE,
+		portal_roles,
+		PORTAL_FINANCE_PTYPES,
+		permlevel=FINANCE_PERMLEVEL,
+	)
+
+	# The only grant of *write* at permlevel 1 anywhere in this module. It
+	# merges with the read above when a role appears in both lists.
+	add(
+		FINANCE_DOCTYPE,
+		_roles_of(settings, FINANCE_FIELD),
+		FINANCE_PTYPES,
+		permlevel=FINANCE_PERMLEVEL,
+	)
 
 	return {
-		doctype: {role: sorted(ptypes) for role, ptypes in roles.items()}
-		for doctype, roles in grants.items()
+		key: {role: sorted(ptypes) for role, ptypes in roles.items()}
+		for key, roles in grants.items()
 	}
 
 
@@ -137,13 +195,14 @@ def _dump(grants):
 	return json.dumps(grants, sort_keys=True) if grants else ""
 
 
-def _custom_docperm_name(doctype, role):
+def _custom_docperm_name(doctype, role, permlevel=0):
 	return frappe.db.get_value(
-		"Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0}
+		"Custom DocPerm",
+		{"parent": doctype, "role": role, "permlevel": permlevel, "if_owner": 0},
 	)
 
 
-def _grant(doctype, role, ptypes):
+def _grant(doctype, role, ptypes, permlevel=0):
 	"""Ensure every ptype in `ptypes` is set on `role`'s Custom DocPerm for
 	`doctype`, using frappe's own Role Permission Manager helpers so this
 	behaves exactly as if an admin had ticked the same boxes by hand."""
@@ -152,15 +211,15 @@ def _grant(doctype, role, ptypes):
 		# only fires if a future change to this module's wiring gets it wrong.
 		raise ValueError("Refusing to grant any permission on Webstore Settings.")
 	ptypes = set(ptypes)
-	existed_before = bool(_custom_docperm_name(doctype, role))
+	existed_before = bool(_custom_docperm_name(doctype, role, permlevel))
 	if not existed_before:
-		frappe.permissions.add_permission(doctype, role, permlevel=0, ptype=sorted(ptypes)[0])
+		frappe.permissions.add_permission(doctype, role, permlevel=permlevel, ptype=sorted(ptypes)[0])
 	# add_permission may also have no-opped (a Custom DocPerm for this role
 	# already existed, copied from a shipped DocPerm when the doctype was
 	# touched for the first time) — set every ptype explicitly regardless, so
 	# the result never depends on what that copy happened to already carry.
 	for ptype in sorted(ptypes):
-		frappe.permissions.update_permission_property(doctype, role, 0, ptype, 1)
+		frappe.permissions.update_permission_property(doctype, role, permlevel, ptype, 1)
 	if not existed_before:
 		# A row add_permission just created carries its own shipped Custom
 		# DocPerm defaults — notably `export`, which defaults to 1 however the
@@ -169,20 +228,20 @@ def _grant(doctype, role, ptypes):
 		# this call just created: a pre-existing row may carry flags an admin
 		# set by hand, and those must never be touched here.
 		for ptype in set(_PTYPE_FLAGS) - ptypes:
-			frappe.permissions.update_permission_property(doctype, role, 0, ptype, 0)
+			frappe.permissions.update_permission_property(doctype, role, permlevel, ptype, 0)
 
 
-def _revoke(doctype, role, ptypes):
+def _revoke(doctype, role, ptypes, permlevel=0):
 	"""Clear exactly `ptypes` on the Custom DocPerm this feature previously
 	set for `role` on `doctype`. The row itself is deleted only once nothing
 	but this feature's flags are left on it — anything an admin set on the
 	same row by hand keeps the row alive and untouched."""
-	docperm_name = _custom_docperm_name(doctype, role)
+	docperm_name = _custom_docperm_name(doctype, role, permlevel)
 	if not docperm_name:
 		# an admin may already have removed it by hand; nothing to do
 		return
 	for ptype in ptypes:
-		frappe.permissions.update_permission_property(doctype, role, 0, ptype, 0)
+		frappe.permissions.update_permission_property(doctype, role, permlevel, ptype, 0)
 	remaining = frappe.db.get_value("Custom DocPerm", docperm_name, list(_PTYPE_FLAGS), as_dict=True)
 	if remaining and not any(remaining.values()):
 		frappe.delete_doc("Custom DocPerm", docperm_name, ignore_permissions=True, force=True)
@@ -212,19 +271,21 @@ def reconcile(settings):
 
 	# Revoke first: anything the previous reconcile applied that the current
 	# configuration no longer wants, for exactly the roles/ptypes it added.
-	for doctype, roles_map in applied.items():
+	for key, roles_map in applied.items():
+		doctype, permlevel = _split_key(key)
 		for role, ptypes in roles_map.items():
-			gone = set(ptypes) - set(desired.get(doctype, {}).get(role, []))
+			gone = set(ptypes) - set(desired.get(key, {}).get(role, []))
 			if gone:
-				_revoke(doctype, role, gone)
+				_revoke(doctype, role, gone, permlevel)
 				touched_doctypes.add(doctype)
 
 	# Then grant whatever is newly wanted.
-	for doctype, roles_map in desired.items():
+	for key, roles_map in desired.items():
+		doctype, permlevel = _split_key(key)
 		for role, ptypes in roles_map.items():
-			previously = set(applied.get(doctype, {}).get(role, []))
+			previously = set(applied.get(key, {}).get(role, []))
 			if set(ptypes) - previously:
-				_grant(doctype, role, ptypes)
+				_grant(doctype, role, ptypes, permlevel)
 				touched_doctypes.add(doctype)
 
 	for doctype in touched_doctypes:

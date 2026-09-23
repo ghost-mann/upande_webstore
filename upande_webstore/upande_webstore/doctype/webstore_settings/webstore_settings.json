@@ -29,6 +29,7 @@
   "catalogue_manager_roles",
   "order_manager_roles",
   "portal_manager_roles",
+  "claim_finance_roles",
   "applied_role_permissions",
   "created_custom_fields",
   "theme_tab",
@@ -288,13 +289,20 @@
    "description": "Read, write and create on Webstore Portal Settings, Webstore Portal Access, Webstore Claim and Webstore Claim Type — lets a role configure the customer portal, grant or revoke buyer logins, and handle claims."
   },
   {
+   "fieldname": "claim_finance_roles",
+   "fieldtype": "Table MultiSelect",
+   "options": "Webstore Role",
+   "label": "Claim Finance Roles",
+   "description": "Roles allowed to set Approved Total and Approval Note on a claim, and nothing else — this is the only setting here that grants permlevel 1. It grants those two fields only, so a role listed here and nowhere else cannot open a claim at all: add it to Portal Managers as well to give it the ordinary access it needs to reach the claim in the first place."
+  },
+  {
    "fieldname": "applied_role_permissions",
    "fieldtype": "Code",
    "label": "Applied Role Permissions",
    "options": "JSON",
    "hidden": 1,
    "read_only": 1,
-   "description": "Internal record of exactly what the Roles section above has applied (doctype → role → permission types), so the next save reconciles against what this panel actually added rather than whatever else exists."
+   "description": "Internal record of exactly what the Roles section above has applied, so the next save reconciles against what this panel actually added rather than whatever else exists. The shape is key → role → permission types, where the key is the doctype name for ordinary (permlevel 0) permissions and <doctype>#<permlevel> for a higher level — so Webstore Claim and Webstore Claim#1 are two separate, independently reconciled entries."
   },
   {
    "fieldname": "created_custom_fields",

@@ -24,6 +24,10 @@ CLAIM_FIELDS = (
 	"posting_date",
 	"against_doctype",
 	"against_document",
+	# The outcome and the agreed figure, but never the proposed one: a customer
+	# should see what was decided, not commerce's opening position.
+	"action",
+	"approved_total",
 	"credit_note",
 	"resolution",
 	"description",
@@ -81,16 +85,38 @@ def get_claims(limit=50):
 	)
 
 
+#: The child rows the claim page renders, and the only two columns of them it
+#: is given. Projected explicitly for the same reason as CLAIM_FIELDS.
+CLAIM_RELATED_FIELDS = ("reference_doctype", "reference_name")
+
+
 @frappe.whitelist()
 @guard("portal", "claims")
 def get_claim(name):
-	"""One claim, only if it belongs to the session user's customer."""
+	"""One claim, only if it belongs to the session user's customer.
+
+	Returns a projection, never the Document. Frappe's own field-level read
+	filtering (`Document.apply_fieldlevel_read_permissions`) runs for
+	`frappe.client` and `run_doc_method`, not for a custom whitelisted method
+	like this one, so returning the doc would hand a logged-in buyer every
+	field on it — including `approval_note`, which is internal finance
+	commentary at permlevel 1. Building the payload from CLAIM_FIELDS makes the
+	buyer-visible set an explicit whitelist: a field added to the doctype later
+	cannot leak here by default, it has to be named.
+	"""
 	_require_login()
 	customer = get_current_customer()
 	claim = frappe.get_doc("Webstore Claim", name)
 	if claim.customer != customer:
 		frappe.throw(_("Not permitted."), frappe.PermissionError)
-	return claim
+
+	out = frappe._dict({field: claim.get(field) for field in CLAIM_FIELDS})
+	# The one child table the claim page renders, projected column by column.
+	out.related_documents = [
+		frappe._dict({column: row.get(column) for column in CLAIM_RELATED_FIELDS})
+		for row in (claim.related_documents or [])
+	]
+	return out
 
 
 def get_claim_options():
@@ -156,3 +182,35 @@ def claimable_invoice_query(doctype, txt, searchfield, start, page_len, filters)
 			parts.append(_("outside the {0}-day claim window").format(window))
 		out.append((row.name, " · ".join(parts)))
 	return out
+
+
+@frappe.whitelist(methods=["POST"])
+def fetch_invoice_lines(claim):
+	"""Copy the referenced invoice's lines onto the claim, replacing any there.
+
+	Deliberately a button rather than automatic: it is an act with a
+	consequence, and re-running it discards whatever was filled in.
+	"""
+	doc = frappe.get_doc("Webstore Claim", claim)
+	doc.check_permission("write")
+
+	if not doc.against_document:
+		frappe.throw(
+			_("Pick the invoice this claim is about before fetching its lines."),
+			frappe.ValidationError,
+		)
+
+	if doc.approved_total:
+		frappe.throw(
+			_("This claim has an approved value. Withdraw the approval before "
+			  "changing the lines it was given for."),
+			frappe.ValidationError,
+		)
+
+	from upande_webstore.services.claim_lines import snapshot_rows
+
+	doc.set("lines", [])
+	for row in snapshot_rows(doc.against_document):
+		doc.append("lines", row)
+	doc.save()
+	return {"lines": len(doc.lines)}

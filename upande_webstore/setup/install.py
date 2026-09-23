@@ -694,9 +694,53 @@ def _existing_claim_type_values():
 	return [v for v in values if v]
 
 
+SHIPPED_CLAIM_ACTIONS = (
+	"Credit Note",
+	"Replacement",
+	"Discount on next order",
+	"Goodwill",
+	"No action",
+)
+
+CLAIM_ACTION_DOCTYPE = "Webstore Claim Action"
+
+
+def seed_claim_actions():
+	"""Every action a claim already names must exist as a record.
+
+	`Webstore Claim.action` is a Link, so a value with no master record is a
+	dangling link: the claim cannot be re-saved and the picker cannot show it.
+	Existing claim values come first for exactly that reason, the shipped list
+	second — the same ordering, and the same reasoning, as seed_claim_types().
+	"""
+	if not frappe.db.exists("DocType", CLAIM_ACTION_DOCTYPE):
+		return
+
+	wanted = []
+	if frappe.db.table_exists("Webstore Claim"):
+		try:
+			rows = frappe.db.sql(
+				"select distinct `action` from `tabWebstore Claim` where ifnull(`action`, '') != ''"
+			)
+		except Exception:
+			rows = []
+		wanted.extend((r[0] or "").strip() for r in rows)
+	for name in SHIPPED_CLAIM_ACTIONS:
+		if name not in wanted:
+			wanted.append(name)
+
+	for name in wanted:
+		if not name or frappe.db.exists(CLAIM_ACTION_DOCTYPE, name):
+			continue
+		doc = frappe.get_doc({"doctype": CLAIM_ACTION_DOCTYPE, "action": name})
+		doc.flags.ignore_permissions = True
+		doc.insert()
+
+
 def after_install():
 	create_webstore_custom_fields()
 	seed_claim_types()
+	seed_claim_actions()
 	seed_default_theme()
 	ensure_navigation_block()
 	ensure_desktop_icon()
@@ -745,6 +789,7 @@ def normalise_settings_docstatus():
 def after_migrate():
 	create_webstore_custom_fields()
 	seed_claim_types()
+	seed_claim_actions()
 	normalise_settings_docstatus()
 	ensure_navigation_block()
 	ensure_desktop_icon()
