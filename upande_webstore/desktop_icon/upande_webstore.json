@@ -1,7 +1,7 @@
 {
  "app": "upande_webstore",
  "bg_color": "gray",
- "creation": "2026-09-22 04:49:50.662728",
+ "creation": "2026-09-27 09:49:26.309132",
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
@@ -11,7 +11,7 @@
  "link": "/desk/upande-webstore",
  "link_type": "External",
  "logo_url": "/assets/upande_webstore/images/upande-logo.png",
- "modified": "2026-09-22 04:54:55.261295",
+ "modified": "2026-09-27 09:49:26.332314",
  "modified_by": "Administrator",
  "name": "Upande Webstore",
  "owner": "Administrator",
