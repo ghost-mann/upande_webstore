@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_url_to_form
 
+from upande_webstore.services.elevation import as_administrator
 from upande_webstore.services.portal import assert_customer_doc
 from upande_webstore.services.settings import get_settings
 from upande_webstore.theme.features import guard
@@ -60,12 +61,8 @@ def download_invoice_pdf(name):
 	invoice = assert_customer_doc("Sales Invoice", name, "customer")
 	# Ownership verified above; render under elevated context because
 	# printview re-checks desk permissions website users lack.
-	session_user = frappe.session.user
-	frappe.set_user("Administrator")
-	try:
+	with as_administrator():
 		pdf = frappe.get_print("Sales Invoice", name, doc=invoice, as_pdf=True)
-	finally:
-		frappe.set_user(session_user)
 	frappe.local.response.filename = f"{name}.pdf"
 	frappe.local.response.filecontent = pdf
 	frappe.local.response.type = "pdf"

@@ -4,6 +4,7 @@ from frappe.utils import add_days, flt, formatdate, get_url_to_form, getdate, no
 
 from upande_webstore.api.cart import _get_open_cart, _require_login
 from upande_webstore.services import dropoff
+from upande_webstore.services.elevation import as_administrator
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
 from upande_webstore.services.settings import checkout_mode_permits, get_settings
 from upande_webstore.services.stock import get_source_warehouse, get_stock_qty
@@ -63,15 +64,11 @@ def place_order(
 	# is system-constructed, so create it under elevated context (ERPNext's
 	# account permission check has no bypass flag for website users).
 	build = _create_sales_order if mode == ORDER else _create_quotation
-	session_user = frappe.session.user
-	frappe.set_user("Administrator")
-	try:
+	with as_administrator():
 		doc = build(
 			cart, customer, settings, price_list, contact_name, address_name,
 			po_reference, notes, shipping_date, dropoff_points, delivery_point,
 		)
-	finally:
-		frappe.set_user(session_user)
 
 	cart.status = "Ordered"
 	if mode == ORDER:
