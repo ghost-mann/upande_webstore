@@ -696,11 +696,19 @@ def _existing_claim_type_values():
 
 SHIPPED_CLAIM_ACTIONS = (
 	"Credit Note",
+	"Price Adjustment",
 	"Replacement",
 	"Discount on next order",
 	"Goodwill",
 	"No action",
 )
+
+#: Markers a shipped action is created with. Applied on creation only: a farm
+#: that unticks one has decided otherwise, and a migrate must not undo that.
+SHIPPED_CLAIM_ACTION_MARKERS = {
+	"Credit Note": {"requires_credit_note": 1},
+	"Price Adjustment": {"is_price_adjustment": 1, "requires_credit_note": 1},
+}
 
 CLAIM_ACTION_DOCTYPE = "Webstore Claim Action"
 
@@ -732,7 +740,11 @@ def seed_claim_actions():
 	for name in wanted:
 		if not name or frappe.db.exists(CLAIM_ACTION_DOCTYPE, name):
 			continue
-		doc = frappe.get_doc({"doctype": CLAIM_ACTION_DOCTYPE, "action": name})
+		doc = frappe.get_doc({
+			"doctype": CLAIM_ACTION_DOCTYPE,
+			"action": name,
+			**SHIPPED_CLAIM_ACTION_MARKERS.get(name, {}),
+		})
 		doc.flags.ignore_permissions = True
 		doc.insert()
 

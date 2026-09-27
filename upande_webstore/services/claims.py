@@ -10,13 +10,16 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, getdate, nowdate
 
-# claimable doctype -> (customer field, date field used for the claim window).
-# Invoices only: a claim is about what was billed, and offering orders as well
-# let customers claim against a document that may never have shipped.
+# claimable doctype -> customer field. Invoices, and delivery notes for flowers
+# rejected at delivery — both record something that actually shipped. Orders
+# stay out: offering them let customers claim against a document that may
+# never have shipped.
 CLAIMABLE_DOCTYPES = {
 	"Sales Invoice": "customer",
+	"Delivery Note": "customer",
 }
-CLAIM_DATE_FIELD = {"Sales Invoice": "posting_date"}
+# the date each doctype's claim window runs from
+CLAIM_DATE_FIELD = {"Sales Invoice": "posting_date", "Delivery Note": "posting_date"}
 
 # The shipped list lives in portal_settings so it is defined once; Portal
 # Settings may override it per site.
@@ -118,3 +121,45 @@ def assert_credit_note(customer, name):
 		frappe.throw(
 			_("Credit note {0} belongs to a different customer.").format(name), frappe.ValidationError
 		)
+
+
+def assert_contact_belongs(customer, contact):
+	"""A claim's contact person must be one of the customer's own contacts."""
+	if not contact:
+		return
+	linked = frappe.db.exists(
+		"Dynamic Link",
+		{
+			"parenttype": "Contact",
+			"parent": contact,
+			"link_doctype": "Customer",
+			"link_name": customer,
+		},
+	)
+	if not linked:
+		frappe.throw(
+			_("Contact {0} is not linked to customer {1}.").format(contact, customer),
+			frappe.ValidationError,
+		)
+
+
+def contact_for_user(customer, user):
+	"""The customer's Contact that `user` logs in as, if there is one.
+
+	How a portal-filed claim records who raised it: the portal user's Contact
+	carries both the login and the link to the customer.
+	"""
+	if not customer or not user or user == "Guest":
+		return None
+	rows = frappe.get_all(
+		"Contact",
+		filters=[
+			["Contact", "user", "=", user],
+			["Dynamic Link", "link_doctype", "=", "Customer"],
+			["Dynamic Link", "link_name", "=", customer],
+		],
+		pluck="name",
+		limit=1,
+		ignore_permissions=True,
+	)
+	return rows[0] if rows else None

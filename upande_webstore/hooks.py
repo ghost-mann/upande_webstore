@@ -231,6 +231,13 @@ doc_events = {
 # 	"Task": "upande_webstore.task.get_dashboard_data"
 # }
 
+override_doctype_dashboards = {
+	"Customer": "upande_webstore.dashboards.claims.customer",
+	"Sales Invoice": "upande_webstore.dashboards.claims.sales_invoice",
+	"Delivery Note": "upande_webstore.dashboards.claims.delivery_note",
+	"Contact": "upande_webstore.dashboards.claims.contact",
+}
+
 # exempt linked doctypes from being automatically cancelled
 #
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]

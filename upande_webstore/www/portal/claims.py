@@ -20,9 +20,17 @@ def _labelled(documents, window_days):
 	"""Add the label the picker renders, built here rather than in the browser so
 	dates follow the site's date format."""
 	return {
-		doctype: [dict(row, label=_document_label(row, window_days)) for row in rows]
+		doctype: [
+			# the page embeds these with `tojson`, which cannot encode a date
+			dict(row, label=_document_label(row, window_days), date=_iso(row.get("date")))
+			for row in rows
+		]
 		for doctype, rows in documents.items()
 	}
+
+
+def _iso(value):
+	return str(value) if value else None
 
 
 def _document_label(row, window_days):

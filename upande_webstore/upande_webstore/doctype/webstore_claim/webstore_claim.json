@@ -5,32 +5,45 @@
  "engine": "InnoDB",
  "autoname": "format:CLM-{#####}",
  "creation": "2026-07-28 00:00:01.000000",
- "modified": "2026-07-28 00:00:01.000000",
+ "modified": "2026-09-27 00:00:01.000000",
  "owner": "Administrator",
  "title_field": "claim_type",
  "track_changes": 1,
  "field_order": [
   "customer",
+  "contact_person",
+  "contact_email",
+  "cb_head",
   "claim_type",
   "status",
-  "cb_head",
-  "raised_by",
   "posting_date",
   "against_section",
   "against_doctype",
+  "cb_against",
   "against_document",
-  "related_documents",
-  "lines_section",
-  "lines",
-  "proposed_total",
-  "approved_total",
-  "approval_note",
   "detail_section",
   "description",
-  "resolution_section",
+  "settlement_section",
   "action",
+  "is_price_adjustment",
+  "requires_credit_note",
+  "cb_settlement",
+  "lines_section",
+  "fetch_lines",
+  "lines",
+  "totals_section",
+  "cb_totals",
+  "proposed_total",
+  "approval_section",
+  "approved_total",
+  "cb_approval",
+  "approval_note",
+  "resolution_section",
   "credit_note",
+  "cb_resolution",
   "resolution",
+  "more_info_tab",
+  "related_documents",
   "legacy_issue"
  ],
  "fields": [
@@ -43,6 +56,26 @@
    "set_only_once": 1,
    "in_list_view": 1,
    "in_standard_filter": 1
+  },
+  {
+   "fieldname": "contact_person",
+   "fieldtype": "Link",
+   "label": "Contact Person",
+   "options": "Contact",
+   "description": "Who raised the claim on the customer's side. Only contacts linked to the customer above are offered."
+  },
+  {
+   "fieldname": "contact_email",
+   "fieldtype": "Data",
+   "label": "Contact Email",
+   "options": "Email",
+   "fetch_from": "contact_person.email_id",
+   "read_only": 1,
+   "depends_on": "eval:doc.contact_person"
+  },
+  {
+   "fieldname": "cb_head",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "claim_type",
@@ -65,17 +98,6 @@
    "in_standard_filter": 1
   },
   {
-   "fieldname": "cb_head",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "raised_by",
-   "fieldtype": "Link",
-   "label": "Raised By",
-   "options": "User",
-   "set_only_once": 1
-  },
-  {
    "fieldname": "posting_date",
    "fieldtype": "Datetime",
    "label": "Filed On",
@@ -90,8 +112,13 @@
    "fieldname": "against_doctype",
    "fieldtype": "Select",
    "label": "Document Type",
-   "options": "\nSales Invoice",
-   "default": "Sales Invoice"
+   "options": "\nSales Invoice\nDelivery Note",
+   "default": "Sales Invoice",
+   "description": "A Delivery Note when flowers were rejected at delivery, before or without an invoice."
+  },
+  {
+   "fieldname": "cb_against",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "against_document",
@@ -102,16 +129,59 @@
    "description": "Must belong to the customer above."
   },
   {
-   "fieldname": "related_documents",
-   "fieldtype": "Table",
-   "label": "Other Related Documents",
-   "options": "Webstore Claim Document"
+   "fieldname": "detail_section",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "settlement_section",
+   "fieldtype": "Section Break",
+   "label": "Settlement"
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Link",
+   "options": "Webstore Claim Action",
+   "label": "Action Taken",
+   "description": "Pick this before filling the lines: a price-adjustment action unlocks New Unit Value, and a credit-note action shows the Credit Note field."
+  },
+  {
+   "fieldname": "is_price_adjustment",
+   "fieldtype": "Check",
+   "label": "Price Adjustment",
+   "fetch_from": "action.is_price_adjustment",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "requires_credit_note",
+   "fieldtype": "Check",
+   "label": "Settled by Credit Note",
+   "fetch_from": "action.requires_credit_note",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "cb_settlement",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "lines_section",
    "fieldtype": "Section Break",
    "label": "Claimed Lines",
-   "description": "Fetched from the invoice above. A snapshot — later changes to the invoice do not move these rows."
+   "description": "Fetched from the document above. A snapshot — later changes to that document do not move these rows."
+  },
+  {
+   "fieldname": "fetch_lines",
+   "fieldtype": "Button",
+   "label": "Fetch Lines",
+   "depends_on": "eval:doc.against_document"
   },
   {
    "fieldname": "lines",
@@ -120,11 +190,25 @@
    "label": "Lines"
   },
   {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "cb_totals",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "proposed_total",
    "fieldtype": "Currency",
-   "label": "Proposed Total",
+   "label": "Claim Total",
    "read_only": 1,
-   "description": "Summed from the claimed lines."
+   "description": "Summed from the lines: Claimed Quantity × Rate, or × (Rate − New Unit Value) for a price adjustment."
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Approval",
+   "depends_on": "eval:doc.status != 'Open' || doc.approved_total || doc.approval_note"
   },
   {
    "fieldname": "approved_total",
@@ -134,21 +218,14 @@
    "description": "Set by finance. No arithmetic ties this to the credit note — a settlement may be paid as a replacement or a discount, and one credit note may cover several claims."
   },
   {
+   "fieldname": "cb_approval",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "approval_note",
    "fieldtype": "Small Text",
    "label": "Approval Note",
    "permlevel": 1
-  },
-  {
-   "fieldname": "detail_section",
-   "fieldtype": "Section Break",
-   "label": "Detail"
-  },
-  {
-   "fieldname": "description",
-   "fieldtype": "Text",
-   "label": "What happened",
-   "reqd": 1
   },
   {
    "fieldname": "resolution_section",
@@ -157,24 +234,33 @@
    "description": "Filled in by the sales team. The customer sees both fields on their claim."
   },
   {
-   "fieldname": "action",
-   "fieldtype": "Link",
-   "options": "Webstore Claim Action",
-   "label": "Action Taken",
-   "description": "What was done about this claim. The credit note, if any, is linked below."
-  },
-  {
    "fieldname": "credit_note",
    "fieldtype": "Link",
    "label": "Credit Note",
    "options": "Sales Invoice",
    "description": "Raise it from the invoice (Create → Return / Credit Note), then link it here.",
-   "link_filters": "[[\"Sales Invoice\",\"is_return\",\"=\",1]]"
+   "link_filters": "[[\"Sales Invoice\",\"is_return\",\"=\",1]]",
+   "depends_on": "eval:doc.requires_credit_note || doc.credit_note"
+  },
+  {
+   "fieldname": "cb_resolution",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "resolution",
    "fieldtype": "Small Text",
    "label": "Resolution Note"
+  },
+  {
+   "fieldname": "more_info_tab",
+   "fieldtype": "Tab Break",
+   "label": "More Info"
+  },
+  {
+   "fieldname": "related_documents",
+   "fieldtype": "Table",
+   "label": "Other Related Documents",
+   "options": "Webstore Claim Document"
   },
   {
    "fieldname": "legacy_issue",

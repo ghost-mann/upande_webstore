@@ -12,7 +12,7 @@ patch idempotent.
 
 import frappe
 
-from upande_webstore.services.claims import CLAIMABLE_DOCTYPES, CLAIM_TYPES
+from upande_webstore.services.claims import CLAIMABLE_DOCTYPES, CLAIM_TYPES, contact_for_user
 
 LEGACY_ISSUE_TYPE = "Claim"
 
@@ -76,7 +76,9 @@ def execute():
 				"description": issue.description or issue.subject or "",
 				"against_doctype": doctype,
 				"against_document": name,
-				"raised_by": issue.raised_by,
+				# raised_by is the reporter's email; it names a Contact only
+				# when that email is a portal login of this customer
+				"contact_person": contact_for_user(issue.customer, issue.raised_by),
 				"posting_date": issue.creation,
 				"legacy_issue": issue.name,
 			}

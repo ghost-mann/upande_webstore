@@ -9,6 +9,9 @@ from frappe import _
 
 from upande_webstore.api.cart import _require_login
 from upande_webstore.services.claims import (
+	CLAIMABLE_DOCTYPES,
+	assert_belongs_to,
+	contact_for_user,
 	get_claim_window_days,
 	get_claimable_documents,
 	is_within_window,
@@ -58,16 +61,28 @@ def create_claim(claim_type, description, against_doctype=None, against_document
 			"customer": customer,
 			"claim_type": claim_type,
 			"status": "Open",
-			"description": description,
+			"description": plain_text_to_html(description),
 			"against_doctype": (against_doctype or "").strip() or None,
 			"against_document": (against_document or "").strip() or None,
-			"raised_by": frappe.session.user,
+			"contact_person": contact_for_user(customer, frappe.session.user),
 		}
 	)
 	# the controller re-checks that the referenced document belongs to `customer`
 	claim.flags.ignore_permissions = True
 	claim.insert()
 	return {"name": claim.name}
+
+
+def plain_text_to_html(text):
+	"""The portal's textarea is plain text; the claim's Description is a Text
+	Editor. Escaped, with its line breaks kept, so the customer's text reads
+	the same on the desk and back on the portal."""
+	from frappe.utils import escape_html
+
+	text = (text or "").strip()
+	if not text:
+		return text
+	return "<p>" + escape_html(text).replace("\r\n", "\n").replace("\n", "<br>") + "</p>"
 
 
 @frappe.whitelist()
@@ -136,8 +151,12 @@ def get_claim_options():
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def claimable_invoice_query(doctype, txt, searchfield, start, page_len, filters):
-	"""Link query behind a claim's Sales Invoice fields, in the desk.
+def claimable_document_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Link query behind a claim's document fields, in the desk.
+
+	Serves both claimable doctypes: the Dynamic Link passes the chosen one as
+	`doctype`. What follows was written for invoices and holds for delivery
+	notes the same way.
 
 	`assert_belongs_to` has always refused another customer's invoice, but that
 	is a check on save. The Link field itself carried no query, so the desk
@@ -158,11 +177,13 @@ def claimable_invoice_query(doctype, txt, searchfield, start, page_len, filters)
 	if not customer:
 		# never fall back to every invoice on the site
 		return []
+	if doctype not in CLAIMABLE_DOCTYPES:
+		return []
 
 	rows = frappe.get_all(
-		"Sales Invoice",
+		doctype,
 		filters={
-			"customer": customer,
+			CLAIMABLE_DOCTYPES[doctype]: customer,
 			"docstatus": 1,
 			"name": ["like", f"%{txt or ''}%"],
 		},
@@ -184,9 +205,34 @@ def claimable_invoice_query(doctype, txt, searchfield, start, page_len, filters)
 	return out
 
 
+# the name the desk form and the tests were written against
+claimable_invoice_query = claimable_document_query
+
+
+@frappe.whitelist()
+def get_document_lines(customer, doctype, name):
+	"""The lines a claim against `doctype` `name` would start from, unsaved.
+
+	Behind the form's Fetch Lines button, so the lines can be filled in before
+	the claim is first saved. The same ownership and window check the claim
+	runs on save, plus the caller's own read permission on the document: this
+	returns prices, and must not become a way round Sales Invoice permissions.
+	"""
+	if not frappe.has_permission("Webstore Claim", "create") and not frappe.has_permission(
+		"Webstore Claim", "write"
+	):
+		frappe.throw(_("Not permitted."), frappe.PermissionError)
+	assert_belongs_to(customer, doctype, name)
+	frappe.get_doc(doctype, name).check_permission("read")
+
+	from upande_webstore.services.claim_lines import snapshot_rows
+
+	return snapshot_rows(name, doctype)
+
+
 @frappe.whitelist(methods=["POST"])
 def fetch_invoice_lines(claim):
-	"""Copy the referenced invoice's lines onto the claim, replacing any there.
+	"""Copy the referenced document's lines onto the claim, replacing any there.
 
 	Deliberately a button rather than automatic: it is an act with a
 	consequence, and re-running it discards whatever was filled in.
@@ -196,7 +242,7 @@ def fetch_invoice_lines(claim):
 
 	if not doc.against_document:
 		frappe.throw(
-			_("Pick the invoice this claim is about before fetching its lines."),
+			_("Pick the invoice or delivery note this claim is about before fetching its lines."),
 			frappe.ValidationError,
 		)
 
@@ -210,7 +256,7 @@ def fetch_invoice_lines(claim):
 	from upande_webstore.services.claim_lines import snapshot_rows
 
 	doc.set("lines", [])
-	for row in snapshot_rows(doc.against_document):
+	for row in snapshot_rows(doc.against_document, doc.against_doctype or "Sales Invoice"):
 		doc.append("lines", row)
 	doc.save()
 	return {"lines": len(doc.lines)}

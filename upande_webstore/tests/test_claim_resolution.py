@@ -8,6 +8,7 @@ from frappe.tests import IntegrationTestCase
 
 from upande_webstore.services import roles as roles_service
 from upande_webstore.tests.utils import (
+	get_default_warehouse,
 	make_desk_user,
 	make_item_price,
 	make_portal_user,
@@ -134,16 +135,28 @@ class TestClaimLines(IntegrationTestCase):
 		self.assertEqual(rows[0]["invoiced_qty"], 10)
 		self.assertEqual(rows[0]["invoiced_amount"], 500)
 
-	def test_claimed_total_counts_only_ticked_lines(self):
+	def test_claimed_total_is_quantity_times_rate(self):
+		"""A credit-note-style claim: 200 claimed at the invoice rate."""
 		from upande_webstore.services.claim_lines import claimed_total
 
 		rows = [
-			{"is_claimed": 1, "proposed_value": 120},
-			{"is_claimed": 0, "proposed_value": 999},
-			{"is_claimed": 1, "proposed_value": 30},
+			{"claimed_qty": 200, "rate": 0.5},
+			{"claimed_qty": 0, "rate": 999},
+			{"claimed_qty": 3, "rate": 10},
 		]
 
-		self.assertEqual(claimed_total(rows), 150)
+		self.assertEqual(claimed_total(rows), 130)
+
+	def test_a_price_adjustment_totals_the_difference(self):
+		"""Claimed Quantity × (Rate − New Unit Value): what was overpaid."""
+		from upande_webstore.services.claim_lines import claimed_total
+
+		rows = [
+			{"claimed_qty": 200, "rate": 0.5, "new_rate": 0.3},
+			{"claimed_qty": 0, "rate": 10, "new_rate": 1},
+		]
+
+		self.assertAlmostEqual(claimed_total(rows, price_adjustment=True), 40)
 
 	def test_fetch_puts_the_lines_on_the_claim(self):
 		from upande_webstore.api.claims import fetch_invoice_lines
@@ -170,29 +183,92 @@ class TestClaimLines(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			fetch_invoice_lines(claim.name)
 
+	def _line(self, **values):
+		return {
+			"item_code": "WS-CR-ITEM", "invoiced_qty": 10, "rate": 50,
+			"invoiced_amount": 500, **values,
+		}
+
 	def test_proposed_total_is_summed_server_side(self):
 		"""A client-supplied total is overwritten, never believed."""
 		claim = self._claim()
-		claim.append("lines", {
-			"item_code": "WS-CR-ITEM", "invoiced_qty": 10, "rate": 50,
-			"invoiced_amount": 500, "is_claimed": 1, "claimed_qty": 2,
-			"proposed_value": 100,
-		})
+		claim.append("lines", self._line(claimed_qty=2, claim_amount=77))
 		claim.proposed_total = 99999
 		claim.save(ignore_permissions=True)
 
 		self.assertEqual(claim.proposed_total, 100)
+		self.assertEqual(claim.lines[0].claim_amount, 100)
 
 	def test_claiming_more_than_was_invoiced_is_refused(self):
+		"""The reported bug: with the old "Claimed" tick left off, 11 of 10
+		saved without complaint. There is no tick now; any quantity counts."""
 		claim = self._claim()
-		claim.append("lines", {
-			"item_code": "WS-CR-ITEM", "invoiced_qty": 10, "rate": 50,
-			"invoiced_amount": 500, "is_claimed": 1, "claimed_qty": 11,
-			"proposed_value": 50,
-		})
+		claim.append("lines", self._line(claimed_qty=11))
 
 		with self.assertRaises(frappe.ValidationError):
 			claim.save(ignore_permissions=True)
+
+	def test_a_negative_quantity_is_refused(self):
+		claim = self._claim()
+		claim.append("lines", self._line(claimed_qty=-1))
+
+		with self.assertRaises(frappe.ValidationError):
+			claim.save(ignore_permissions=True)
+
+	def test_a_price_adjustment_claim_totals_the_difference(self):
+		claim = self._claim()
+		claim.action = "Price Adjustment"
+		claim.append("lines", self._line(claimed_qty=4, new_rate=30))
+		claim.save(ignore_permissions=True)
+
+		self.assertTrue(claim.is_price_adjustment)
+		self.assertEqual(claim.proposed_total, 80)
+
+	def test_a_new_unit_value_above_the_rate_is_refused(self):
+		claim = self._claim()
+		claim.action = "Price Adjustment"
+		claim.append("lines", self._line(claimed_qty=4, new_rate=60))
+
+		with self.assertRaises(frappe.ValidationError):
+			claim.save(ignore_permissions=True)
+
+	def test_a_new_unit_value_is_ignored_outside_a_price_adjustment(self):
+		"""Credit Note is quantity-based: a stray unit value must neither count
+		nor linger on the line looking as if it did."""
+		claim = self._claim()
+		claim.action = "Credit Note"
+		claim.append("lines", self._line(claimed_qty=4, new_rate=30))
+		claim.save(ignore_permissions=True)
+
+		self.assertFalse(claim.is_price_adjustment)
+		self.assertTrue(claim.requires_credit_note)
+		self.assertEqual(claim.lines[0].new_rate, 0)
+		self.assertEqual(claim.proposed_total, 200)
+
+	def test_the_action_markers_are_not_taken_from_the_client(self):
+		claim = self._claim()
+		claim.action = "Replacement"
+		claim.is_price_adjustment = 1
+		claim.append("lines", self._line(claimed_qty=1, new_rate=10))
+		claim.save(ignore_permissions=True)
+
+		self.assertFalse(claim.is_price_adjustment)
+		self.assertEqual(claim.proposed_total, 50)
+
+	def test_lines_can_be_fetched_before_the_claim_is_saved(self):
+		from upande_webstore.api.claims import get_document_lines
+
+		rows = get_document_lines("CR Buyer Ltd", "Sales Invoice", self.invoice)
+
+		self.assertEqual([r["item_code"] for r in rows], ["WS-CR-ITEM"])
+		self.assertEqual(rows[0]["claimed_qty"], 0)
+
+	def test_fetching_another_customers_lines_is_refused(self):
+		from upande_webstore.api.claims import get_document_lines
+
+		make_portal_user("cr.stranger@example.com", "CR Stranger Ltd")
+		with self.assertRaises(frappe.ValidationError):
+			get_document_lines("CR Stranger Ltd", "Sales Invoice", self.invoice)
 
 	def test_fetch_is_refused_once_finance_has_approved(self):
 		"""Otherwise an approval silently detaches from the lines it was for."""
@@ -218,6 +294,151 @@ class TestClaimLines(IntegrationTestCase):
 		claim.reload()
 
 		self.assertEqual(claim.lines[0].invoiced_qty, before)
+
+
+class TestClaimActionMarkers(IntegrationTestCase):
+	def test_the_markers_exist_on_the_action_master(self):
+		meta = frappe.get_meta("Webstore Claim Action")
+
+		self.assertEqual(meta.get_field("is_price_adjustment").fieldtype, "Check")
+		self.assertEqual(meta.get_field("requires_credit_note").fieldtype, "Check")
+
+	def test_the_shipped_actions_carry_their_markers(self):
+		get = lambda name, field: frappe.db.get_value("Webstore Claim Action", name, field)
+
+		self.assertEqual(get("Price Adjustment", "is_price_adjustment"), 1)
+		self.assertEqual(get("Credit Note", "requires_credit_note"), 1)
+		self.assertEqual(get("Credit Note", "is_price_adjustment"), 0)
+		self.assertEqual(get("Replacement", "requires_credit_note"), 0)
+
+	def test_new_unit_value_is_locked_unless_the_action_is_a_price_adjustment(self):
+		field = frappe.get_meta("Webstore Claim Line").get_field("new_rate")
+
+		self.assertEqual(field.label, "New Unit Value")
+		self.assertIn("parent.is_price_adjustment", field.read_only_depends_on)
+
+	def test_the_credit_note_field_shows_only_when_the_action_needs_it(self):
+		field = frappe.get_meta("Webstore Claim").get_field("credit_note")
+
+		self.assertIn("requires_credit_note", field.depends_on)
+
+
+class TestDeliveryNoteClaims(IntegrationTestCase):
+	"""Flowers rejected at delivery: the claim is about the delivery note."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-CR-DN-ITEM")
+		make_item_price("WS-CR-DN-ITEM", "Standard Selling", 50)
+		set_stock("WS-CR-DN-ITEM", 100)
+		make_portal_user("cr.dn@example.com", "CR DN Ltd")
+		make_portal_user("cr.dn.other@example.com", "CR DN Other Ltd")
+		cls.note = cls._delivery_note("CR DN Ltd")
+		cls.theirs = cls._delivery_note("CR DN Other Ltd")
+
+	@classmethod
+	def _delivery_note(cls, customer):
+		doc = frappe.get_doc({
+			"doctype": "Delivery Note",
+			"customer": customer,
+			"company": frappe.defaults.get_global_default("company"),
+			"selling_price_list": "Standard Selling",
+			"items": [{
+				"item_code": "WS-CR-DN-ITEM", "qty": 6, "rate": 50,
+				"warehouse": get_default_warehouse(),
+			}],
+		})
+		doc.flags.ignore_permissions = True
+		doc.insert()
+		doc.submit()
+		return doc.name
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+	def _claim(self, note):
+		doc = frappe.get_doc({
+			"doctype": "Webstore Claim",
+			"customer": "CR DN Ltd",
+			"claim_type": frappe.get_all("Webstore Claim Type", pluck="name")[0],
+			"description": "Rejected at the door.",
+			"against_doctype": "Delivery Note",
+			"against_document": note,
+		})
+		doc.flags.ignore_permissions = True
+		doc.insert()
+		return doc
+
+	def test_a_claim_against_the_customers_delivery_note_saves(self):
+		self.assertEqual(self._claim(self.note).against_doctype, "Delivery Note")
+
+	def test_another_customers_delivery_note_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self._claim(self.theirs)
+
+	def test_fetch_copies_the_delivery_note_lines(self):
+		from upande_webstore.api.claims import fetch_invoice_lines
+
+		claim = self._claim(self.note)
+		fetch_invoice_lines(claim.name)
+		claim.reload()
+
+		self.assertEqual(claim.lines[0].item_code, "WS-CR-DN-ITEM")
+		self.assertEqual(claim.lines[0].invoiced_qty, 6)
+
+	def test_the_claims_page_renders_for_a_customer_with_documents(self):
+		"""The picker's rows are embedded with `tojson`; a raw date in them made
+		/portal/claims a 500 for every customer with an invoice or delivery note.
+		The claim-page tests only ever rendered /portal/claim, singular."""
+		from frappe.app import make_form_dict
+		from frappe.utils import set_request
+		from frappe.website.serve import get_response
+
+		frappe.set_user("cr.dn@example.com")
+		try:
+			set_request(method="GET", path="portal/claims")
+			make_form_dict(frappe.local.request)
+			response = get_response()
+			html = frappe.safe_decode(response.get_data())
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertEqual(response.status_code, 200)
+		self.assertIn(self.note, html, "the delivery note should be offered in the picker")
+
+	def test_the_desk_picker_offers_the_customers_delivery_notes(self):
+		from upande_webstore.api.claims import claimable_document_query
+
+		names = [r[0] for r in claimable_document_query(
+			"Delivery Note", "", "name", 0, 20, {"customer": "CR DN Ltd"}
+		)]
+
+		self.assertIn(self.note, names)
+		self.assertNotIn(self.theirs, names)
+
+
+class TestClaimConnections(IntegrationTestCase):
+	def _items(self, doctype):
+		data = frappe.get_meta(doctype).get_dashboard_data()
+		return data, [i for group in data.transactions for i in group["items"]]
+
+	def test_claims_show_on_the_documents_they_point_at(self):
+		for doctype, fieldname in (
+			("Customer", "customer"),
+			("Sales Invoice", "against_document"),
+			("Delivery Note", "against_document"),
+			("Contact", "contact_person"),
+		):
+			data, items = self._items(doctype)
+			self.assertIn("Webstore Claim", items, f"no Claims connection on {doctype}")
+			self.assertEqual(data.non_standard_fieldnames["Webstore Claim"], fieldname)
+
+	def test_the_invoice_count_is_scoped_by_the_dynamic_link(self):
+		data, _ = self._items("Sales Invoice")
+
+		self.assertEqual(data.dynamic_links["against_document"], ["Sales Invoice", "against_doctype"])
 
 
 class TestFinanceApproval(IntegrationTestCase):
@@ -580,6 +801,28 @@ class TestClaimPortalRender(IntegrationTestCase):
 		zero = frappe.utils.fmt_money(0, currency=self._currency())
 		self.assertIn(zero, html, "an approved total of zero must still be rendered")
 		self.assertNotIn("reviewing this claim", html)
+
+	def test_the_description_renders_as_sanitised_html(self):
+		"""A Text Editor, so tables pasted from Word survive — scripts do not."""
+		claim = self._claim()
+		frappe.db.set_value(
+			"Webstore Claim", claim.name, "description",
+			"<table><tr><td>Box 7</td></tr></table><script>alert(1)</script>",
+		)
+
+		html = self._render(claim.name)
+
+		self.assertIn("<td>Box 7</td>", html)
+		self.assertNotIn("alert(1)", html)
+
+	def test_a_plain_text_description_keeps_its_line_breaks(self):
+		"""Claims written before Description became a Text Editor."""
+		claim = self._claim()
+		frappe.db.set_value("Webstore Claim", claim.name, "description", "Line one\nLine two")
+
+		html = self._render(claim.name)
+
+		self.assertIn("Line one<br>Line two", html)
 
 	def test_an_unresolved_claim_still_shows_the_pending_message(self):
 		"""No regression: a claim with no action, no approved figure, no

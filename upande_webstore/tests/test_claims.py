@@ -74,7 +74,21 @@ class TestClaimScoping(IntegrationTestCase):
 		self.assertEqual(claim.against_doctype, "Sales Invoice")
 		self.assertEqual(claim.against_document, self.mine_invoice)
 		self.assertEqual(claim.status, "Open")
-		self.assertEqual(claim.raised_by, "claim.mine@example.com")
+		self.assertEqual(
+			claim.contact_person,
+			frappe.db.get_value("Contact", {"user": "claim.mine@example.com"}),
+			"a portal claim records the filer's own Contact",
+		)
+
+	def test_the_portal_description_is_stored_as_html(self):
+		"""Description is a Text Editor; the portal's plain text is escaped
+		into it with its line breaks kept, never passed through as markup."""
+		from upande_webstore.api.claims import create_claim
+
+		result = create_claim("Other", "Box 3 <crushed>\nBox 4 wet")
+		description = frappe.db.get_value("Webstore Claim", result["name"], "description")
+
+		self.assertEqual(description, "<p>Box 3 &lt;crushed&gt;<br>Box 4 wet</p>")
 
 	def test_cannot_claim_against_another_customers_invoice(self):
 		"""The reference used to be free text, so this was possible."""
@@ -279,10 +293,19 @@ class TestClaimWindow(IntegrationTestCase):
 	def tearDown(self):
 		frappe.set_user("Administrator")
 
-	def test_only_sales_invoices_are_claimable(self):
+	def test_invoices_and_delivery_notes_are_claimable(self):
+		"""Delivery notes cover flowers rejected at delivery. Orders stay out:
+		they may never have shipped."""
 		from upande_webstore.services.claims import CLAIMABLE_DOCTYPES
 
-		self.assertEqual(list(CLAIMABLE_DOCTYPES), ["Sales Invoice"])
+		self.assertEqual(sorted(CLAIMABLE_DOCTYPES), ["Delivery Note", "Sales Invoice"])
+		self.assertNotIn("Sales Order", CLAIMABLE_DOCTYPES)
+
+	def test_the_form_offers_both_document_types(self):
+		options = frappe.get_meta("Webstore Claim").get_field("against_doctype").options.split("\n")
+
+		self.assertIn("Sales Invoice", options)
+		self.assertIn("Delivery Note", options)
 
 	def test_a_recent_invoice_is_offered_and_accepted(self):
 		from upande_webstore.api.claims import create_claim
@@ -341,11 +364,12 @@ class TestClaimDeskEntry(IntegrationTestCase):
 	Frappe's read_only is a form-level restriction, so the portal API and every
 	test here — all of which insert server-side — were unaffected, while the
 	desk's New Webstore Claim form had no way to fill the one field it could not
-	save without. `raised_by` was read_only for the same reason.
+	save without.
 
-	Both are set_only_once instead: supplied when the claim is created, fixed
-	afterwards, so a portal-filed claim cannot have its customer or its origin
-	rewritten later.
+	It is set_only_once instead: supplied when the claim is created, fixed
+	afterwards, so a portal-filed claim cannot have its customer rewritten
+	later. Who raised it on the customer's side is `contact_person`, one of
+	that customer's Contacts.
 	"""
 
 	@classmethod
@@ -385,17 +409,18 @@ class TestClaimDeskEntry(IntegrationTestCase):
 		self.assertTrue(field.reqd, "customer is still required")
 		self.assertFalse(field.read_only, "customer cannot be filled in the desk")
 
-	def test_raised_by_is_fillable_on_the_desk_form(self):
-		field = frappe.get_meta("Webstore Claim").get_field("raised_by")
-		self.assertFalse(field.read_only, "raised_by cannot be filled in the desk")
+	def test_raised_by_gave_way_to_contact_person(self):
+		meta = frappe.get_meta("Webstore Claim")
+
+		self.assertIsNone(meta.get_field("raised_by"))
+		field = meta.get_field("contact_person")
+		self.assertEqual(field.fieldtype, "Link")
+		self.assertEqual(field.options, "Contact")
+		self.assertFalse(field.read_only, "contact_person cannot be filled in the desk")
 
 	def test_customer_cannot_be_switched_after_creation(self):
 		field = frappe.get_meta("Webstore Claim").get_field("customer")
 		self.assertTrue(field.set_only_once, "customer must be fixed once set")
-
-	def test_raised_by_cannot_be_switched_after_creation(self):
-		field = frappe.get_meta("Webstore Claim").get_field("raised_by")
-		self.assertTrue(field.set_only_once, "raised_by must be fixed once set")
 
 	def test_a_desk_claim_saves_and_keeps_its_customer(self):
 		claim = self._new_claim()
@@ -404,16 +429,21 @@ class TestClaimDeskEntry(IntegrationTestCase):
 		self.assertEqual(claim.status, "Open")
 		self.assertTrue(claim.posting_date, "posting_date is still server-filled")
 
-	def test_raised_by_still_defaults_to_the_session_user_when_left_blank(self):
-		"""set_only_once must not stop validate() filling a blank raised_by."""
-		claim = self._new_claim()
+	def test_a_contact_of_the_customer_is_accepted(self):
+		contact = frappe.db.get_value("Contact", {"user": "claim.desk@example.com"})
+		claim = self._new_claim(contact_person=contact)
 
-		self.assertEqual(claim.raised_by, "Administrator")
+		self.assertEqual(claim.contact_person, contact)
 
-	def test_raised_by_is_honoured_when_supplied(self):
-		claim = self._new_claim(raised_by="claim.desk@example.com")
+	def test_a_contact_of_another_customer_is_refused(self):
+		make_portal_user("claim.desk.other@example.com", "Claim Desk Other Ltd")
+		theirs = frappe.db.get_value("Contact", {"user": "claim.desk.other@example.com"})
 
-		self.assertEqual(claim.raised_by, "claim.desk@example.com")
+		with self.assertRaises(frappe.ValidationError):
+			self._new_claim(contact_person=theirs)
+
+	def test_the_contact_person_is_optional(self):
+		self.assertFalse(self._new_claim().contact_person)
 
 	def test_switching_the_customer_afterwards_is_refused(self):
 		"""Deliberately a claim with no document reference.

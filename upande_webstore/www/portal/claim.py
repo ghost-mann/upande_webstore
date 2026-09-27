@@ -13,6 +13,7 @@ def get_context(context):
 	from upande_webstore.api.claims import get_claim
 
 	context.doc = get_claim(name)
+	context.description_html = description_html(context.doc.description)
 	context.attachments = frappe.get_all(
 		"File",
 		filters={"attached_to_doctype": "Webstore Claim", "attached_to_name": name},
@@ -20,3 +21,18 @@ def get_context(context):
 		ignore_permissions=True,
 	)
 	return context
+
+
+def description_html(description):
+	"""Description is a Text Editor, so it is HTML — sanitised again here
+	because the template prints it unescaped. A claim written before the field
+	became a Text Editor is plain text and keeps its line breaks."""
+	from frappe.utils.html_utils import sanitize_html
+
+	from upande_webstore.api.claims import plain_text_to_html
+
+	if not description:
+		return ""
+	if "<" not in description and ">" not in description:
+		return plain_text_to_html(description)
+	return sanitize_html(description)

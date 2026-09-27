@@ -6,6 +6,12 @@
 {% block portal_sub %}{{ doc.name }} · {{ _("filed") }} {{ frappe.utils.formatdate(doc.posting_date) }}{% endblock %}
 
 {% block portal_body %}
+<style>
+	/* tables pasted from Word or an email must not push the page sideways */
+	.ws-claim-description table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+	.ws-claim-description td, .ws-claim-description th { border: 1px solid var(--border-color, #ddd); padding: 4px 8px; }
+	.ws-claim-description img { max-width: 100%; height: auto; }
+</style>
 {% from "templates/includes/webstore_macros.html" import status_badge %}
 
 <div class="ws-panel">
@@ -21,8 +27,8 @@
 		<div><small>{{ _("Filed on") }}</small><b>{{ frappe.utils.formatdate(doc.posting_date) }}</b></div>
 	</div>
 
-	<h6 class="mt-4">{{ _("What happened") }}</h6>
-	<p style="white-space:pre-wrap">{{ doc.description }}</p>
+	<h6 class="mt-4">{{ _("Description") }}</h6>
+	<div class="ws-claim-description">{{ description_html | safe }}</div>
 
 	{% if doc.related_documents %}
 	<h6 class="mt-4">{{ _("Other related documents") }}</h6>
