@@ -57,6 +57,10 @@ def _redirect(location):
 	raise _Redirect()
 
 
+#: Landing routes a portal customer is sent past, into the portal.
+PORTAL_CUSTOMER_REDIRECT_PATHS = frozenset({"me", "apps", "app", "desk"})
+
+
 def redirect_me_to_portal():
 	"""before_request hook: send a portal customer past frappe's unbranded
 	/me (frappe/www/me.py, which 200s for any logged-in website user) and
@@ -69,12 +73,18 @@ def redirect_me_to_portal():
 	Manager, a website user of some other app on a multi-app site) reaches
 	/me exactly as they do today.
 
+	The desk landing routes are covered for the same reason. frappe's login
+	only consults get_website_user_home_page when get_default_path() comes up
+	empty, and on a bench where another app also registers on the apps screen
+	it does not: a customer was sent to /apps, then /desk, and met a 403 as
+	the first page after signing in.
+
 	Fires on every request, so the path is checked before any database
 	lookup - get_website_user_home_page's queries only run for the rare
-	request that is actually /me.
+	request that is actually one of these.
 	"""
 	path = (frappe.request.path or "").strip("/") if frappe.request else ""
-	if path != "me":
+	if path not in PORTAL_CUSTOMER_REDIRECT_PATHS:
 		return
 
 	destination = get_website_user_home_page(frappe.session.user)

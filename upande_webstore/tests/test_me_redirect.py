@@ -101,6 +101,34 @@ class TestMeRedirect(IntegrationTestCase):
 		finally:
 			self._cleanup_user(EMAIL)
 
+	def test_portal_customer_landing_on_the_desk_is_redirected_to_the_portal(self):
+		"""Login sends a website user to /apps when another app registers on
+		the apps screen; /apps then forwards to /desk, a 403 for a customer."""
+		from upande_webstore.services.portal import redirect_me_to_portal
+
+		doc = self._grant()
+		try:
+			frappe.set_user(doc.user)
+			for path in ("/apps", "/app", "/desk"):
+				self._request(path)
+				with self.assertRaises(HTTPException, msg=path) as ctx:
+					redirect_me_to_portal()
+				self.assertEqual(ctx.exception.get_response().location, "/portal", path)
+		finally:
+			self._cleanup_user(EMAIL)
+
+	def test_a_desk_page_below_the_landing_route_is_left_alone(self):
+		"""Only the bare landing routes: a deep link is frappe's to refuse."""
+		from upande_webstore.services.portal import redirect_me_to_portal
+
+		doc = self._grant()
+		try:
+			frappe.set_user(doc.user)
+			self._request("/desk/sales-invoice")
+			self.assertIsNone(redirect_me_to_portal())
+		finally:
+			self._cleanup_user(EMAIL)
+
 	def test_redirect_honours_the_configured_landing_page(self):
 		from upande_webstore.services.portal import redirect_me_to_portal
 
