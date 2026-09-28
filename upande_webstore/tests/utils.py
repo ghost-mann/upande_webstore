@@ -42,8 +42,12 @@ def setup_webstore_settings():
 		settings.set(field, 0 if field == "accent_drives_primary" else "")
 	for field in DEFAULTS:
 		settings.set(field, "")
+	# storefront and portal features on, optional modules off, so no test
+	# inherits a module another one turned on
 	for feature in FEATURES:
-		settings.set(feature.fieldname, 1)
+		settings.set(feature.fieldname, 0 if feature.group == "modules" else 1)
+	settings.set("boxes", [])
+	settings.spec_doctype = "Specifications"
 	# occasion state is deliberately outside THEME_FIELDS, so it needs its own
 	# reset or a campaign set by one test module leaks into the next
 	for field in (

@@ -15,20 +15,23 @@ class TestFeatureRegistry(IntegrationTestCase):
 	def setUp(self):
 		setup_webstore_settings()
 
-	def test_all_twenty_registered(self):
+	def test_all_twenty_two_registered(self):
 		from upande_webstore.theme.features import FEATURES
 
-		self.assertEqual(len(FEATURES), 20)
+		self.assertEqual(len(FEATURES), 22)
 		keys = [feature.key for feature in FEATURES]
 		self.assertEqual(len(keys), len(set(keys)), "duplicate feature keys")
 		for expected in ("cart", "wishlist", "signup", "portal", "quotations", "claims"):
 			self.assertIn(expected, keys)
 
-	def test_groups_split_ten_and_ten(self):
+	def test_groups_split_ten_ten_and_two_modules(self):
 		from upande_webstore.theme.features import FEATURES
 
 		self.assertEqual(len([f for f in FEATURES if f.group == "storefront"]), 10)
 		self.assertEqual(len([f for f in FEATURES if f.group == "portal"]), 10)
+		self.assertEqual(
+			[f.key for f in FEATURES if f.group == "modules"], ["box_packing", "customer_specs"]
+		)
 
 	def test_every_feature_has_a_real_field(self):
 		"""A registry entry with no DocType field would silently never disable."""
@@ -41,10 +44,13 @@ class TestFeatureRegistry(IntegrationTestCase):
 			)
 
 	def test_default_is_enabled(self):
-		from upande_webstore.theme.features import enabled
+		from upande_webstore.theme.features import BY_KEY, enabled
 
 		for key, value in enabled().items():
-			self.assertTrue(value, f"{key} should default on")
+			if BY_KEY[key].group == "modules":
+				self.assertFalse(value, f"module {key} should default off")
+			else:
+				self.assertTrue(value, f"{key} should default on")
 
 	def test_unset_falls_back_to_the_field_default(self):
 		from upande_webstore.theme.features import _is_on
@@ -66,6 +72,9 @@ class TestFeatureRegistry(IntegrationTestCase):
 		self.assertFalse(defaults["enable_signup"])
 		for feature in FEATURES:
 			if feature.key == "signup":
+				continue
+			if feature.group == "modules":
+				self.assertFalse(defaults[feature.fieldname], f"module {feature.key} should ship off")
 				continue
 			self.assertTrue(defaults[feature.fieldname], f"{feature.key} should ship on")
 

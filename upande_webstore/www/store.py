@@ -29,4 +29,32 @@ def get_context(context):
 		if not search and not category and page == 1
 		else []
 	)
+	_spec_context(context)
 	return context
+
+
+def _spec_context(context):
+	"""The My specifications switch, for a signed-in customer who has specs.
+
+	Nothing is read unless the module is on, the cart is, and the visitor is a
+	customer — guests and customers without specs get the store unchanged.
+	"""
+	from upande_webstore.services import specs
+	from upande_webstore.services.pricing import get_customer
+	from upande_webstore.theme.features import enabled
+
+	context.spec_count = 0
+	context.view = "products"
+	context.specs = []
+	flags = enabled()
+	if not (flags.customer_specs and flags.cart) or frappe.session.user == "Guest":
+		return
+	if not specs.availability()[0]:
+		return
+	customer = get_customer()
+	if not customer:
+		return
+	context.spec_count = specs.count_for(customer)
+	if context.spec_count and frappe.form_dict.get("view") == "specs":
+		context.view = "specs"
+		context.specs = specs.my_specs(customer)

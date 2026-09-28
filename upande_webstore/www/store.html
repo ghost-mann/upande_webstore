@@ -54,6 +54,49 @@
 </div>
 {% endmacro %}
 
+{% macro spec_card(spec) %}
+{%- set first = spec.lines[0] -%}
+<div class="col-md-6 mb-4">
+	<div class="ws-card ws-spec-card" data-spec="{{ spec.name | e }}" data-spec-mode="{{ spec.mode }}">
+		<div class="ws-card-body">
+			<span class="ws-sku">{{ spec.box_type | e }}{% if spec.length %} · {{ spec.length | e }}{% endif %} · {{ spec.box_assortment | e }}</span>
+			<h5 class="ws-card-title">{{ spec.spec_name | e }}</h5>
+			{% if spec.mode == "box" %}
+			<p class="ws-card-desc">{{ _("By the box: {0} stems of {1} per box.").format(spec.pack_rate, first.item_name | e) }}</p>
+			<div class="ws-card-foot">
+				<span class="ws-price">{{ frappe.utils.fmt_money(first.rate * spec.pack_rate, currency=first.currency) }}
+					<span class="ws-price-note">{{ _("per box") }} · {{ frappe.utils.fmt_money(first.rate, currency=first.currency) }} {{ _("per stem") }}</span></span>
+			</div>
+			<div class="ws-card-cart">
+				<input type="number" min="1" step="1" value="1" class="form-control form-control-sm" data-spec-boxes aria-label="{{ _('Boxes') }}">
+				<button class="btn btn-sm btn-primary" data-spec-add>{{ _("Add boxes") }}</button>
+			</div>
+			{% else %}
+			<p class="ws-card-desc">
+				{% if spec.fill == "whole_boxes" %}{{ _("By variety: each variety in whole boxes of {0} stems.").format(spec.pack_rate) }}
+				{% elif spec.min_colours or spec.max_colours %}{{ _("By variety: a mixed box of {0} colours. The packhouse confirms the box count.").format(spec.min_colours if spec.min_colours == spec.max_colours else (spec.min_colours|string) ~ "–" ~ (spec.max_colours|string)) }}
+				{% else %}{{ _("By variety. The packhouse confirms the box count.") }}{% endif %}
+			</p>
+			<table class="table table-sm ws-spec-lines">
+				<thead><tr><th>{{ _("Colour") }}</th><th>{{ _("Variety") }}</th><th class="text-right">{{ _("Rate") }}</th><th style="width:110px">{{ _("Stems") }}</th></tr></thead>
+				<tbody>
+				{% for line in spec.lines %}
+				<tr>
+					<td>{{ line.colour | e }}</td>
+					<td>{{ line.item_name | e }}</td>
+					<td class="text-right">{{ frappe.utils.fmt_money(line.rate, currency=line.currency) }}</td>
+					<td><input type="number" min="0" step="{{ spec.pack_rate or 1 }}" value="0" class="form-control form-control-sm" data-spec-item="{{ line.item_code | e }}" aria-label="{{ _('Stems of {0}').format(line.item_name | e) }}"></td>
+				</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+			<div class="ws-card-cart"><button class="btn btn-sm btn-primary" data-spec-add>{{ _("Add to cart") }}</button></div>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endmacro %}
+
 {% block hero %}
 {% if webstore_features.hero or webstore_features.category_cards %}
 <div class="container ws-storefront-band">
@@ -125,6 +168,18 @@
 		</div>
 	</div>
 	<div class="col-md-9">
+		{% if spec_count %}
+		<div class="ws-view-switch" role="tablist" style="display:flex;gap:.5rem;margin-bottom:1rem">
+			<a role="tab" class="btn btn-sm {{ 'btn-primary' if view != 'specs' else 'btn-light' }}" href="{{ webstore_urls.store }}" aria-selected="{{ 'true' if view != 'specs' else 'false' }}">{{ _("All products") }}</a>
+			<a role="tab" class="btn btn-sm {{ 'btn-primary' if view == 'specs' else 'btn-light' }}" href="{{ webstore_urls.store }}?view=specs" aria-selected="{{ 'true' if view == 'specs' else 'false' }}">{{ _("My specifications") }} <span class="ws-count">{{ spec_count }}</span></a>
+		</div>
+		{% endif %}
+		{% if view == "specs" %}
+		<div class="ws-section-head"><h4>{{ _("My specifications") }}</h4><span>{{ specs | length }} {{ _("specifications") }}</span></div>
+		<p class="text-muted" style="font-size:.8rem">{{ _("Your agreed packing specifications. Each is priced at your rate for its varieties and packed in its own box.") }}</p>
+		{% if not specs %}<p class="text-muted">{{ _("None of your specifications can be ordered online right now. Please contact us.") }}</p>{% endif %}
+		<div class="row">{% for spec in specs %}{{ spec_card(spec) }}{% endfor %}</div>
+		{% else %}
 		<div class="ws-section-head"><h4>{{ _("All products") }}{% if search %} — {{ _("results for") }} “{{ search }}”{% endif %}</h4><span>{{ total }} {{ _("items") }}</span></div>
 		{% if not products %}<p class="text-muted">{{ _("No products found.") }} {% if search or category %}<a href="{{ webstore_urls.store }}">{{ _("Clear filters") }}</a>{% endif %}</p>{% endif %}
 		<div class="row">{% for p in products %}{{ product_card(p) }}{% endfor %}</div>
@@ -137,9 +192,38 @@
 			{% endfor %}
 		</ul></nav>
 		{% endif %}
+		{% endif %}
 	</div>
 </div>
 </div>
+{% if view == "specs" %}
+<script>
+document.addEventListener("click", async (e) => {
+	const button = e.target.closest("[data-spec-add]");
+	if (!button) return;
+	const card = button.closest("[data-spec]");
+	const args = { specification: card.dataset.spec };
+	if (card.dataset.specMode === "box") {
+		args.boxes = parseInt(card.querySelector("[data-spec-boxes]").value || "0", 10);
+	} else {
+		args.lines = [...card.querySelectorAll("[data-spec-item]")]
+			.map((input) => ({ item_code: input.dataset.specItem, qty: parseFloat(input.value || "0") }))
+			.filter((line) => line.qty > 0);
+	}
+	button.disabled = true;
+	try {
+		await window.webstore.call("upande_webstore.api.specs.add_spec", args);
+		window.webstore.toast("{{ _('Added to basket') }}");
+		window.webstore.refreshCartBadge();
+		card.querySelectorAll("[data-spec-item]").forEach((input) => (input.value = 0));
+	} catch (err) {
+		window.webstore.toast(err.message, true);
+	} finally {
+		button.disabled = false;
+	}
+});
+</script>
+{% endif %}
 
 {% if webstore_branding.process_steps %}
 <div class="ws-process rv">

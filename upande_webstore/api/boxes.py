@@ -24,8 +24,43 @@ def list_box_types():
 	if not source:
 		# nothing to read, so there is no permission question to ask
 		return []
-	require_permission(source.doctype)
+	# a table row is part of Webstore Settings, not a doctype of its own
+	require_permission("Webstore Settings" if source.kind == "table" else source.doctype)
 	return [box["box_type"] for box in packing.get_box_types()]
+
+
+@frappe.whitelist()
+def list_site_box_records():
+	"""The site's own box record names, for the table's Site Box Record column."""
+	require_permission("Webstore Settings")
+	source = packing.get_site_box_source()
+	if not source:
+		return []
+	return frappe.get_all(source.doctype, filters=source.candidate_filters, pluck="name", order_by="name asc")
+
+
+@frappe.whitelist()
+def load_site_boxes():
+	"""Rows for the Boxes table, copied from the site's own box records.
+
+	Returned rather than saved: the desk appends them to the form, so the farm
+	reviews names and rates before anything changes.
+	"""
+	require_permission("Webstore Settings", "write")
+	source = packing.get_site_box_source()
+	if not source:
+		frappe.throw(packing.box_source_hint(), frappe.ValidationError)
+	rows = frappe.get_all(
+		source.doctype,
+		filters=source.filters,
+		fields=["name", f"{source.label_field} as box_name", f"{source.rate_field} as pack_rate"],
+		order_by=f"{source.label_field} asc",
+	)
+	return [
+		{"box_name": row.box_name or row.name, "pack_rate": int(frappe.utils.flt(row.pack_rate)), "box_type": row.name}
+		for row in rows
+		if frappe.utils.flt(row.pack_rate) > 0
+	]
 
 
 @frappe.whitelist()
@@ -37,6 +72,8 @@ def describe_source():
 	source = packing.get_box_source()
 	return {
 		"doctype": source.doctype if source else None,
+		"from_table": bool(source and source.kind == "table"),
+		"site_source": (packing.get_site_box_source() or {}).get("doctype"),
 		"label": packing.source_label(),
 		"usable": packing.get_box_types(),
 		"unusable": packing.get_unusable_box_types(),

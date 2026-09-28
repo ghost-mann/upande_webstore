@@ -13,6 +13,7 @@ class WebstoreSettings(Document):
 			self.docstatus = 0
 		self.validate_font_url()
 		self.validate_occasion()
+		self.validate_boxes()
 		self.validate_default_box_type()
 		self.validate_guest_price_lists()
 		self.apply_feature_dependencies()
@@ -79,6 +80,19 @@ class WebstoreSettings(Document):
 			return
 		from upande_webstore.services.packing import box_source_hint, is_usable_box
 
+		if self.boxes:
+			# this save's own table, not the stored one get_settings() still returns
+			usable = {
+				row.box_name
+				for row in self.boxes
+				if not frappe.utils.cint(row.disabled) and frappe.utils.cint(row.pack_rate) > 0
+			}
+			if self.default_box_type not in usable:
+				frappe.throw(
+					_("{0} is not an enabled box in the Boxes table.").format(self.default_box_type),
+					frappe.ValidationError,
+				)
+			return
 		if not is_usable_box(self.default_box_type):
 			frappe.throw(
 				_("{0} is not a usable box type on this site. {1}").format(
@@ -86,6 +100,24 @@ class WebstoreSettings(Document):
 				),
 				frappe.ValidationError,
 			)
+
+	def validate_boxes(self):
+		"""A box row names what a cart line stores, so the name must be unique,
+		and a box with no stems per box would silently never be checked."""
+		seen = set()
+		for row in self.boxes or []:
+			row.box_name = (row.box_name or "").strip()
+			if row.box_name in seen:
+				frappe.throw(
+					_("Box {0} is listed twice. Each box needs its own name.").format(row.box_name),
+					frappe.ValidationError,
+				)
+			seen.add(row.box_name)
+			if frappe.utils.cint(row.pack_rate) <= 0:
+				frappe.throw(
+					_("Box {0}: enter how many stems fill one box.").format(row.box_name),
+					frappe.ValidationError,
+				)
 
 	def validate_guest_price_lists(self):
 		"""Every row offered to guests must actually be usable, and the table

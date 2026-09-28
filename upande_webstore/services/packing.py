@@ -3,12 +3,13 @@
 Pure maths plus a few thin reads. Deliberately knows nothing about carts or
 documents, so the arithmetic can be tested without building either.
 
-Where box types live differs per farm, so one resolver answers it once per
-request and every read goes through it. Karen Roses runs a populated `Box Type`
-doctype whose `custom_stem_capacity` is the pack rate; Mona flags Items with
-`custom_is_box` and `custom_pack_rate`. Both are other apps' schema, so every
-read guards on the doctype and the field actually existing: this app must work
-on a farm that has neither.
+Boxes come from one of two places. A project can list them in the Boxes table
+on Webstore Settings, which is the portable way and wins whenever it has rows.
+Otherwise they come from the site's own box records, which differ per farm:
+Karen Roses runs a populated `Box Type` doctype whose `custom_stem_capacity` is
+the pack rate; Mona flags Items with `custom_is_box` and `custom_pack_rate`.
+Both are other apps' schema, so every read guards on the doctype and the field
+actually existing: this app must work on a farm that has neither.
 """
 
 import frappe
@@ -21,6 +22,7 @@ BOX_FLAG = "custom_is_box"
 BOX_RATE = "custom_pack_rate"
 BOX_TYPE_DOCTYPE = "Box Type"
 BOX_TYPE_CAPACITY = "custom_stem_capacity"
+BOX_TABLE = "Webstore Box"
 
 _UNSET = object()
 
@@ -41,7 +43,9 @@ def packing_enabled():
 	keeps a farm with no box types unpackable-safe everywhere at once: none
 	of them can disagree about whether packing is on.
 	"""
-	if not bool(int(flt(get_settings().get("enable_box_packing")))):
+	from upande_webstore.theme.features import enabled
+
+	if not enabled()["box_packing"]:
 		return False
 	return bool(get_box_types())
 
@@ -55,14 +59,49 @@ def get_minimum_order_stems():
 
 
 def get_box_source():
-	"""Which doctype this site's box types live in, or None.
+	"""Where the boxes a buyer can pick come from, or None.
+
+	The Boxes table on Webstore Settings when it has any rows, else the site's
+	own box records. Not cached: the table is part of settings, which a desk
+	save changes mid-session.
+	"""
+	if _table_rows():
+		return frappe._dict(
+			kind="table",
+			doctype=BOX_TABLE,
+			label_field="box_name",
+			rate_field="pack_rate",
+			filters={"disabled": 0},
+			candidate_filters={},
+		)
+	return get_site_box_source()
+
+
+def get_site_box_source():
+	"""Which doctype this site's own box records live in, or None.
 
 	Resolved once per request: it is a property of the site's schema, not of the
-	cart being priced.
+	cart being priced. The installer and role grants use this rather than
+	get_box_source(), because the fields they create must Link to real records,
+	never to rows of the settings table.
 	"""
 	if getattr(frappe.local, "webstore_box_source", _UNSET) is _UNSET:
 		frappe.local.webstore_box_source = _resolve_box_source()
 	return frappe.local.webstore_box_source
+
+
+def _table_rows():
+	return list(get_settings().get("boxes") or [])
+
+
+def _table_row(box):
+	if not box:
+		return None
+	return next((row for row in _table_rows() if row.box_name == box), None)
+
+
+def _is_table(source):
+	return bool(source) and source.get("kind") == "table"
 
 
 def clear_box_source_cache():
@@ -79,6 +118,7 @@ def _resolve_box_source():
 	# those two comparisons taught the operator form first.
 	if _box_type_doctype_populated():
 		return frappe._dict(
+			kind="records",
 			doctype=BOX_TYPE_DOCTYPE,
 			rate_field=BOX_TYPE_CAPACITY,
 			label_field="box_type" if frappe.get_meta(BOX_TYPE_DOCTYPE).get_field("box_type") else "name",
@@ -87,6 +127,7 @@ def _resolve_box_source():
 		)
 	if _item_has_box_fields():
 		return frappe._dict(
+			kind="records",
 			doctype="Item",
 			rate_field=BOX_RATE,
 			label_field="item_name",
@@ -129,6 +170,8 @@ def source_label():
 	source = get_box_source()
 	if not source:
 		return _("no box type source on this site")
+	if _is_table(source):
+		return _("the Boxes table in Webstore Settings")
 	if source.doctype == BOX_TYPE_DOCTYPE:
 		return _("Box Type records with a stem capacity above zero")
 	return _("Items flagged Is Box with a pack rate above zero")
@@ -146,8 +189,9 @@ def box_source_hint():
 	source = get_box_source()
 	if not source:
 		return _(
-			"This site has no box type source yet: either Box Type records with a "
-			"stem capacity, or Items with Is Box ticked and a pack rate."
+			"This site has no boxes yet: add them to the Boxes table in Webstore "
+			"Settings, or create Box Type records with a stem capacity, or Items "
+			"with Is Box ticked and a pack rate."
 		)
 	return _("Box types come from {0}.").format(source_label())
 
@@ -165,6 +209,14 @@ def get_box_types():
 	source = get_box_source()
 	if not source:
 		return []
+	if _is_table(source):
+		# table order, not alphabetical: the farm lists its boxes the way it
+		# wants buyers to see them
+		return [
+			{"box_type": row.box_name, "box_name": row.box_name, "pack_rate": int(flt(row.pack_rate))}
+			for row in _table_rows()
+			if not int(flt(row.disabled)) and flt(row.pack_rate) > 0
+		]
 	rows = frappe.get_all(
 		source.doctype,
 		filters=source.filters,
@@ -191,6 +243,17 @@ def get_unusable_box_types():
 	source = get_box_source()
 	if not source:
 		return []
+	if _is_table(source):
+		out = []
+		for row in _table_rows():
+			reasons = []
+			if flt(row.pack_rate) <= 0:
+				reasons.append(_("no pack rate entered"))
+			if int(flt(row.disabled)):
+				reasons.append(_("disabled"))
+			if reasons:
+				out.append({"box_type": row.box_name, "box_name": row.box_name, "reasons": reasons})
+		return out
 	rows = frappe.get_all(
 		source.doctype,
 		filters=source.candidate_filters,
@@ -221,6 +284,12 @@ def get_pack_rate(box):
 	source = get_box_source()
 	if not box or not source:
 		return 0
+	if _is_table(source):
+		row = _table_row(box)
+		if not row or int(flt(row.disabled)):
+			return 0
+		rate = flt(row.pack_rate)
+		return int(rate) if rate > 0 else 0
 	row = frappe.db.get_value(
 		source.doctype, box, [source.rate_field] + list(source.filters), as_dict=True
 	)
@@ -255,9 +324,25 @@ def box_label(box):
 	if not box:
 		return _("no box type")
 	source = get_box_source()
-	if not source:
+	if not source or _is_table(source):
 		return box
 	return frappe.db.get_value(source.doctype, box, source.label_field) or box
+
+
+def box_record(box):
+	"""The site's own record for a box, for writing to a document Link.
+
+	In table mode that is the row's optional Site Box Record mapping, so a farm
+	that lists its boxes in settings still gets `Box Type` on its Sales Order
+	lines; otherwise the box already is a site record.
+	"""
+	if not box:
+		return None
+	source = get_box_source()
+	if _is_table(source):
+		row = _table_row(box)
+		return (row.box_type or None) if row else None
+	return box
 
 
 def compute_boxes(qty, pack_rate):

@@ -54,11 +54,27 @@ def place_order(
 
 	_assert_available(cart)
 	_assert_packable(cart)
+	_assert_repeats_allowed(cart)
 	_assert_shipping_date(shipping_date)
 
 	settings = get_settings()
 	price_list = get_price_list()
 	contact_name = frappe.db.get_value("Contact", {"user": frappe.session.user}, "name")
+	# resolved as the buyer: inside as_administrator() there is no customer,
+	# so "which of this customer's specs" would find none
+	from upande_webstore.api.cart import _cart_specs
+
+	cart.flags.webstore_spec_map = _cart_specs(cart)
+	# the same for rates: priced as Administrator, a line would get the guest
+	# price list instead of this customer's
+	from upande_webstore.api.cart import line_length
+
+	cart.flags.webstore_rates = {
+		row.name: get_item_price(
+			row.item_code, qty=row.qty, length=line_length(row, cart.flags.webstore_spec_map)
+		)["rate"]
+		for row in cart.items
+	}
 
 	# All inputs above are resolved from the session user; the document itself
 	# is system-constructed, so create it under elevated context (ERPNext's
@@ -103,24 +119,38 @@ def _assert_available(cart):
 
 
 def _assert_packable(cart):
-	"""Whole-box fill per box-type group, and the order minimum.
+	"""Whole-box fill per box-type group, the order minimum, and every spec
+	line still the customer's to order under a spec that still allows it.
 
-	Inert unless the farm has switched packing on AND entered pack rates, so
-	this cannot break a site that has done neither.
+	The same summary the cart page renders, so the page and this check cannot
+	disagree. Inert when neither the packing module nor a spec line applies.
 	"""
-	from upande_webstore.services import packing
+	from upande_webstore.api.cart import packing_summary
 
-	if not packing.packing_enabled():
+	summary = packing_summary(cart)
+	if summary and summary["problems"]:
+		frappe.throw("<br>".join(summary["problems"]), frappe.ValidationError)
+
+
+def _assert_repeats_allowed(cart):
+	"""A variety ordered both plain and under a spec, or under two specs, is two
+	lines of one item. ERPNext refuses that unless Selling Settings allows it
+	(Kaitet does), and its own message points a buyer at a desk page they
+	cannot open, so say what to change in the basket instead."""
+	if frappe.db.get_single_value("Selling Settings", "allow_multiple_items"):
 		return
-	groups = packing.group_by_box_type(
-		[{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type} for row in cart.items]
-	)
-	total_stems = sum(flt(row.qty) for row in cart.items)
-	problems = packing.find_problems(
-		groups, total_stems, packing.get_minimum_order_stems()
-	)
-	if problems:
-		frappe.throw("<br>".join(problems), frappe.ValidationError)
+	seen = {}
+	for row in cart.items:
+		seen.setdefault(row.item_code, []).append(row)
+	repeated = [rows[0].item_name or code for code, rows in seen.items() if len(rows) > 1]
+	if repeated:
+		frappe.throw(
+			_("{0} is in your basket more than once (for example under two specifications). "
+			  "This store takes each variety once per order: combine or remove the extra line.").format(
+				", ".join(repeated)
+			),
+			frappe.ValidationError,
+		)
 
 
 def _earliest_delivery_date():
@@ -205,54 +235,91 @@ def _writable(doctype, fieldname, expect_options=None, expect_fieldtype=None):
 	return (field.options or "") == expect_options
 
 
+def _link_value(doctype, fieldname, value):
+	"""`value` if this site can store it in that Link field, else None.
+
+	A field of the same name may link somewhere else entirely: Karen Roses'
+	`Sales Order Item.custom_box_type` links to its own `Box Type`, the
+	webstore's own Quotation Item field to Item. Writing a value the target
+	doctype does not hold would raise a raw LinkValidationError at the
+	customer, so the value must exist in whatever the field actually links to.
+	"""
+	if not value:
+		return None
+	field = frappe.get_meta(doctype).get_field(fieldname)
+	if not field or field.fieldtype != "Link" or not field.options:
+		return None
+	return value if frappe.db.exists(field.options, value) else None
+
+
+def _document_currency(price_list):
+	"""Quote in the currency the buyer was shown: the price list's.
+
+	Left unset, ERPNext takes the company's currency, so a EUR customer of a
+	KES company (Karen Roses' Trade Debtors EUR customers) got their EUR rates
+	written as KES — or, where the customer's receivable account is in EUR, the
+	order was refused outright ("can only be made in currency: EUR"). ERPNext
+	fills the exchange rate to the company currency itself.
+	"""
+	currency = frappe.db.get_value("Price List", price_list, "currency") if price_list else None
+	return {"currency": currency} if currency else {}
+
+
 def _cart_items(cart, target_doctype):
 	"""Cart lines as document rows.
 
 	`target_doctype` decides which box fields are safe to write — Quotation Item
 	and Sales Order Item are not guaranteed to model box type the same way.
 	"""
-	from upande_webstore.services import packing
+	from upande_webstore.api.cart import _cart_specs
+	from upande_webstore.services import packing, specs
 
 	include_boxes = packing.packing_enabled()
-	source = packing.get_box_source()
-	box_doctype = source.doctype if source else None
-	write_box = bool(
-		include_boxes
-		and box_doctype
-		and _writable(target_doctype, "custom_box_type", box_doctype, "Link")
-	)
+	spec_map = _cart_specs(cart)
 	# Both are derived from the box type, so neither may be written without it.
 	# A row carrying "400 stems per box, 3 boxes" and no box name tells ops the
 	# pack rate of a box nobody named, and the quotation -> sales order mapper
 	# carries that emptiness onward.
-	write_rate = write_box and _writable(
-		target_doctype, "custom_pack_rate", expect_fieldtype="Float"
-	)
-	write_count = write_box and _writable(
-		target_doctype, "custom_number_of_boxes", expect_fieldtype="Int"
-	)
+	write_rate = _writable(target_doctype, "custom_pack_rate", expect_fieldtype="Float")
+	write_count = _writable(target_doctype, "custom_number_of_boxes", expect_fieldtype="Int")
 
 	rows = []
 	for row in cart.items:
+		rates = cart.flags.get("webstore_rates") or {}
 		line = {
 			"item_code": row.item_code,
 			"qty": row.qty,
-			"rate": get_item_price(row.item_code, qty=row.qty)["rate"],
+			"rate": rates[row.name] if row.name in rates else get_item_price(row.item_code, qty=row.qty)["rate"],
 		}
-		# Re-derived here, not trusted from the cart: a box type is master data
-		# another app maintains, and one renamed or deleted between add-to-cart
-		# and checkout would otherwise be written verbatim into a Link and raise
-		# a raw LinkValidationError at the customer. A rate of 0 means the box no
-		# longer resolves, so the line simply carries no box detail.
-		pack_rate = packing.get_pack_rate(row.box_type) if include_boxes and row.box_type else 0
-		if pack_rate:
-			if write_box:
-				line["custom_box_type"] = row.box_type
-			if write_rate:
+		spec = spec_map.get(row.get("specification")) if row.get("specification") else None
+		if spec:
+			# the packhouse already reads one line per variety tagged with its spec
+			spec_link = _link_value(target_doctype, "custom_line", spec.name)
+			if spec_link:
+				line["custom_line"] = spec_link
+			# and prices Roses lines per (variety, length) on save
+			length = _link_value(target_doctype, "custom_length", spec.price_length)
+			if length:
+				line["custom_length"] = length
+			record = spec.box_type
+			pack_rate = spec.pack_rate
+			boxes = specs.boxes_in(spec, row.qty)
+		else:
+			# Re-derived here, not trusted from the cart: a box is master data
+			# that can be renamed or removed between add-to-cart and checkout.
+			# A rate of 0 means the box no longer resolves, so the line simply
+			# carries no box detail.
+			pack_rate = packing.get_pack_rate(row.box_type) if include_boxes and row.box_type else 0
+			record = packing.box_record(row.box_type) if pack_rate else None
+			# a line sharing a mixed box has no whole-box count of its own
+			boxes = row.number_of_boxes or 0
+		box_link = _link_value(target_doctype, "custom_box_type", record)
+		if box_link:
+			line["custom_box_type"] = box_link
+			if write_rate and pack_rate:
 				line["custom_pack_rate"] = pack_rate
-			if write_count:
-				# a line sharing a mixed box has no whole-box count of its own
-				line["custom_number_of_boxes"] = row.number_of_boxes or 0
+			if write_count and pack_rate:
+				line["custom_number_of_boxes"] = boxes
 		rows.append(line)
 	return rows
 
@@ -264,13 +331,19 @@ def _has_mixed_boxes(cart):
 	else must share, which is what tells the desk this order needs mixed-box
 	handling. Two lines of 600 at 300/box are not mixed; 150 + 150 are.
 	"""
-	from upande_webstore.services import packing
+	from upande_webstore.api.cart import _cart_specs
+	from upande_webstore.services import packing, specs
 
+	# a Mixed Box spec is a mixed box by definition, however it was entered
+	for spec in _cart_specs(cart).values():
+		if spec.box_assortment == specs.MIXED_BOX:
+			return 1
 	if not packing.packing_enabled():
 		return 0
-	if len(cart.items) < 2:
+	plain = [row for row in cart.items if not row.get("specification")]
+	if len(plain) < 2:
 		return 0
-	for row in cart.items:
+	for row in plain:
 		pack_rate = packing.get_pack_rate(row.box_type)
 		if pack_rate and flt(row.qty) % pack_rate:
 			return 1
@@ -289,6 +362,7 @@ def _create_quotation(
 		"order_type": "Shopping Cart",
 		"company": settings.company,
 		"selling_price_list": price_list,
+		**_document_currency(price_list),
 		"valid_till": add_days(nowdate(), settings.quotation_validity_days or 14),
 		"contact_person": contact_name,
 		"customer_address": address_name,
@@ -325,6 +399,7 @@ def _create_sales_order(
 		"order_type": "Shopping Cart",
 		"company": settings.company,
 		"selling_price_list": price_list,
+		**_document_currency(price_list),
 		"transaction_date": nowdate(),
 		"delivery_date": delivery_date,
 		"contact_person": contact_name,
@@ -349,6 +424,11 @@ def _create_sales_order(
 	_stamp_webstore(fields, "Sales Order")
 	order = frappe.get_doc(fields)
 	order.flags.ignore_permissions = True
+	# Other apps make freight fields mandatory on Sales Order (upande_packhouse:
+	# delivery point, shipping agent, consignee, truck details). The buyer
+	# cannot know those, and this draft exists for the sales team to fill them
+	# in and confirm; submitting it still enforces every mandatory field.
+	order.flags.ignore_mandatory = True
 	order.insert()
 	_store_delivery_point(order, delivery_point)
 	return order

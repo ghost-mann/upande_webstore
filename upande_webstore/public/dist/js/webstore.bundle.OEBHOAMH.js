@@ -74,10 +74,10 @@
         return;
       }
       body.innerHTML = cart.items.map((line) => `
-			<div class="ws-drawer-line" data-item="${esc(line.item_code)}">
+			<div class="ws-drawer-line" data-item="${esc(line.item_code)}" data-spec="${esc(line.specification || "")}">
 				<div class="ws-drawer-line-main">
 					<a href="${line.route ? "/" + esc(line.route) : "#"}" class="ws-drawer-title">${esc(line.web_title)}</a>
-					<span class="ws-sku">${esc(line.item_code)}</span>
+					<span class="ws-sku">${esc(line.specification ? line.specification : line.item_code)}</span>
 				</div>
 				<div class="ws-drawer-line-controls">
 					<button class="ws-step" data-ws-step="-1" aria-label="Decrease">\u2212</button>
@@ -105,11 +105,15 @@
         toast(e.message, true);
       }
     }
-    async function stepQty(itemCode, delta) {
-      const row = document.querySelector(`.ws-drawer-line[data-item="${CSS.escape(itemCode)}"] .ws-step-qty`);
-      const current = parseFloat((row == null ? void 0 : row.textContent) || "0");
+    async function stepQty(line, delta) {
+      var _a;
+      const current = parseFloat(((_a = line.querySelector(".ws-step-qty")) == null ? void 0 : _a.textContent) || "0");
       try {
-        const cart = await call("upande_webstore.api.cart.update_qty", { item_code: itemCode, qty: current + delta });
+        const cart = await call("upande_webstore.api.cart.update_qty", {
+          item_code: line.getAttribute("data-item"),
+          specification: line.getAttribute("data-spec") || null,
+          qty: current + delta
+        });
         renderCart(cart);
         refreshCartBadge();
       } catch (e) {
@@ -222,7 +226,7 @@
       }
     }
     document.addEventListener("click", async (event) => {
-      var _a, _b, _c;
+      var _a;
       const target = event.target;
       const logout = target.closest("[data-webstore-logout]");
       if (logout) {
@@ -253,17 +257,21 @@
       }
       const step = target.closest("[data-ws-step]");
       if (step) {
-        const item = (_b = step.closest(".ws-drawer-line")) == null ? void 0 : _b.getAttribute("data-item");
-        if (item)
-          stepQty(item, parseInt(step.getAttribute("data-ws-step") || "0", 10));
+        const line = step.closest(".ws-drawer-line");
+        if (line)
+          stepQty(line, parseInt(step.getAttribute("data-ws-step") || "0", 10));
         return;
       }
       const remove = target.closest("[data-ws-remove]");
       if (remove) {
-        const item = (_c = remove.closest(".ws-drawer-line")) == null ? void 0 : _c.getAttribute("data-item");
+        const line = remove.closest(".ws-drawer-line");
+        const item = line == null ? void 0 : line.getAttribute("data-item");
         if (item) {
           try {
-            renderCart(await call("upande_webstore.api.cart.remove_item", { item_code: item }));
+            renderCart(await call("upande_webstore.api.cart.remove_item", {
+              item_code: item,
+              specification: (line == null ? void 0 : line.getAttribute("data-spec")) || null
+            }));
             refreshCartBadge();
           } catch (e) {
             toast(e.message, true);
@@ -423,4 +431,4 @@
     window.webstore = { addToCart, toggleWishlist, refreshCartBadge, openCart, openPalette, call, toast };
   })();
 })();
-//# sourceMappingURL=webstore.bundle.32LTMHOA.js.map
+//# sourceMappingURL=webstore.bundle.OEBHOAMH.js.map

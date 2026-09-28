@@ -37,6 +37,9 @@ FEATURES = (
 	_f("claims", "Claims", "portal"),
 	_f("account", "Account", "portal"),
 	_f("sidebar_stats", "Sidebar Stats", "portal"),
+	# modules — optional business features, off unless a project turns them on
+	_f("box_packing", "Box Packing", "modules"),
+	_f("customer_specs", "Customer Specifications", "modules"),
 )
 
 BY_KEY = {feature.key: feature for feature in FEATURES}

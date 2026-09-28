@@ -34,20 +34,51 @@ Open **Webstore Settings** (single doctype) in the desk and set:
 - **Stock Display** — In/Out badge or exact quantity
 - **Sales Notification Emails** — comma-separated recipients notified of new web quotations and portal accept/decline actions
 
-### Where box types come from
+### Modules
 
-The storefront reads box types from whichever representation your ERP already
-runs, resolved per site:
+Business features that only some projects use are **modules** on the
+Webstore Settings → Modules tab. Each ships **off**; while off it adds no UI,
+no routes and no reads of another app's doctypes, and its settings stay
+hidden. Each can also be switched per storefront.
 
-1. **`Box Type` records** with a stem capacity above zero, if your site has that
-   doctype and has filled it in. The capacity is the pack rate.
-2. Otherwise **Items** with *Is Box* ticked and a *Pack Rate* above zero.
-3. Otherwise nothing — box packing stays inert, whatever the settings say.
+| Module | What it does |
+|---|---|
+| **Box Packing** | Buyers pick a box per line, the cart and the checkout panel show box fill, checkout refuses part-filled boxes and the order minimum, and Quotation / Sales Order lines record box type, pack rate and box count |
+| **Customer Specifications** | A signed-in customer with packing specifications (upande_packhouse's `Specifications`) gets a **My specifications** switch on the store and orders against them; nobody else sees them |
 
-Webstore Settings → Boxes & Order Rules names which source is in use, lists the
-usable boxes, and lists the ones being hidden with the reason (no rate entered,
-disabled). This app never creates, migrates or takes ownership of a `Box Type`
-doctype; it only reads one where a farm already has it.
+### Where boxes come from
+
+1. The **Boxes** table on the Modules tab, when it has rows: box name, stems
+   per box, and optionally the site's own box record (a `Box Type` or box Item)
+   to write to the order line. *Load boxes from this site* fills it from 2 or 3.
+2. Otherwise **`Box Type` records** with a stem capacity above zero, if your
+   site has that doctype and has filled it in.
+3. Otherwise **Items** with *Is Box* ticked and a *Pack Rate* above zero.
+4. Otherwise nothing — box packing stays inert, whatever the settings say.
+
+The panel under the table names which source is in use, lists the usable boxes,
+and lists the ones being hidden with the reason. This app never creates,
+migrates or takes ownership of a `Box Type` doctype; it only reads one.
+
+### Customer specifications
+
+Read-only against the doctype named in settings (default `Specifications`); a
+site without it keeps the module inert. A customer sees their own specs that
+are Active, in date and have a primary variety. Each is ordered one of two ways:
+
+- **By the box** — one primary variety and one pack rate: "3 boxes" becomes
+  3 × pack rate stems of that variety.
+- **By variety** — everything else: stems per primary variety. A mono box with
+  one pack rate must be whole boxes per variety; a mixed box is checked for its
+  colour count instead, and the packhouse confirms its box count.
+
+Substitute varieties are not offered; the packhouse substitutes as it does now.
+Lines price at the customer's rate for the spec's stem length where Item Price
+carries `custom_length`, and reach the Sales Order as one line per variety with
+`custom_line` (the spec), `custom_length`, and the spec's box type — the shape
+the packhouse already reads. Where Selling Settings does not allow an item on
+several lines, a variety ordered under two specs is refused with a basket
+message.
 
 ### What install adds, and what it never touches
 
@@ -78,7 +109,8 @@ differs between clients lives in Webstore Settings, not in code.
 |---|---|
 | Theme | 13 color seeds → the full `--ws-*` set, fonts, radii, custom CSS |
 | Branding | Logo, favicon, wordmark, hero copy, hero stats, category cards, footer |
-| Features | 19 checkboxes; off = hidden **and** 404 **and** API rejected |
+| Features | 20 checkboxes; off = hidden **and** 404 **and** API rejected |
+| Modules | Optional business modules (box packing, customer specifications), off by default |
 | Transfer | Export/import theme JSON |
 
 **Every field is optional and blank means "use the shipped default".** A site
@@ -123,8 +155,8 @@ rendering an empty shell. Defaults all live in one place,
 
 ### Features
 
-Nineteen flags in one registry (`upande_webstore/theme/features.py`), all
-defaulting on, enforced at three layers so a disabled feature is genuinely
+Twenty flags in one registry (`upande_webstore/theme/features.py`), all
+defaulting on (the two modules share the registry but default off), enforced at three layers so a disabled feature is genuinely
 unreachable: the UI is hidden, the route raises 404, and the whitelisted API
 methods throw. Turning off *Cart & Checkout* leaves a browse-only catalog;
 turning off *Signup* also swaps the hero's guest CTA to **Member login** so it
@@ -156,6 +188,13 @@ For each sellable Item, create a **Webstore Product**: link the Item (templates 
 2. Customer builds a cart at `/store` and checks out at `/cart` → a submitted **Quotation** is created and the sales team is emailed.
 3. Customer accepts/declines the quotation at `/portal/quotations`; the sales team converts accepted quotations to Sales Orders in the desk.
 4. Orders, invoices (with PDF download), account statement, support tickets, and profile/addresses are all available under `/portal`.
+
+Quotations and Sales Orders are created in the currency of the price list the
+buyer was shown, at the buyer's own rates (resolved before the document is
+built as Administrator). A direct Sales Order is a draft: freight fields other
+apps make mandatory (upande_packhouse's delivery point, shipping agent,
+consignee, truck) are left for the sales team, and submitting still enforces
+them.
 
 ## Run tests
 

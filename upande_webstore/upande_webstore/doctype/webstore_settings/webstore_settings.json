@@ -5,7 +5,7 @@
  "issingle": 1,
  "engine": "InnoDB",
  "creation": "2026-07-20 00:00:01.000000",
- "modified": "2026-09-01 00:00:01.000000",
+ "modified": "2026-09-28 00:00:01.000000",
  "owner": "Administrator",
  "field_order": [
   "general_tab",
@@ -19,12 +19,8 @@
   "notification_emails",
   "warehouses",
   "packing_section",
-  "enable_box_packing",
-  "default_box_type",
-  "minimum_order_stems",
   "default_lead_days",
   "checkout_mode",
-  "box_source_summary",
   "roles_section",
   "catalogue_manager_roles",
   "order_manager_roles",
@@ -147,6 +143,17 @@
   "enable_claims",
   "enable_account",
   "enable_sidebar_stats",
+  "modules_tab",
+  "box_packing_section",
+  "enable_box_packing",
+  "boxes",
+  "default_box_type",
+  "minimum_order_stems",
+  "box_source_summary",
+  "specs_section",
+  "enable_customer_specs",
+  "spec_doctype",
+  "spec_source_summary",
   "transfer_tab",
   "transfer_section",
   "theme_file"
@@ -218,27 +225,7 @@
   {
    "fieldname": "packing_section",
    "fieldtype": "Section Break",
-   "label": "Boxes & Order Rules"
-  },
-  {
-   "fieldname": "enable_box_packing",
-   "fieldtype": "Check",
-   "label": "Box Packing Rules",
-   "default": "0",
-   "description": "Off = no box maths and no order minimum. Turn on only after pack rates are entered on your box Items."
-  },
-  {
-   "fieldname": "default_box_type",
-   "fieldtype": "Autocomplete",
-   "label": "Default Box Type",
-   "description": "Seeds each new cart line. Must be a usable box from this site's box source."
-  },
-  {
-   "fieldname": "minimum_order_stems",
-   "fieldtype": "Int",
-   "label": "Minimum Order (Stems)",
-   "default": "0",
-   "description": "0 = no minimum. Checked against the whole cart, not per line."
+   "label": "Order Rules"
   },
   {
    "fieldname": "default_lead_days",
@@ -253,11 +240,6 @@
    "label": "Checkout Mode",
    "options": "\nBuyer chooses\nQuotation only\nSales order only",
    "description": "Which checkout button(s) the cart page offers. Blank behaves as Buyer chooses."
-  },
-  {
-   "fieldname": "box_source_summary",
-   "fieldtype": "HTML",
-   "label": "Box Types On This Site"
   },
   {
    "fieldname": "roles_section",
@@ -979,6 +961,80 @@
    "label": "Sidebar Stats",
    "default": "1",
    "depends_on": "enable_portal"
+  },
+  {
+   "fieldname": "modules_tab",
+   "fieldtype": "Tab Break",
+   "label": "Modules"
+  },
+  {
+   "fieldname": "box_packing_section",
+   "fieldtype": "Section Break",
+   "label": "Box Packing",
+   "description": "Optional module. Leave off for projects that do not sell by the box."
+  },
+  {
+   "fieldname": "enable_box_packing",
+   "fieldtype": "Check",
+   "label": "Box Packing",
+   "default": "0",
+   "description": "Buyers pick a box per line from the table below, box fill is checked at checkout, and orders record box type and count. Off = no box maths and no order minimum."
+  },
+  {
+   "fieldname": "boxes",
+   "fieldtype": "Table",
+   "label": "Boxes",
+   "options": "Webstore Box",
+   "depends_on": "enable_box_packing",
+   "description": "The boxes buyers choose from. Leave empty to use this site's own box records (Box Type with a stem capacity, or Items ticked Is Box). Load boxes from this site copies those in."
+  },
+  {
+   "fieldname": "default_box_type",
+   "fieldtype": "Autocomplete",
+   "label": "Default Box Type",
+   "description": "Seeds each new cart line. Must be a usable box from the table above (or, with no table rows, from this site's own box records).",
+   "depends_on": "enable_box_packing"
+  },
+  {
+   "fieldname": "minimum_order_stems",
+   "fieldtype": "Int",
+   "label": "Minimum Order (Stems)",
+   "default": "0",
+   "description": "0 = no minimum. Checked against the whole cart, not per line.",
+   "depends_on": "enable_box_packing"
+  },
+  {
+   "fieldname": "box_source_summary",
+   "fieldtype": "HTML",
+   "label": "Boxes Buyers Can Pick",
+   "depends_on": "enable_box_packing"
+  },
+  {
+   "fieldname": "specs_section",
+   "fieldtype": "Section Break",
+   "label": "Customer Specifications",
+   "description": "Optional module. A signed-in customer sees and orders against their own packing specifications; nobody else sees them."
+  },
+  {
+   "fieldname": "enable_customer_specs",
+   "fieldtype": "Check",
+   "label": "Customer Specifications",
+   "default": "0",
+   "description": "Adds a My specifications switch to the store for customers who have active specifications. Needs a specifications doctype on this site (upande_packhouse)."
+  },
+  {
+   "fieldname": "spec_doctype",
+   "fieldtype": "Data",
+   "label": "Specification DocType",
+   "default": "Specifications",
+   "depends_on": "enable_customer_specs",
+   "description": "Where specifications live. Read only — the webstore never edits them."
+  },
+  {
+   "fieldname": "spec_source_summary",
+   "fieldtype": "HTML",
+   "label": "Specifications On This Site",
+   "depends_on": "enable_customer_specs"
   },
   {
    "fieldname": "transfer_tab",

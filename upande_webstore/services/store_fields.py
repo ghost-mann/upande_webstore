@@ -138,6 +138,7 @@ TRISTATE_OPTIONS = {"Enabled": 1, "Disabled": 0}
 PER_STORE_TRISTATE = (
 	"accent_drives_primary",
 	"enable_box_packing",
+	"enable_customer_specs",
 	"enable_cart",
 	"enable_direct_order",
 	"enable_wishlist",

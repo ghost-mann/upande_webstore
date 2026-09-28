@@ -14,9 +14,6 @@
   "stock_display",
   "warehouses",
   "packing_section",
-  "enable_box_packing",
-  "default_box_type",
-  "minimum_order_stems",
   "default_lead_days",
   "checkout_mode",
   "theme_tab",
@@ -119,7 +116,14 @@
   "enable_hero",
   "enable_hero_stats",
   "enable_category_cards",
-  "enable_footer"
+  "enable_footer",
+  "modules_tab",
+  "box_packing_section",
+  "enable_box_packing",
+  "default_box_type",
+  "minimum_order_stems",
+  "specs_section",
+  "enable_customer_specs"
  ],
  "fields": [
   {
@@ -184,26 +188,7 @@
   {
    "fieldname": "packing_section",
    "fieldtype": "Section Break",
-   "label": "Boxes & Order Rules"
-  },
-  {
-   "description": "Off = no box maths and no order minimum. Turn on only after pack rates are entered on your box Items. Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
-   "fieldname": "enable_box_packing",
-   "fieldtype": "Select",
-   "label": "Box Packing Rules",
-   "options": "\nEnabled\nDisabled"
-  },
-  {
-   "description": "Seeds each new cart line. Must be a usable box from this site's box source. Blank inherits Webstore Settings.",
-   "fieldname": "default_box_type",
-   "fieldtype": "Autocomplete",
-   "label": "Default Box Type"
-  },
-  {
-   "description": "0 = no minimum. Checked against the whole cart, not per line. Blank inherits Webstore Settings.",
-   "fieldname": "minimum_order_stems",
-   "fieldtype": "Int",
-   "label": "Minimum Order (Stems)"
+   "label": "Order Rules"
   },
   {
    "description": "Earliest shipping date a buyer may request, and the fallback when none is given. Blank inherits Webstore Settings.",
@@ -819,6 +804,49 @@
    "fieldname": "enable_footer",
    "fieldtype": "Select",
    "label": "Footer",
+   "options": "\nEnabled\nDisabled"
+  },
+  {
+   "fieldname": "modules_tab",
+   "fieldtype": "Tab Break",
+   "label": "Modules"
+  },
+  {
+   "description": "Optional module. Leave off for projects that do not sell by the box.",
+   "fieldname": "box_packing_section",
+   "fieldtype": "Section Break",
+   "label": "Box Packing"
+  },
+  {
+   "description": "Buyers pick a box per line from the table below, box fill is checked at checkout, and orders record box type and count. Off = no box maths and no order minimum. Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
+   "fieldname": "enable_box_packing",
+   "fieldtype": "Select",
+   "label": "Box Packing",
+   "options": "\nEnabled\nDisabled"
+  },
+  {
+   "description": "Seeds each new cart line. Must be a usable box from the table above (or, with no table rows, from this site's own box records). Blank inherits Webstore Settings.",
+   "fieldname": "default_box_type",
+   "fieldtype": "Autocomplete",
+   "label": "Default Box Type"
+  },
+  {
+   "description": "0 = no minimum. Checked against the whole cart, not per line. Blank inherits Webstore Settings.",
+   "fieldname": "minimum_order_stems",
+   "fieldtype": "Int",
+   "label": "Minimum Order (Stems)"
+  },
+  {
+   "description": "Optional module. A signed-in customer sees and orders against their own packing specifications; nobody else sees them.",
+   "fieldname": "specs_section",
+   "fieldtype": "Section Break",
+   "label": "Customer Specifications"
+  },
+  {
+   "description": "Adds a My specifications switch to the store for customers who have active specifications. Needs a specifications doctype on this site (upande_packhouse). Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
+   "fieldname": "enable_customer_specs",
+   "fieldtype": "Select",
+   "label": "Customer Specifications",
    "options": "\nEnabled\nDisabled"
   }
  ],

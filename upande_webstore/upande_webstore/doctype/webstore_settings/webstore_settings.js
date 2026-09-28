@@ -13,6 +13,32 @@ frappe.ui.form.on("Webstore Settings", {
 			frm.get_field("box_source_summary").$wrapper.html(boxSummary(r.message));
 		});
 
+		// the table's Site Box Record column offers this site's own box records
+		frappe.call("upande_webstore.api.boxes.list_site_box_records").then((r) => {
+			frm.fields_dict.boxes.grid.update_docfield_property("box_type", "options", r.message || []);
+		});
+
+		frappe.call("upande_webstore.api.specs.describe_source").then((r) => {
+			frm.get_field("spec_source_summary").$wrapper.html(specSummary(r.message));
+		});
+
+		// refresh runs on every save; the grid outlives it, so add the button once
+		const grid = frm.fields_dict.boxes.grid;
+		if (!grid.__ws_load_button) grid.__ws_load_button = grid.add_custom_button(__("Load boxes from this site"), () => {
+			frappe.call("upande_webstore.api.boxes.load_site_boxes").then((r) => {
+				const known = new Set((frm.doc.boxes || []).map((row) => row.box_name));
+				const fresh = (r.message || []).filter((row) => !known.has(row.box_name));
+				fresh.forEach((row) => frm.add_child("boxes", row));
+				frm.refresh_field("boxes");
+				frappe.show_alert({
+					message: fresh.length
+						? __("Added {0} boxes. Review them, then save.", [fresh.length])
+						: __("Every box on this site is already in the table."),
+					indicator: fresh.length ? "green" : "blue",
+				});
+			});
+		});
+
 		frappe.call("upande_webstore.theme.occasion.list_occasions").then((r) => {
 			const options = r.message || [];
 			// set_data, not set_df_property: an Autocomplete reads df.options only
@@ -107,6 +133,20 @@ function report(frm, result) {
 	frappe.msgprint({ title: __("Theme Applied"), message: message, indicator: "green" });
 }
 
+function specSummary(data) {
+	if (!data) return "";
+	if (!data.available) {
+		return `<div class="alert alert-warning">${frappe.utils.escape_html(data.reason || "")} ${__(
+			"The module stays inert until it can read them."
+		)}</div>`;
+	}
+	return `<div class="text-muted">${__("{0} active specifications across {1} customers in {2}.", [
+		data.active,
+		data.customers,
+		`<b>${frappe.utils.escape_html(data.doctype)}</b>`,
+	])}</div>`;
+}
+
 function boxSummary(data) {
 	if (!data) return "";
 	if (!data.doctype) {
@@ -151,7 +191,7 @@ function boxSummary(data) {
 	return `
 		${warning}
 		<div class="text-muted" style="margin-bottom:.5rem">
-			${__("Box types come from")} <b>${frappe.utils.escape_html(data.label)}</b>
+			${__("Buyers pick from")} <b>${frappe.utils.escape_html(data.label)}</b>
 		</div>
 		<table class="table table-bordered table-sm">
 			<thead><tr><th>${__("Box")}</th><th class="text-right">${__("Stems")}</th><th></th></tr></thead>

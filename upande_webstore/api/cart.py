@@ -44,10 +44,17 @@ def _validate_stock(item_code, qty):
 		)
 
 
+def line_length(row, spec_map):
+	"""The stem length a line is priced at: its spec's, when it has one."""
+	spec = spec_map.get(row.get("specification")) if row.get("specification") else None
+	return spec.price_length if spec else None
+
+
 def _reprice(cart):
 	"""Re-resolve every rate server-side; never trust stored/client prices."""
+	spec_map = _cart_specs(cart)
 	for row in cart.items:
-		price = get_item_price(row.item_code, qty=row.qty)
+		price = get_item_price(row.item_code, qty=row.qty, length=line_length(row, spec_map))
 		row.rate = price["rate"]
 		row.amount = row.rate * row.qty
 		# Item is not readable by Guest/Customer on newer frappe; the storefront
@@ -55,19 +62,69 @@ def _reprice(cart):
 		row.item_name = frappe.db.get_value("Item", row.item_code, "item_name")
 
 
+def _find_row(cart, item_code, specification=None):
+	"""A line is a variety under one specification, or under none: the same
+	variety may sit in the cart both plain and as part of a spec."""
+	specification = specification or ""
+	return next(
+		(
+			row
+			for row in cart.items
+			if row.item_code == item_code and (row.get("specification") or "") == specification
+		),
+		None,
+	)
+
+
+def _cart_specs(cart):
+	"""{name: spec} for the specs this cart's lines were ordered under, as the
+	session customer may still order them. A spec that has since expired or
+	been reassigned is simply absent, which checkout then refuses."""
+	from upande_webstore.services import specs
+
+	# checkout resolves this before building the document as Administrator,
+	# who has no customer and so no specs of their own
+	if cart.flags.get("webstore_spec_map") is not None:
+		return cart.flags.webstore_spec_map
+	names = frozenset(row.specification for row in cart.items if row.get("specification"))
+	if not names or not specs.module_on():
+		return {}
+	# reprice, box recompute and the summary all ask within one request
+	memo = cart.flags.get("webstore_spec_memo")
+	if memo and memo[0] == names:
+		return memo[1]
+	out = {}
+	for name in names:
+		spec = specs.get_for_customer(name)
+		if spec:
+			out[name] = spec
+	cart.flags.webstore_spec_memo = (names, out)
+	return out
+
+
 def _recompute_boxes(cart):
 	"""Keep each line's box choice honest and derive its box count.
 
 	The product supplies the default — it knows a 120cm stem needs a tall box —
 	but the buyer may override it per line, so a usable existing choice is left
-	alone. Only the box *count* is never a client input, same as _reprice and
-	rates.
+	alone. A spec line has no choice at all: its box is the spec's. Only the
+	box *count* is never a client input, same as _reprice and rates.
 	"""
-	from upande_webstore.services import packing
+	from upande_webstore.services import packing, specs
+
+	spec_map = _cart_specs(cart)
+	for row in cart.items:
+		if not row.get("specification"):
+			continue
+		spec = spec_map.get(row.specification)
+		row.box_type = spec.box_type if spec else row.box_type
+		row.number_of_boxes = specs.boxes_in(spec, row.qty) if spec else 0
 
 	if not packing.packing_enabled():
 		return
 	for row in cart.items:
+		if row.get("specification"):
+			continue
 		if not row.box_type or not packing.is_usable_box(row.box_type):
 			row.box_type = packing.get_product_box_type(row.item_code)
 		info = packing.compute_boxes(row.qty, packing.get_pack_rate(row.box_type))
@@ -75,38 +132,93 @@ def _recompute_boxes(cart):
 		row.number_of_boxes = info["boxes"] if info["pack_rate"] and info["is_full"] else 0
 
 
-def _box_view(cart):
-	"""Box summary for the cart page, or None when packing is off."""
-	from upande_webstore.services import packing
+def packing_summary(cart):
+	"""Box groups and blocking problems for a cart, or None when neither the
+	packing module nor any spec line has anything to say.
 
-	if not cart or not packing.packing_enabled():
+	One function for the cart page and for checkout, so what the buyer is shown
+	and what place_order refuses cannot disagree.
+	"""
+	from frappe.utils import flt
+
+	from upande_webstore.services import packing, specs
+
+	if not cart:
 		return None
-	total_stems = sum(frappe.utils.flt(row.qty) for row in cart.items)
-	groups = packing.group_by_box_type(
-		[{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type} for row in cart.items]
-	)
-	problems = packing.find_problems(
-		groups, total_stems, packing.get_minimum_order_stems()
-	)
-	return {
-		"groups": [
+	plain = [row for row in cart.items if not row.get("specification")]
+	spec_rows = [row for row in cart.items if row.get("specification")]
+	on = packing.packing_enabled()
+	if not on and not spec_rows:
+		return None
+
+	groups = []
+	problems = []
+	total_stems = sum(flt(row.qty) for row in cart.items)
+	if on:
+		by_box = packing.group_by_box_type(
+			[{"item_code": row.item_code, "qty": row.qty, "box_type": row.box_type} for row in plain]
+		)
+		for g in sorted(by_box.values(), key=lambda g: (g["box_type"] or "")):
+			groups.append(
+				{
+					"box_type": g["box_type"],
+					"box_name": packing.box_label(g["box_type"]),
+					"specification": None,
+					"pack_rate": g["pack_rate"],
+					"stems": g["stems"],
+					"boxes": g["boxes"],
+					"is_full": g["is_full"],
+					"nearest_down": g["nearest_down"],
+					"nearest_up": g["nearest_up"],
+					"lines": len(g["item_codes"]),
+				}
+			)
+		# the minimum is a whole-cart rule, so spec stems count towards it
+		problems += packing.find_problems(by_box, total_stems, packing.get_minimum_order_stems())
+
+	spec_map = _cart_specs(cart)
+	by_spec = {}
+	for row in spec_rows:
+		by_spec.setdefault(row.specification, []).append(row)
+	for name, rows in sorted(by_spec.items()):
+		spec = spec_map.get(name)
+		if not spec:
+			problems.append(_("{0}: {1}").format(name, specs.not_available()))
+			continue
+		stems = sum(flt(row.qty) for row in rows)
+		problems += specs.check_lines(
+			spec, [{"item_code": row.item_code, "qty": row.qty} for row in rows]
+		)
+		boxes = sum(specs.boxes_in(spec, row.qty) for row in rows)
+		groups.append(
 			{
-				"box_type": g["box_type"],
-				"box_name": packing.box_label(g["box_type"]),
-				"pack_rate": g["pack_rate"],
-				"stems": g["stems"],
-				"boxes": g["boxes"],
-				"is_full": g["is_full"],
-				"nearest_down": g["nearest_down"],
-				"nearest_up": g["nearest_up"],
-				"lines": len(g["item_codes"]),
+				"box_type": spec.box_type,
+				"box_name": spec.box_type or _("spec box"),
+				"specification": name,
+				"spec_name": spec.spec_name,
+				"pack_rate": spec.pack_rate,
+				"stems": stems,
+				"boxes": boxes,
+				# unchecked fill (mixed boxes) is the packhouse's to count
+				"is_full": spec.fill != specs.WHOLE_BOXES or bool(boxes),
+				"checked": spec.fill == specs.WHOLE_BOXES,
+				"nearest_down": None,
+				"nearest_up": None,
+				"lines": len(rows),
 			}
-			for g in sorted(groups.values(), key=lambda g: (g["box_type"] or ""))
-		],
+		)
+	return {
+		"groups": groups,
 		"problems": problems,
 		"packable": not problems,
 		"total_stems": total_stems,
+		"total_boxes": sum(g["boxes"] for g in groups if g["pack_rate"]),
 	}
+
+
+def _box_view(cart):
+	"""Box summary for the cart page, or None when there is nothing to show."""
+	return packing_summary(cart)
 
 
 def serialize_cart(cart):
@@ -143,10 +255,15 @@ def serialize_cart(cart):
 				"qty": row.qty,
 				"rate": row.rate,
 				"amount": row.amount,
+				"specification": row.get("specification") or None,
 				"box_type": row.get("box_type"),
 				"box_name": (
-					packing.box_label(row.box_type) if row.get("box_type") else None
+					row.box_type
+					if row.get("specification")
+					else packing.box_label(row.box_type) if row.get("box_type") else None
 				),
+				# a spec line's box is the spec's; the buyer cannot change it
+				"box_fixed": bool(row.get("specification")),
 				"number_of_boxes": row.get("number_of_boxes") or 0,
 			}
 			for row in cart.items
@@ -196,7 +313,7 @@ def add_item(item_code, qty=1):
 	if not is_in_current_store(product):
 		frappe.throw(_("This product is not available."), frappe.ValidationError)
 	cart = _get_open_cart(create=True)
-	existing = next((row for row in cart.items if row.item_code == item_code), None)
+	existing = _find_row(cart, item_code)
 	new_qty = (existing.qty if existing else 0) + qty
 	_validate_stock(item_code, new_qty)
 	if existing:
@@ -211,15 +328,15 @@ def add_item(item_code, qty=1):
 
 @frappe.whitelist()
 @guard("cart")
-def update_qty(item_code, qty):
+def update_qty(item_code, qty, specification=None):
 	_require_login()
 	qty = frappe.utils.flt(qty)
 	if qty <= 0:
-		return remove_item(item_code)
+		return remove_item(item_code, specification)
 	cart = _get_open_cart()
 	if not cart:
 		frappe.throw(_("Cart is empty."), frappe.ValidationError)
-	row = next((r for r in cart.items if r.item_code == item_code), None)
+	row = _find_row(cart, item_code, specification)
 	if not row:
 		frappe.throw(_("Item not in cart."), frappe.ValidationError)
 	_validate_stock(item_code, qty)
@@ -232,12 +349,13 @@ def update_qty(item_code, qty):
 
 @frappe.whitelist()
 @guard("cart")
-def remove_item(item_code):
+def remove_item(item_code, specification=None):
 	_require_login()
 	cart = _get_open_cart()
 	if not cart:
 		return serialize_cart(None)
-	cart.items = [r for r in cart.items if r.item_code != item_code]
+	gone = _find_row(cart, item_code, specification)
+	cart.items = [r for r in cart.items if r is not gone]
 	_reprice(cart)
 	_recompute_boxes(cart)
 	cart.save(ignore_permissions=True)
@@ -254,7 +372,7 @@ def get_box_types():
 
 @frappe.whitelist()
 @guard("cart")
-def set_box_type(item_code, box_type):
+def set_box_type(item_code, box_type, specification=None):
 	"""Override one line's box. Blank falls back to the product's own box."""
 	from upande_webstore.services import packing
 
@@ -262,9 +380,14 @@ def set_box_type(item_code, box_type):
 	cart = _get_open_cart()
 	if not cart:
 		frappe.throw(_("Cart is empty."), frappe.ValidationError)
-	row = next((r for r in cart.items if r.item_code == item_code), None)
+	row = _find_row(cart, item_code, specification)
 	if not row:
 		frappe.throw(_("Item not in cart."), frappe.ValidationError)
+	if row.get("specification"):
+		frappe.throw(
+			_("This line ships in its specification's box, which cannot be changed."),
+			frappe.ValidationError,
+		)
 	if box_type and not packing.is_usable_box(box_type):
 		frappe.throw(_("That box type is not available."), frappe.ValidationError)
 	row.box_type = box_type or None

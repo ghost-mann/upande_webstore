@@ -50,8 +50,8 @@ Because they are registry features, `features.require()` 404s their routes,
 `features.guard()` refuses their API, and `webstore_features.<key>` hides their
 UI — the same three layers every other flag already has. Both are per-store
 tri-state (`PER_STORE_TRISTATE`), so one storefront can run specs while another
-on the same site does not. Their settings sit in a **Modules** section of the
-Features tab and every module-specific field is `depends_on` its switch.
+on the same site does not. Their settings sit on a **Modules** tab of Webstore
+Settings and every module-specific field is `depends_on` its switch.
 
 `packing_enabled()` stays the one packing gate but reads the switch through the
 registry.
@@ -227,3 +227,32 @@ and inspect its lines.
   instructions.
 - Inferring a Mixed Box's per-box composition from its rows.
 - Per-store box tables (the table is site-wide; packing on/off is per store).
+
+## Found while building (2026-09-28)
+
+Integration against a real packhouse install surfaced these; each is handled
+in the implementation and covered by a test.
+
+- **Length pricing.** On Kaitet all but 27 of 18,855 selling Item Prices carry
+  `custom_length`, and the packhouse reprices Roses lines per (variety,
+  length). Spec lines therefore price at the spec's length, taking the price in
+  force with the latest `valid_from` (Aqua 42cm on May EUR has two rows), and
+  the Sales Order line gets `custom_length`. A spec spanning several lengths
+  falls back to the plain price.
+- **Checkout ran as Administrator** (`as_administrator()`), so anything
+  customer-scoped resolved inside it saw no customer: no specs, and — a
+  pre-existing bug — the guest price list, so a customer shown 6 was quoted 10.
+  Specs and rates are now resolved as the buyer before elevating.
+- **Document currency** was never set, so orders took the company currency: a
+  EUR customer of a KES company was either quoted EUR numbers as KES or refused
+  ("can only be made in currency: EUR") where their receivable account is EUR,
+  as Karen Roses' Trade Debtors EUR customers' are. Documents now use the price
+  list's currency.
+- **Packhouse makes Sales Order freight fields mandatory.** The webstore's draft
+  Sales Order is inserted with `ignore_mandatory`; submit still enforces them.
+- **One variety on several lines** needs Selling Settings *Allow Item to Be
+  Added Multiple Times* (Kaitet has it on); without it checkout says so in
+  basket terms rather than ERPNext's desk message.
+- **Karen Roses is a company inside the Kaitet site**; its customers' specs are
+  this same `Specifications` data.
+- A spec with no primary variety is neither listed nor counted.

@@ -17,7 +17,7 @@ declare global {
 interface PriceInfo { rate: number; currency: string; price_list: string; is_customer_price: boolean }
 interface StockInfo { in_stock: boolean; qty: number | null; show_qty: boolean }
 interface VariantResult { item_code: string | null; price?: PriceInfo; stock?: StockInfo }
-interface CartLine { item_code: string; item_name: string; web_title: string; route: string | null; qty: number; rate: number; amount: number }
+interface CartLine { item_code: string; item_name: string; web_title: string; route: string | null; qty: number; rate: number; amount: number; specification?: string | null }
 interface Cart { name: string | null; items: CartLine[]; total: number; currency: string | null; count: number }
 interface SearchHit { web_title: string; route: string; item: string; image: string | null; category: string | null; rate: number | null; currency: string | null; in_stock: boolean; has_variants: boolean }
 
@@ -92,10 +92,10 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 			return;
 		}
 		body.innerHTML = cart.items.map((line) => `
-			<div class="ws-drawer-line" data-item="${esc(line.item_code)}">
+			<div class="ws-drawer-line" data-item="${esc(line.item_code)}" data-spec="${esc(line.specification || "")}">
 				<div class="ws-drawer-line-main">
 					<a href="${line.route ? "/" + esc(line.route) : "#"}" class="ws-drawer-title">${esc(line.web_title)}</a>
-					<span class="ws-sku">${esc(line.item_code)}</span>
+					<span class="ws-sku">${esc(line.specification ? line.specification : line.item_code)}</span>
 				</div>
 				<div class="ws-drawer-line-controls">
 					<button class="ws-step" data-ws-step="-1" aria-label="Decrease">−</button>
@@ -120,11 +120,15 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 		} catch (e) { toast((e as Error).message, true); }
 	}
 
-	async function stepQty(itemCode: string, delta: number): Promise<void> {
-		const row = document.querySelector(`.ws-drawer-line[data-item="${CSS.escape(itemCode)}"] .ws-step-qty`);
-		const current = parseFloat(row?.textContent || "0");
+	// a line is an item under one specification (or none), so both identify it
+	async function stepQty(line: HTMLElement, delta: number): Promise<void> {
+		const current = parseFloat(line.querySelector(".ws-step-qty")?.textContent || "0");
 		try {
-			const cart = await call<Cart>("upande_webstore.api.cart.update_qty", { item_code: itemCode, qty: current + delta });
+			const cart = await call<Cart>("upande_webstore.api.cart.update_qty", {
+				item_code: line.getAttribute("data-item"),
+				specification: line.getAttribute("data-spec") || null,
+				qty: current + delta,
+			});
 			renderCart(cart);
 			refreshCartBadge();
 		} catch (e) { toast((e as Error).message, true); }
@@ -243,16 +247,20 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 		if (closeTrigger) { closeTrigger.closest("dialog")?.close(); return; }
 		const step = target.closest<HTMLElement>("[data-ws-step]");
 		if (step) {
-			const item = step.closest<HTMLElement>(".ws-drawer-line")?.getAttribute("data-item");
-			if (item) stepQty(item, parseInt(step.getAttribute("data-ws-step") || "0", 10));
+			const line = step.closest<HTMLElement>(".ws-drawer-line");
+			if (line) stepQty(line, parseInt(step.getAttribute("data-ws-step") || "0", 10));
 			return;
 		}
 		const remove = target.closest("[data-ws-remove]");
 		if (remove) {
-			const item = remove.closest<HTMLElement>(".ws-drawer-line")?.getAttribute("data-item");
+			const line = remove.closest<HTMLElement>(".ws-drawer-line");
+			const item = line?.getAttribute("data-item");
 			if (item) {
 				try {
-					renderCart(await call<Cart>("upande_webstore.api.cart.remove_item", { item_code: item }));
+					renderCart(await call<Cart>("upande_webstore.api.cart.remove_item", {
+						item_code: item,
+						specification: line?.getAttribute("data-spec") || null,
+					}));
 					refreshCartBadge();
 				} catch (e) { toast((e as Error).message, true); }
 			}

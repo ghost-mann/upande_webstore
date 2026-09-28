@@ -92,9 +92,9 @@ def _box_source_doctype():
 	have neither `Box Type` nor Item-based box fields, and that is not this
 	feature's problem to raise about.
 	"""
-	from upande_webstore.services.packing import get_box_source
+	from upande_webstore.services.packing import get_site_box_source
 
-	source = get_box_source()
+	source = get_site_box_source()
 	return source.doctype if source else None
 
 

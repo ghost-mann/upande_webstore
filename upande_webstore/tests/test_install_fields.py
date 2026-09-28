@@ -259,7 +259,7 @@ class TestBoxTypeLinkTarget(IntegrationTestCase):
 		"""
 		from upande_webstore.setup.install import _resolved_fields
 
-		with patch("upande_webstore.services.packing.get_box_source", return_value=None):
+		with patch("upande_webstore.services.packing.get_site_box_source", return_value=None):
 			resolved = _resolved_fields()
 		for doctype in ("Quotation Item", "Sales Order Item"):
 			names = [df["fieldname"] for df in resolved[doctype]]

@@ -335,7 +335,7 @@ def _resolved_fields():
 	"""Our definitions with `custom_box_type` pointed at this site's box source.
 
 	The doctype box types live in is a property of the farm, so a `custom_box_type`
-	we are about to create must Link to whatever `packing.get_box_source()`
+	we are about to create must Link to whatever `packing.get_site_box_source()`
 	resolved — `Box Type` on Karen Roses, `Item` on Mona. Shipping a hardcoded
 	`Item` here is how a site whose box source is `Box Type` ends up with a
 	quotation field the checkout can never write to.
@@ -348,7 +348,7 @@ def _resolved_fields():
 	# not importable at the point hooks load install.py during app installation
 	from upande_webstore.services import packing
 
-	source = packing.get_box_source()
+	source = packing.get_site_box_source()
 	resolved = {}
 	for doctype, fields in WEBSTORE_CUSTOM_FIELDS.items():
 		keep = []
@@ -441,7 +441,7 @@ def box_type_field_mismatches():
 	"""
 	from upande_webstore.services import packing
 
-	source = packing.get_box_source()
+	source = packing.get_site_box_source()
 	if not source:
 		return []
 	out = []

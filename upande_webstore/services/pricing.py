@@ -146,8 +146,51 @@ def get_guest_currency_picker(user=None):
 	}
 
 
-def get_item_price(item_code, qty=1, user=None):
-	"""Server-resolved price. Never trust client prices."""
+def _length_price(item_code, price_list, length):
+	"""The price for one stem length, where this site prices by length.
+
+	upande_packhouse gives Item Price a `custom_length` and prices Roses orders
+	per (variety, length); on Kaitet all but a handful of selling prices carry
+	one. Returns None when the site, or this item on this list, is not priced
+	by length — the ordinary price then stands — and 0 when it is but has no
+	price for this length, so the line is not offered at some other length's
+	rate.
+	"""
+	if not length or not frappe.get_meta("Item Price").get_field("custom_length"):
+		return None
+	rows = frappe.get_all(
+		"Item Price",
+		filters={
+			"item_code": item_code,
+			"price_list": price_list,
+			"selling": 1,
+			"custom_length": ["is", "set"],
+		},
+		fields=["custom_length", "price_list_rate", "valid_from", "valid_upto"],
+	)
+	if not rows:
+		return None
+	today = frappe.utils.getdate()
+	in_force = [
+		row
+		for row in rows
+		if row.custom_length == length
+		and (not row.valid_from or frappe.utils.getdate(row.valid_from) <= today)
+		and (not row.valid_upto or frappe.utils.getdate(row.valid_upto) >= today)
+	]
+	if not in_force:
+		return 0.0
+	# a newer price for the same length supersedes the older one, the way the
+	# farm re-prices a list mid-season without deleting the previous row
+	latest = max(in_force, key=lambda row: frappe.utils.getdate(row.valid_from or "1900-01-01"))
+	return float(latest.price_list_rate)
+
+
+def get_item_price(item_code, qty=1, user=None, length=None):
+	"""Server-resolved price. Never trust client prices.
+
+	`length` is the stem length when the line has one (a spec line does), for
+	sites that price by length."""
 	from erpnext.stock.get_item_details import get_item_details
 
 	settings = get_settings()
@@ -217,6 +260,9 @@ def get_item_price(item_code, qty=1, user=None):
 	finally:
 		item.flags.ignore_permissions = previous_ignore_permissions
 	rate = details.get("rate") or details.get("price_list_rate") or 0.0
+	by_length = _length_price(item_code, price_list, length)
+	if by_length is not None:
+		rate = by_length
 	return {
 		"rate": float(rate),
 		"currency": currency,
