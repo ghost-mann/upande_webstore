@@ -568,6 +568,11 @@ def ensure_navigation_block():
 
 
 DESKTOP_ICON = "Upande Webstore"
+# Animated SVG in the Upande CRM tile's style: a cart rolls in, a rose blooms in
+# it, and the Upande arrow rises out, once, then rests as the plain Upande badge
+# so the Upande tiles sit level. The desk draws it through <img>, where its CSS
+# animation plays. The /apps launcher keeps the PNG from add_to_apps_screen.
+DESKTOP_LOGO = "/assets/upande_webstore/images/upande-webstore-logo.svg"
 
 
 def ensure_desktop_icon():
@@ -607,7 +612,7 @@ def ensure_desktop_icon():
 		"icon_type": "App",
 		"link_type": "External",
 		"link": route,
-		"logo_url": "/assets/upande_webstore/images/upande-logo.png",
+		"logo_url": DESKTOP_LOGO,
 		"bg_color": "gray",
 	})
 	doc.save(ignore_permissions=True)

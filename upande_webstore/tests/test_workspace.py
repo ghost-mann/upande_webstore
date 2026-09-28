@@ -408,3 +408,36 @@ class TestDesktopIcon(IntegrationTestCase):
 		ensure_desktop_icon()
 		hook_route = frappe.get_hooks("add_to_apps_screen", app_name="upande_webstore")[0]["route"]
 		self.assertEqual(frappe.db.get_value("Desktop Icon", DESKTOP_ICON, "link"), hook_route)
+
+
+class TestAnimatedTileLogo(IntegrationTestCase):
+	"""The desk tile draws its logo as an <img>, so the SVG's own CSS animation
+	plays there. It is served to every desk user, so it must carry no script,
+	and it must honour reduced motion — the same rules as the Upande CRM tile."""
+
+	LOGO = "/assets/upande_webstore/images/upande-webstore-logo.svg"
+
+	def _svg(self):
+		path = os.path.join(
+			os.path.dirname(upande_webstore.__file__), "public", "images", "upande-webstore-logo.svg"
+		)
+		with open(path, encoding="utf-8") as handle:
+			return handle.read()
+
+	def test_installer_and_shipped_tile_use_the_animated_logo(self):
+		from upande_webstore.setup.install import DESKTOP_LOGO
+
+		self.assertEqual(DESKTOP_LOGO, self.LOGO)
+		path = os.path.join(
+			os.path.dirname(upande_webstore.__file__), "desktop_icon", "upande_webstore.json"
+		)
+		with open(path, encoding="utf-8") as handle:
+			self.assertEqual(json.load(handle)["logo_url"], self.LOGO)
+
+	def test_svg_carries_no_script_or_external_reference(self):
+		svg = self._svg().lower()
+		for bad in ("<script", "javascript:", "onload", "onclick", 'href="http', "@import", "url(http"):
+			self.assertNotIn(bad, svg, bad)
+
+	def test_svg_honours_reduced_motion(self):
+		self.assertIn("prefers-reduced-motion: reduce", self._svg())
