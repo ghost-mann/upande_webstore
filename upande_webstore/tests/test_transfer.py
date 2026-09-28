@@ -3,7 +3,7 @@ import json
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from upande_webstore.tests.utils import setup_webstore_settings
+from upande_webstore.tests.utils import delete_all_webstores, setup_webstore_settings
 
 
 class TestExportImport(IntegrationTestCase):
@@ -127,7 +127,7 @@ class TestExportImport(IntegrationTestCase):
 			import_theme("{not json")
 
 	def test_ignores_unknown_fieldnames(self):
-		"""A preset from a newer version must not blow up an older site."""
+		"""A theme file from a newer version must not blow up an older site."""
 		from upande_webstore.theme.transfer import import_theme
 
 		result = import_theme(
@@ -226,96 +226,35 @@ class TestExportImport(IntegrationTestCase):
 		self.assertEqual(result["missing_images"], [])
 
 
-class TestPresets(IntegrationTestCase):
+NAVY = {
+	"schema": 1,
+	"fields": {
+		"accent": "#1e4d8c",
+		"accent_dark": "#143562",
+		"accent_soft": "#e8f0fb",
+		"accent_drives_primary": 1,
+		"ink": "#1a1a1a",
+		"ink_muted": "#878c9c",
+		"canvas": "#f7f8fa",
+	},
+	"tables": {},
+}
+
+
+class TestPalette(IntegrationTestCase):
 	def setUp(self):
+		# a site's own storefront rows carry their own overrides, which would
+		# otherwise bleed into get_settings() and the rendered page
+		from upande_webstore.services.store import clear_store_cache
+
+		delete_all_webstores()
 		setup_webstore_settings()
-
-	def test_lists_shipped_presets(self):
-		from upande_webstore.theme.transfer import list_presets
-
-		names = list_presets()
-		self.assertIn("karen_roses", names)
-		self.assertIn("mona_flowers", names)
-		self.assertIn("upande", names)
-
-	def test_preset_field_options_match_the_shipped_files(self):
-		"""The dropdown must be selectable without any client script, and must
-		never drift from the presets actually on disk — an empty options list is
-		what made the preset unpickable in the desk."""
-		from upande_webstore.theme.transfer import list_presets
-
-		field = frappe.get_meta("Webstore Settings").get_field("preset")
-		self.assertTrue(field.options, "preset field has no options — dropdown would be empty")
-		offered = [o for o in (field.options or "").split("\n") if o]
-		self.assertEqual(offered, list_presets())
-
-	def test_every_preset_loads_and_validates(self):
-		from upande_webstore.theme.transfer import apply_preset, list_presets
-
-		for name in list_presets():
-			apply_preset(name)  # must not raise
-
-	def test_mona_preset_applies_navy_and_disables_signup(self):
-		from upande_webstore.theme.transfer import apply_preset
-
-		apply_preset("mona_flowers")
-		settings = frappe.get_doc("Webstore Settings")
-		self.assertEqual(settings.accent, "#1e4d8c")
-		self.assertEqual(settings.accent_dark, "#143562")
-		self.assertEqual(settings.accent_soft, "#e8f0fb")
-		self.assertEqual(settings.ink_muted, "#878c9c")
-		self.assertEqual(settings.accent_drives_primary, 1)
-		self.assertEqual(settings.enable_signup, 0)
-		self.assertEqual(settings.wordmark, "mona")
-		self.assertEqual(settings.wordmark_bold, "flowers")
-		self.assertEqual(len(settings.category_cards), 2)
-		self.assertEqual(len(settings.hero_stats), 3)
-
-	def test_mona_preset_produces_navy_tokens(self):
-		from upande_webstore.services.settings import get_settings
-		from upande_webstore.theme import tokens
-		from upande_webstore.theme.transfer import apply_preset
-
-		apply_preset("mona_flowers")
-		result = tokens.get_tokens(get_settings())
-		self.assertEqual(result["accent"], "#1e4d8c")
-		self.assertEqual(result["accent-deep"], "#143562")
-		self.assertEqual(result["primary"], "var(--ws-accent)")
-		self.assertEqual(result["ink-mute"], "#878c9c")
-		self.assertEqual(result["bg"], "#f7f8fa")
-
-	def test_upande_preset_keeps_ink_driving_primary(self):
-		from upande_webstore.services.settings import get_settings
-		from upande_webstore.theme import tokens
-		from upande_webstore.theme.transfer import apply_preset
-
-		apply_preset("upande")
-		settings = get_settings()
-		self.assertEqual(settings.accent, "#d9a514")
-		self.assertFalse(settings.accent_drives_primary)
-		self.assertNotIn("primary", tokens.get_tokens(settings))
-
-	def test_karen_preset_applies_rose_and_ships_its_own_steps(self):
-		from upande_webstore.theme.transfer import apply_preset
-
-		apply_preset("karen_roses")
-		settings = frappe.get_doc("Webstore Settings")
-		self.assertEqual(settings.accent, "#9b2242")
-		self.assertEqual(settings.accent_dark, "#6f1730")
-		self.assertEqual(settings.accent_soft, "#fbe9ee")
-		self.assertEqual(settings.accent_drives_primary, 1)
-		self.assertEqual(settings.enable_signup, 0)
-		self.assertEqual(settings.wordmark, "karen")
-		self.assertEqual(settings.wordmark_bold, "roses")
-		self.assertEqual(len(settings.category_cards), 2)
-		self.assertEqual(len(settings.hero_stats), 3)
-		# ordering steps travel with the preset rather than falling back to shipped copy
-		self.assertEqual(len(settings.process_steps), 3)
-		self.assertEqual(settings.process_steps[0].title, "Build your basket by the box")
+		clear_store_cache()
+		frappe.local.webstore_merged_settings = None
 
 	def test_process_steps_survive_a_round_trip(self):
 		"""Editable ordering steps are theme content: an export must carry them and
-		an import must restore them, or a preset silently reverts to shipped copy."""
+		an import must restore them, or a copied theme silently reverts to shipped copy."""
 		from upande_webstore.theme.transfer import export_theme, import_theme
 
 		settings = frappe.get_doc("Webstore Settings")
@@ -333,38 +272,52 @@ class TestPresets(IntegrationTestCase):
 		steps = frappe.get_doc("Webstore Settings").process_steps
 		self.assertEqual([step.title for step in steps], ["Pick a box"])
 
-	def test_switching_presets_leaves_no_residue(self):
-		"""mona -> upande must not leave navy-only fields behind."""
-		from upande_webstore.theme.transfer import apply_preset
+	def test_a_palette_produces_its_tokens(self):
+		from upande_webstore.services.settings import get_settings
+		from upande_webstore.theme import tokens
+		from upande_webstore.theme.transfer import import_theme
 
-		apply_preset("mona_flowers")
-		apply_preset("upande")
+		import_theme(NAVY)
+		result = tokens.get_tokens(get_settings())
+		self.assertEqual(result["accent"], "#1e4d8c")
+		self.assertEqual(result["accent-deep"], "#143562")
+		self.assertEqual(result["primary"], "var(--ws-accent)")
+		self.assertEqual(result["ink-mute"], "#878c9c")
+		self.assertEqual(result["bg"], "#f7f8fa")
+
+	def test_ink_keeps_driving_primary_unless_asked(self):
+		from upande_webstore.services.settings import get_settings
+		from upande_webstore.theme import tokens
+		from upande_webstore.theme.transfer import import_theme
+
+		import_theme({"schema": 1, "fields": {"accent": "#d9a514"}, "tables": {}})
+		settings = get_settings()
+		self.assertFalse(settings.accent_drives_primary)
+		self.assertNotIn("primary", tokens.get_tokens(settings))
+
+	def test_importing_over_a_palette_leaves_no_residue(self):
+		from upande_webstore.theme.transfer import import_theme
+
+		import_theme(NAVY)
+		import_theme({"schema": 1, "fields": {"accent": "#d9a514"}, "tables": {}})
 		settings = frappe.get_doc("Webstore Settings")
 		self.assertEqual(settings.accent, "#d9a514")
-		# both presets ship signup off; accounts come from Webstore Portal Access
-		self.assertEqual(settings.enable_signup, 0)
-		self.assertEqual(len(settings.category_cards), 2)
-		self.assertEqual([c.label for c in settings.category_cards][0], "Standard Roses")
-
-	def test_unknown_preset_raises(self):
-		from upande_webstore.theme.transfer import apply_preset
-
-		with self.assertRaises(frappe.ValidationError):
-			apply_preset("no_such_preset")
-
-	def test_preset_name_cannot_traverse_paths(self):
-		from upande_webstore.theme.transfer import apply_preset
-
-		for evil in ("../../../etc/passwd", "..%2fupande", "a/b", "../upande", ".", ""):
-			with self.assertRaises(frappe.ValidationError):
-				apply_preset(evil)
+		self.assertFalse(settings.accent_dark)
+		self.assertFalse(settings.canvas)
 
 
-class TestPresetRendersEndToEnd(IntegrationTestCase):
-	"""Applying a preset must actually restyle the served page, not just the doc."""
+class TestPaletteRendersEndToEnd(IntegrationTestCase):
+	"""A palette must actually restyle the served page, not just the doc."""
 
 	def setUp(self):
+		# a site's own storefront rows carry their own overrides, which would
+		# otherwise bleed into get_settings() and the rendered page
+		from upande_webstore.services.store import clear_store_cache
+
+		delete_all_webstores()
 		setup_webstore_settings()
+		clear_store_cache()
+		frappe.local.webstore_merged_settings = None
 
 	def _render_store(self):
 		from frappe.website.serve import get_response_content
@@ -377,125 +330,45 @@ class TestPresetRendersEndToEnd(IntegrationTestCase):
 		match = re.search(r":root \{(.*?)\n\t\}", html, re.S)
 		return match.group(1) if match else ""
 
-	def test_mona_preset_restyles_the_page(self):
-		from upande_webstore.theme.transfer import apply_preset
+	def test_a_palette_restyles_the_page(self):
+		from upande_webstore.theme.transfer import import_theme
 
-		apply_preset("mona_flowers")
-		html = self._render_store()
-		tokens_css = self._root_block(html)
+		import_theme(NAVY)
+		tokens_css = self._root_block(self._render_store())
 
 		self.assertIn("--ws-accent: #1e4d8c;", tokens_css)
 		self.assertIn("--ws-primary: var(--ws-accent);", tokens_css)
 		self.assertIn("--ws-bg: #f7f8fa;", tokens_css)
 		self.assertIn("--ws-ink-mute: #878c9c;", tokens_css)
-
-		self.assertIn("mona<b>flowers</b>", html)
-		self.assertIn("Eldoret", html)
-		self.assertIn("Mona Flowers Kenya Limited", html)
-		self.assertIn("Powered by Upande", html)
-		self.assertEqual(html.count('class="ws-catcard"'), 2)
-		self.assertEqual(html.count('class="ws-hero2-stat"'), 3)
-		self.assertIn("Single-head, 40–120cm", html)
-		self.assertIn("/store?category=Standard%20Roses", html)
-		self.assertIn("/store?category=Spray%20Roses", html)
-		# navy ink means navy-tinted shadows, not black ones
 		self.assertIn("rgba(26, 26, 26,", tokens_css)
 		self.assertIn("--ws-grad-ink: linear-gradient(135deg, var(--ws-accent-deep)", tokens_css)
 
-	def test_mona_preset_hides_signup_for_guests(self):
-		from upande_webstore.theme.transfer import apply_preset
-
-		apply_preset("mona_flowers")
-		frappe.set_user("Guest")
-		try:
-			html = self._render_store()
-			self.assertNotIn('href="/signup"', html)
-			self.assertIn("Member login", html)
-		finally:
-			frappe.set_user("Administrator")
-
-	def test_upande_preset_restores_ink_and_gold(self):
-		from upande_webstore.theme.transfer import apply_preset
-
-		apply_preset("upande")
-		html = self._render_store()
-		tokens_css = self._root_block(html)
-
-		self.assertIn("--ws-accent: #d9a514;", tokens_css)
-		# ink still drives primary actions, so no remap is emitted
-		self.assertNotIn("--ws-primary:", tokens_css)
-		self.assertIn("upande<b>store</b>", html)
-		# both presets are roses-only: Standard and Spray
-		self.assertEqual(html.count('class="ws-catcard"'), 2)
-		self.assertIn("Upande Ltd.", html)
-
 	def test_clearing_seeds_removes_the_override_block_entirely(self):
 		"""The blank-site guarantee, asserted through a real render."""
-		from upande_webstore.theme.transfer import apply_preset
+		from upande_webstore.theme.transfer import import_theme
 
-		apply_preset("mona_flowers")
+		import_theme(NAVY)
 		self.assertIn("--ws-accent", self._render_store())
 
 		setup_webstore_settings()
+		frappe.local.webstore_merged_settings = None
 		self.assertNotIn("--ws-", self._render_store())
 
 
-class TestInstallSeeding(IntegrationTestCase):
+class TestInstall(IntegrationTestCase):
 	def setUp(self):
 		setup_webstore_settings()
 
-	def test_seeds_default_preset_on_blank_site(self):
-		from upande_webstore.setup.install import seed_default_theme
-
-		seed_default_theme()
-		settings = frappe.get_doc("Webstore Settings")
-		self.assertEqual(settings.accent, "#1e4d8c")
-		self.assertEqual(settings.wordmark_bold, "flowers")
-
-	def test_does_not_touch_a_configured_site(self):
-		"""Deploying to an existing site must never restyle it."""
-		from upande_webstore.setup.install import seed_default_theme
-
-		settings = frappe.get_doc("Webstore Settings")
-		settings.accent = "#123456"
-		settings.wordmark = "someone-else"
-		settings.save(ignore_permissions=True)
-		frappe.clear_cache()
-
-		seed_default_theme()
-
-		settings = frappe.get_doc("Webstore Settings")
-		self.assertEqual(settings.accent, "#123456")
-		self.assertEqual(settings.wordmark, "someone-else")
-
-	def test_does_not_touch_a_site_with_its_own_cards(self):
-		from upande_webstore.setup.install import seed_default_theme
-
-		settings = frappe.get_doc("Webstore Settings")
-		settings.append("category_cards", {"label": "Roses", "category": "Roses"})
-		settings.save(ignore_permissions=True)
-		frappe.clear_cache()
-
-		seed_default_theme()
-
-		cards = frappe.get_doc("Webstore Settings").category_cards
-		self.assertEqual([card.label for card in cards], ["Roses"])
-
-	def test_after_migrate_does_not_seed(self):
+	def test_after_migrate_does_not_restyle(self):
 		from upande_webstore.setup.install import after_migrate
 
 		after_migrate()
 		self.assertFalse(frappe.db.get_single_value("Webstore Settings", "accent"))
 
-	def test_seeds_default_preset_with_no_company_or_guest_price_list(self):
-		"""A fresh install has neither field set yet — both are reqd, but a
-		theme write must not be blocked by mandatory fields it has nothing to
-		do with. This is the exact failure seed_default_theme hit installing
-		on a real fresh site: apply_preset's settings.save() threw
-		MandatoryError on guest_price_list and after_install aborted partway,
-		with the app registered and its custom fields created but no theme
-		ever applied."""
-		from upande_webstore.setup.install import seed_default_theme
+	def test_import_needs_no_company_or_guest_price_list(self):
+		"""A fresh site has neither field set yet — both are reqd, but a theme
+		write must not be blocked by mandatory fields it has nothing to do with."""
+		from upande_webstore.theme.transfer import import_theme
 
 		settings = frappe.get_doc("Webstore Settings")
 		settings.flags.ignore_mandatory = True
@@ -504,16 +377,11 @@ class TestInstallSeeding(IntegrationTestCase):
 		settings.save(ignore_permissions=True)
 		frappe.clear_cache()
 
-		seed_default_theme()
+		import_theme(NAVY)
 
 		settings = frappe.get_doc("Webstore Settings")
 		self.assertFalse(settings.company)
-		self.assertFalse(settings.guest_price_list)
-		# the preset must actually have landed, not merely failed to raise
 		self.assertEqual(settings.accent, "#1e4d8c")
-		self.assertEqual(settings.accent_dark, "#143562")
-		self.assertEqual(settings.wordmark_bold, "flowers")
-		self.assertEqual(len(settings.category_cards), 2)
 
 
 class TestTransferPermissions(IntegrationTestCase):
@@ -556,16 +424,5 @@ class TestTransferPermissions(IntegrationTestCase):
 		try:
 			with self.assertRaises(frappe.PermissionError):
 				import_theme({"schema": SCHEMA_VERSION, "fields": {}, "tables": {}})
-		finally:
-			self._cleanup_read_only_user(email)
-
-	def test_apply_preset_refuses_a_read_only_user(self):
-		from upande_webstore.theme.transfer import apply_preset
-
-		email = self._read_only_user()
-		frappe.set_user(email)
-		try:
-			with self.assertRaises(frappe.PermissionError):
-				apply_preset("mona_flowers")
 		finally:
 			self._cleanup_read_only_user(email)

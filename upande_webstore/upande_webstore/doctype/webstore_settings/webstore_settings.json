@@ -148,8 +148,6 @@
   "enable_account",
   "enable_sidebar_stats",
   "transfer_tab",
-  "preset_section",
-  "preset",
   "transfer_section",
   "theme_file"
  ],
@@ -986,19 +984,6 @@
    "fieldname": "transfer_tab",
    "fieldtype": "Tab Break",
    "label": "Transfer"
-  },
-  {
-   "fieldname": "preset_section",
-   "fieldtype": "Section Break",
-   "label": "Shipped Presets",
-   "description": "Applying a preset overwrites every Theme, Branding and Features value."
-  },
-  {
-   "fieldname": "preset",
-   "fieldtype": "Select",
-   "label": "Preset",
-   "options": "\nkaren_roses\nmona_flowers\nupande",
-   "description": "Shipped configurations. Apply from the Theme menu above."
   },
   {
    "fieldname": "transfer_section",

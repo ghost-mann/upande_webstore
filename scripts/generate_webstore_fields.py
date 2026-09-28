@@ -14,7 +14,7 @@ stops matching.
 Check fields become a blank/Enabled/Disabled Select, because a store has to be
 able to say "off" as well as "inherit" — see services/store_fields.py.
 
-The store's own identity fields (slug, title, published, theme_preset) have no
+The store's own identity fields (slug, title, published) have no
 counterpart on the Single, so they are written out here rather than copied.
 """
 
@@ -90,13 +90,6 @@ IDENTITY = [
 		"label": "Published",
 		"default": "1",
 		"description": "An unpublished store 404s for everyone but a System Manager, who can preview it.",
-	},
-	{
-		"fieldname": "theme_preset",
-		"fieldtype": "Data",
-		"label": "Theme Preset",
-		"read_only": 1,
-		"description": "The last shipped preset applied to this store, if any.",
 	},
 ]
 

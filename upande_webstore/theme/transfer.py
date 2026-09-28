@@ -1,4 +1,4 @@
-"""Theme JSON export/import and shipped presets.
+"""Theme JSON export/import.
 
 Images travel as file URLs, not embedded bytes — embedding base64 would bloat
 the payload past usefulness. import_theme therefore reports URLs that do not
@@ -6,8 +6,6 @@ resolve on the target site rather than silently rendering broken images.
 """
 
 import json
-import os
-import re
 
 import frappe
 from frappe import _
@@ -17,9 +15,6 @@ from upande_webstore.theme.branding import DEFAULTS as BRANDING_DEFAULTS
 from upande_webstore.theme.tokens import THEME_FIELDS
 
 SCHEMA_VERSION = 1
-
-PRESET_DIR = os.path.join(os.path.dirname(__file__), "presets")
-PRESET_NAME_RE = re.compile(r"^[a-z0-9_]+$")
 
 # every branding scalar, plus the attachments which are not in DEFAULTS
 BRANDING_FIELDS = tuple(BRANDING_DEFAULTS) + ("brand_logo", "favicon", "hero_image")
@@ -61,7 +56,7 @@ def _target(webstore=None):
 	"""The document a transfer reads from or writes to.
 
 	Without a store this is the site-wide Single, exactly as before multi-store
-	existed. With one it is that `Webstore` row, so a preset can dress the
+	existed. With one it is that `Webstore` row, so an import can dress the
 	flower shop without touching the dairy one beside it.
 	"""
 	if not webstore:
@@ -122,7 +117,7 @@ def _reset_value(target, meta, fieldname):
 
 	On the Single: the DocType default, so "reset" means what it does on a
 	fresh record. On a store: blank, which is how a store says "inherit the
-	site" — a preset that sets no hero heading should leave the shop showing
+	site" — a theme that sets no hero heading should leave the shop showing
 	the site's, not an empty one.
 	"""
 	if target.doctype == "Webstore":
@@ -200,8 +195,8 @@ def import_theme(payload, webstore=None):
 	"""Replace the theme wholesale, site-wide or for one storefront.
 
 	Fields and tables absent from the payload are reset rather than left as
-	they were — otherwise switching presets would leave residue from the
-	previous one, and the desk button promises this overwrites every Theme,
+	they were — otherwise importing one theme over another would leave
+	residue from the first, and the desk button promises this overwrites every Theme,
 	Branding and Features value. "Reset" means the DocType default on the
 	Single and blank on a store, blank being how a store inherits.
 	"""
@@ -231,10 +226,8 @@ def import_theme(payload, webstore=None):
 	settings.flags.ignore_permissions = True
 	# A theme write touches only Theme, Branding and Features fields — whether
 	# the farm has chosen a company or a guest price list is none of its
-	# business, and both are reqd. Without this, apply_preset on a fresh
-	# install (seed_default_theme, before either is ever set) throws
-	# MandatoryError and after_install aborts partway: the app registers and
-	# its custom fields land, but the site never gets its default theme.
+	# business, and both are reqd. Without this, importing a theme before
+	# either is ever set throws MandatoryError on fields it never touched.
 	settings.flags.ignore_mandatory = True
 	settings.save()
 	frappe.clear_cache()
@@ -267,32 +260,3 @@ def missing_images(settings=None):
 			missing.append(url)
 	return missing
 
-
-@frappe.whitelist()
-def list_presets():
-	if not os.path.isdir(PRESET_DIR):
-		return []
-	return sorted(
-		filename[: -len(".json")]
-		for filename in os.listdir(PRESET_DIR)
-		if filename.endswith(".json")
-	)
-
-
-@frappe.whitelist()
-def apply_preset(name, webstore=None):
-	require_permission(_permission_doctype(webstore), "write")
-	# the regex rejects '/', '.' and '%' outright, so no path can escape PRESET_DIR
-	if not isinstance(name, str) or not PRESET_NAME_RE.match(name):
-		frappe.throw(_("Invalid preset name."))
-	path = os.path.join(PRESET_DIR, f"{name}.json")
-	if not os.path.isfile(path):
-		frappe.throw(_("No shipped preset named {0}.").format(name))
-	with open(path, encoding="utf-8") as handle:
-		result = import_theme(json.load(handle), webstore=webstore)
-	if webstore:
-		# recorded on the store so the desk can say which preset a shop is
-		# wearing — import_theme resets theme_preset along with everything else
-		frappe.db.set_value("Webstore", webstore, "theme_preset", name)
-		frappe.clear_cache()
-	return result

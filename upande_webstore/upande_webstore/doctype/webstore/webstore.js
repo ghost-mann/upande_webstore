@@ -1,10 +1,9 @@
 // The same Theme tools Webstore Settings has, aimed at one storefront.
 //
 // Without these the only way to give a second shop its own look is to fill in
-// ~60 fields by hand, and the Apply Preset button on the Single would repaint
-// every shop at once. The preset and theme file are asked for in a dialog
-// rather than stored on the record: they are an action's input, not a
-// property of the store.
+// ~60 fields by hand, and an import on the Single would repaint every shop at
+// once. The theme file is asked for in a dialog rather than stored on the
+// record: it is an action's input, not a property of the store.
 
 frappe.ui.form.on("Webstore", {
 	refresh(frm) {
@@ -26,7 +25,6 @@ frappe.ui.form.on("Webstore", {
 
 		if (frm.is_new()) return;
 
-		frm.add_custom_button(__("Apply Preset"), () => applyPreset(frm), __("Theme"));
 		frm.add_custom_button(__("Export Theme"), () => exportTheme(frm), __("Theme"));
 		frm.add_custom_button(__("Import Theme"), () => importTheme(frm), __("Theme"));
 
@@ -52,45 +50,6 @@ frappe.ui.form.on("Webstore", {
 		].forEach((field) => frm.set_value(field, ""));
 	},
 });
-
-function applyPreset(frm) {
-	frappe.call("upande_webstore.theme.transfer.list_presets").then((r) => {
-		const presets = r.message || [];
-		if (!presets.length) {
-			frappe.msgprint(__("No shipped presets on this site."));
-			return;
-		}
-		const dialog = new frappe.ui.Dialog({
-			title: __("Apply Preset to {0}", [frm.doc.title || frm.doc.slug]),
-			fields: [
-				{
-					fieldname: "preset",
-					fieldtype: "Select",
-					label: __("Preset"),
-					options: presets.join("\n"),
-					reqd: 1,
-				},
-				{
-					fieldtype: "HTML",
-					options: `<p class="text-muted small">${__(
-						"This overwrites every Theme, Branding and Features value on this storefront. Anything the preset does not set goes back to inheriting Webstore Settings. Other storefronts are untouched."
-					)}</p>`,
-				},
-			],
-			primary_action_label: __("Apply"),
-			primary_action(values) {
-				dialog.hide();
-				frappe
-					.call("upande_webstore.theme.transfer.apply_preset", {
-						name: values.preset,
-						webstore: frm.doc.name,
-					})
-					.then((res) => report(frm, res.message));
-			},
-		});
-		dialog.show();
-	});
-}
 
 function exportTheme(frm) {
 	frappe

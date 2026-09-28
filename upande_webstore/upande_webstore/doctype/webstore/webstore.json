@@ -8,7 +8,6 @@
   "slug",
   "title",
   "published",
-  "theme_preset",
   "general_tab",
   "guest_price_list",
   "guest_price_lists",
@@ -148,13 +147,6 @@
    "fieldname": "published",
    "fieldtype": "Check",
    "label": "Published"
-  },
-  {
-   "description": "The last shipped preset applied to this store, if any.",
-   "fieldname": "theme_preset",
-   "fieldtype": "Data",
-   "label": "Theme Preset",
-   "read_only": 1
   },
   {
    "fieldname": "general_tab",

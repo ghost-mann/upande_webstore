@@ -36,7 +36,7 @@ class TestLoad(unittest.TestCase):
 		self.assertIsNone(occasion.load("no_such_occasion"))
 
 	def test_path_traversal_is_rejected(self):
-		self.assertIsNone(occasion.load("../presets/mona_flowers"))
+		self.assertIsNone(occasion.load("../tokens"))
 		self.assertIsNone(occasion.load("valentines.json"))
 
 	def test_non_string_name_returns_none(self):

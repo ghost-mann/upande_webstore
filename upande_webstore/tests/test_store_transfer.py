@@ -1,8 +1,8 @@
-"""Phase 2: a preset or an exported theme can dress one storefront.
+"""Phase 2: an exported theme can dress one storefront.
 
 Without this the transfer tools are site-wide only, so the only way to give
-the dairy shop its own look is to set ~60 fields by hand — and applying the
-flower preset would repaint both shops.
+the dairy shop its own look is to set ~60 fields by hand — and importing the
+flower theme would repaint both shops.
 """
 
 import frappe
@@ -36,49 +36,47 @@ class TransferCase(IntegrationTestCase):
 		frappe.local.webstore_merged_settings = None
 
 
-class TestApplyPresetToOneStore(TransferCase):
-	def test_a_preset_dresses_only_the_store_it_names(self):
+ROSE = {"schema": transfer.SCHEMA_VERSION, "fields": {"accent": "#9b2242"}, "tables": {}}
+
+
+class TestImportToOneStore(TransferCase):
+	def test_an_import_dresses_only_the_store_it_names(self):
 		make_webstore("flowers", title="Flowers")
 		make_webstore("dairy", title="Dairy")
 
-		transfer.apply_preset("karen_roses", webstore="flowers")
+		transfer.import_theme(ROSE, webstore="flowers")
 
 		self._as("flowers")
 		dressed = get_settings().accent
 		self._as("dairy")
 		untouched = get_settings().accent
 
-		self.assertTrue(dressed)
+		self.assertEqual(dressed, "#9b2242")
 		self.assertNotEqual(dressed, untouched)
 
-	def test_the_site_wide_settings_are_untouched_by_a_store_preset(self):
+	def test_the_site_wide_settings_are_untouched_by_a_store_import(self):
 		make_webstore("flowers", title="Flowers")
 		before = frappe.db.get_value("Webstore Settings", "Webstore Settings", "accent")
 
-		transfer.apply_preset("karen_roses", webstore="flowers")
+		transfer.import_theme(ROSE, webstore="flowers")
 
 		self.assertEqual(
 			frappe.db.get_value("Webstore Settings", "Webstore Settings", "accent"), before
 		)
 
-	def test_the_store_records_which_preset_it_wears(self):
-		make_webstore("flowers", title="Flowers")
-		transfer.apply_preset("karen_roses", webstore="flowers")
-		self.assertEqual(frappe.db.get_value("Webstore", "flowers", "theme_preset"), "karen_roses")
-
-	def test_a_preset_with_no_store_still_applies_site_wide(self):
-		"""The unchanged path: no store named, the Single is the target, and a
-		single-store site's existing button behaves as it always did."""
-		transfer.apply_preset("karen_roses")
-		self.assertTrue(frappe.db.get_value("Webstore Settings", "Webstore Settings", "accent"))
+	def test_an_import_with_no_store_still_applies_site_wide(self):
+		transfer.import_theme(ROSE)
+		self.assertEqual(
+			frappe.db.get_value("Webstore Settings", "Webstore Settings", "accent"), "#9b2242"
+		)
 
 	def test_an_unknown_slug_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):
-			transfer.apply_preset("karen_roses", webstore="nope")
+			transfer.import_theme(ROSE, webstore="nope")
 
 	def test_a_checkbox_in_the_payload_lands_as_a_tristate_on_the_store(self):
 		"""Feature flags are Checks on the Single and three-state Selects on a
-		store; a preset that switches one off has to say Disabled, not 0."""
+		store; a theme that switches one off has to say Disabled, not 0."""
 		make_webstore("flowers", title="Flowers")
 		transfer.import_theme(
 			{"schema": transfer.SCHEMA_VERSION, "fields": {"enable_wishlist": 0}, "tables": {}},

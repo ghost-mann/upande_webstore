@@ -1,9 +1,5 @@
 frappe.ui.form.on("Webstore Settings", {
 	refresh(frm) {
-		frappe.call("upande_webstore.theme.transfer.list_presets").then((r) => {
-			frm.set_df_property("preset", "options", [""].concat(r.message || []).join("\n"));
-		});
-
 		frappe.call("upande_webstore.api.boxes.list_box_types").then((r) => {
 			const options = r.message || [];
 			// set_data as well as the property: an Autocomplete reads df.options
@@ -75,30 +71,6 @@ frappe.ui.form.on("Webstore Settings", {
 									indicator: "red",
 								})
 							);
-					}
-				);
-			},
-			__("Theme")
-		);
-
-		frm.add_custom_button(
-			__("Apply Preset"),
-			() => {
-				if (!frm.doc.preset) {
-					frappe.msgprint(__("Pick a preset first."));
-					return;
-				}
-				frappe.confirm(
-					__(
-						"Apply preset {0}? This overwrites every Theme, Branding and Features value.",
-						[frm.doc.preset]
-					),
-					() => {
-						frappe
-							.call("upande_webstore.theme.transfer.apply_preset", {
-								name: frm.doc.preset,
-							})
-							.then((r) => report(frm, r.message));
 					}
 				);
 			},

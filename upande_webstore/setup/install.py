@@ -4,8 +4,6 @@ import os
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-DEFAULT_PRESET = "mona_flowers"
-
 # The workspace body is a Custom HTML Block — a tile grid, matching the
 # navigation blocks upande_scp and upande_crm ship on the same production
 # site. It cannot ship as a module fixture: `Custom HTML Block` is not in
@@ -528,22 +526,6 @@ def _repoint_unused_box_type_fields():
 		)
 
 
-def seed_default_theme():
-	"""Fresh installs get the default preset.
-
-	A site whose theme is already configured is never touched, so deploying to
-	an existing site cannot restyle it. Deliberately not called from
-	after_migrate for that reason.
-	"""
-	if frappe.db.get_single_value("Webstore Settings", "accent"):
-		return
-	if frappe.get_all("Webstore Category Card", limit=1):
-		return
-	from upande_webstore.theme.transfer import apply_preset
-
-	apply_preset(DEFAULT_PRESET)
-
-
 def _navigation_block_sources():
 	import upande_webstore
 
@@ -753,7 +735,6 @@ def after_install():
 	create_webstore_custom_fields()
 	seed_claim_types()
 	seed_claim_actions()
-	seed_default_theme()
 	ensure_navigation_block()
 	ensure_desktop_icon()
 

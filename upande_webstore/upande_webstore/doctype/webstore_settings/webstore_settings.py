@@ -67,9 +67,9 @@ class WebstoreSettings(Document):
 		was valid when it was set can go stale on its own: the box Item gets
 		disabled, or the `Box Type` table gets emptied, with nobody touching this
 		field. Without the change guard, an operator changing an unrelated colour
-		hits a box-type error about a field they never touched, and `apply_theme`
-		(the desk "Apply Preset" button, which saves the whole form including
-		this field untouched) fails the same way. An operator who breaks it by
+		hits a box-type error about a field they never touched, and a theme
+		import (which saves the whole form including this field untouched)
+		fails the same way. An operator who breaks it by
 		setting it themselves still gets told at that moment, which is the point
 		of the check; a stale value inherited from before no longer holds the
 		whole form hostage."""

@@ -79,7 +79,7 @@ differs between clients lives in Webstore Settings, not in code.
 | Theme | 13 color seeds → the full `--ws-*` set, fonts, radii, custom CSS |
 | Branding | Logo, favicon, wordmark, hero copy, hero stats, category cards, footer |
 | Features | 19 checkboxes; off = hidden **and** 404 **and** API rejected |
-| Transfer | Export/import theme JSON, apply a shipped preset |
+| Transfer | Export/import theme JSON |
 
 **Every field is optional and blank means "use the shipped default".** A site
 with nothing filled in emits no CSS override block at all and renders exactly as
@@ -133,17 +133,18 @@ cannot point at a dead route.
 ### Transfer
 
 *Theme → Export Theme* downloads every Theme, Branding and Features value as
-JSON; *Import Theme* applies an attached file; *Apply Preset* loads one of the
-shipped presets in `upande_webstore/theme/presets/` (`mona_flowers`, `upande`).
+JSON; *Import Theme* applies an attached file. There are no shipped presets —
+each project sets its own palette on the Theme tab, and an exported file is how
+a look is carried to another site.
 
 Import is a **replace**: fields absent from the payload reset to their defaults,
-so switching presets leaves no residue. General settings — company, price list,
+so importing one theme over another leaves no residue. General settings — company, price list,
 warehouses — are never touched.
 
 Images travel as **file URLs, not embedded bytes**, so an import reports which
 attachments do not exist on the target site and need re-uploading. A fresh
-install seeds the default preset; a site that already has a configured theme is
-never restyled by a deploy.
+install applies no theme, so it renders the shipped defaults until configured;
+a deploy never restyles an existing site.
 
 ## Publish products
 
