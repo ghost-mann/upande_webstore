@@ -283,6 +283,28 @@ def get_variant_price_range(template_item, user=None):
 	)
 	if not variants:
 		return None
+	price_list, rates = _variant_rates(variants, user)
+	if not rates:
+		return None
+
+	return {
+		"min": min(row.price_list_rate for row in rates),
+		"max": max(row.price_list_rate for row in rates),
+		"currency": frappe.db.get_value("Price List", price_list, "currency"),
+		"price_list": price_list,
+		"variants": len(variants),
+	}
+
+
+def get_priced_variants(variants, user=None):
+	"""The variants among `variants` that have a price for this visitor, by
+	the same price list (and fallback) the template's price range uses."""
+	return {row.item_code for row in _variant_rates(variants, user)[1]}
+
+
+def _variant_rates(variants, user=None):
+	"""(price_list, priced Item Price rows) for the visitor's price list, falling
+	back to the guest price list when theirs prices none of these variants."""
 
 	def rates_in(price_list):
 		# deliberately not filtering on `selling`: the flag is derived from the
@@ -292,10 +314,10 @@ def get_variant_price_range(template_item, user=None):
 		found = frappe.get_all(
 			"Item Price",
 			filters={"item_code": ["in", variants], "price_list": price_list},
-			pluck="price_list_rate",
+			fields=["item_code", "price_list_rate"],
 			ignore_permissions=True,
 		)
-		return [rate for rate in found if rate]
+		return [row for row in found if row.price_list_rate]
 
 	price_list = get_price_list(user)
 	rates = rates_in(price_list)
@@ -307,13 +329,4 @@ def get_variant_price_range(template_item, user=None):
 			rates = rates_in(fallback)
 			if rates:
 				price_list = fallback
-	if not rates:
-		return None
-
-	return {
-		"min": min(rates),
-		"max": max(rates),
-		"currency": frappe.db.get_value("Price List", price_list, "currency"),
-		"price_list": price_list,
-		"variants": len(variants),
-	}
+	return price_list, rates
