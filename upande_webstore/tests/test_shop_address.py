@@ -536,6 +536,18 @@ class TestReachabilityAndInterlock(ShopTestCase):
 		doc.save(ignore_permissions=True)
 		self.assertTrue(frappe.db.get_single_value("Webstore Settings", "send_customers_to_shop"))
 
+	def test_address_change_refused_while_switch_is_on(self):
+		set_shop(enabled=1)
+		doc = frappe.get_doc("Webstore Settings")
+		doc.shop_address = "https://other-shop.example.com"
+		with self.assertRaises(frappe.ValidationError):
+			doc.save(ignore_permissions=True)
+		# switching off in the same save is the way to change it
+		doc = frappe.get_doc("Webstore Settings")
+		doc.shop_address = "https://other-shop.example.com"
+		doc.send_customers_to_shop = 0
+		doc.save(ignore_permissions=True)
+
 	def test_resaving_with_switch_on_needs_no_new_check(self):
 		set_shop(enabled=1, shop_last_check_ok=None)
 		doc = frappe.get_doc("Webstore Settings")

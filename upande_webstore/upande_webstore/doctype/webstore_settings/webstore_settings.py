@@ -26,12 +26,20 @@ class WebstoreSettings(Document):
 		if not self.shop_address:
 			self.send_customers_to_shop = 0
 			return
+		before = self.get_doc_before_save()
+		was_on = bool(before and before.send_customers_to_shop)
 		if self.has_value_changed("shop_address"):
+			if was_on and self.send_customers_to_shop:
+				frappe.throw(
+					_(
+						"Switch off Send Customers to the Shop Address before changing the address, "
+						"then check the new address and switch it back on."
+					),
+					frappe.ValidationError,
+				)
 			# a check of the old address says nothing about the new one
 			self.shop_last_check_ok = None
-		turning_on = self.send_customers_to_shop and not (
-			self.get_doc_before_save() and self.get_doc_before_save().send_customers_to_shop
-		)
+		turning_on = self.send_customers_to_shop and not was_on
 		if turning_on and not check_is_fresh(self.shop_last_check_ok):
 			frappe.throw(
 				_(
