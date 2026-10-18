@@ -711,3 +711,37 @@ class TestStaffEmailsKeepErpLinks(ShopTestCase):
 		quotation = frappe._dict(doctype="Quotation", name="SAL-QTN-TEST-2", party_name="Shop Customer Ltd")
 		message = self._sent_during_shop_request(lambda: _notify(quotation, "Accepted"))
 		self.assertNotIn("shop.example.com", message)
+
+
+class TestPasswordLinksOnTheErp(ShopTestCase):
+	"""A reset link made outside a shop request - desk "Reset Password", the
+	ERP's own forgot-password page - points at the ERP. For a customer that
+	page would set the password and then refuse the login, losing it."""
+
+	def _key_for(self, user):
+		from urllib.parse import parse_qs, urlsplit
+
+		link = frappe.get_doc("User", user)._reset_password(send_email=False)
+		return parse_qs(urlsplit(link).query)["key"][0]
+
+	def test_customer_reset_link_is_sent_to_the_shop(self):
+		set_shop(enabled=1)
+		customer, _ = make_portal_user("shop.reset@example.com", "Shop Reset Ltd")
+		key = self._key_for(customer)
+		with fake_request(path="/update-password", query_string=f"key={key}"):
+			self.assertEqual(run_before_request(), f"{SHOP}/update-password?key={key}")
+
+	def test_staff_reset_link_stays_on_the_erp(self):
+		set_shop(enabled=1)
+		staff = make_desk_user("shop.staffreset@example.com", ["Sales User"])
+		try:
+			key = self._key_for(staff)
+			with fake_request(path="/update-password", query_string=f"key={key}"):
+				self.assertIsNone(run_before_request())
+		finally:
+			frappe.delete_doc("User", staff, force=True, ignore_permissions=True)
+
+	def test_unknown_key_stays_on_the_erp(self):
+		set_shop(enabled=1)
+		with fake_request(path="/update-password", query_string="key=not-a-real-key"):
+			self.assertIsNone(run_before_request())

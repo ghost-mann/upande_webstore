@@ -275,6 +275,21 @@ def as_erp():
 		frappe.local.conf = previous
 
 
+def _is_customer_password_link(path):
+	"""A customer's set/reset-password link opened on the ERP. Finished here,
+	the password would be saved and the sign-in that follows refused - so it
+	is finished on the shop instead. Staff links stay on the ERP."""
+	if path.rstrip("/") != "/update-password":
+		return False
+	key = frappe.request.args.get("key")
+	if not key:
+		return False
+	from frappe.utils import sha256_hash
+
+	user = frappe.db.get_value("User", {"reset_password_key": sha256_hash(key)}, "name")
+	return bool(user and is_customer_account(user))
+
+
 def before_request():
 	"""Shop requests build their links on the shop address; with the switch on,
 	customers who reach the ERP directly are sent to the shop."""
@@ -291,7 +306,7 @@ def before_request():
 
 	path = frappe.request.path or "/"
 	query = frappe.request.query_string.decode() if frappe.request.query_string else ""
-	if CUSTOMER_PATH.match(path):
+	if CUSTOMER_PATH.match(path) or _is_customer_password_link(path):
 		_redirect(shop_url(path + (f"?{query}" if query else "")))
 	if is_customer_account(frappe.session.user):
 		# a session from before the switch went on: end it here, the shop has its own
