@@ -254,10 +254,15 @@ override_doctype_dashboards = {
 # before_request hook and not the get_website_user_home_page hook above,
 # which only fires on login.
 before_request = [
+	# first: a customer sent to the shop address needs nothing else resolved here
+	"upande_webstore.services.shop.before_request",
 	"upande_webstore.services.store.resolve_webstore_prefix",
 	"upande_webstore.services.portal.redirect_me_to_portal",
 ]
 # after_request = ["upande_webstore.utils.after_request"]
+
+# staff sign in on the ERP, customers on the shop address
+on_login = ["upande_webstore.services.shop.on_login"]
 
 # Job Events
 # ----------

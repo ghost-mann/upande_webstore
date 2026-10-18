@@ -14,6 +14,7 @@ See docs/superpowers/specs/2026-10-18-shop-address-design.md.
 """
 
 import hmac
+import re
 from urllib.parse import urlsplit
 
 import frappe
@@ -90,7 +91,7 @@ def is_staff(user):
 	linked to a customer."""
 	if user in ("Administrator",):
 		return True
-	return frappe.db.get_value("User", user, "user_type") == "System User"
+	return frappe.get_cached_value("User", user, "user_type") == "System User"
 
 
 def is_customer_account(user):
@@ -178,3 +179,65 @@ def gateway_config():
 		"extra_pages": _lines(settings.get("shop_extra_pages")),
 		"methods": list(CUSTOMER_METHODS) + [m for m in extra_methods if m not in CUSTOMER_METHODS],
 	}
+
+
+# The store's own pages, on any storefront: the same set the gateway lets
+# through, so a customer sent from the ERP always lands on a page that opens.
+CUSTOMER_PATH = re.compile(
+	r"^(/[a-z0-9-]+)?/(store|cart|wishlist)(/[^/]+)?/?$"
+	r"|^/portal(/.*)?$"
+	r"|^/signup/?$"
+)
+
+
+def _swap_conf_host(host):
+	"""Point get_url() at `host` for the rest of this request.
+
+	frappe.local.conf is the worker's cached site config, shared by every
+	request it serves, so it is replaced by a copy rather than written to -
+	writing host_name into it would send every later staff link to the shop.
+	frappe.local is discarded when the request ends, taking the copy with it."""
+	conf = frappe._dict(frappe.local.conf)
+	conf.host_name = host
+	frappe.local.conf = conf
+
+
+def before_request():
+	"""Shop requests build their links on the shop address; with the switch on,
+	customers who reach the ERP directly are sent to the shop."""
+	if not shop_address():
+		return
+	if is_shop_request():
+		_swap_conf_host(shop_address())
+		return
+	if not shop_enabled():
+		return
+
+	from upande_webstore.services.portal import _redirect
+
+	path = frappe.request.path or "/"
+	query = frappe.request.query_string.decode() if frappe.request.query_string else ""
+	if CUSTOMER_PATH.match(path):
+		_redirect(shop_url(path + (f"?{query}" if query else "")))
+	if is_customer_account(frappe.session.user):
+		# a session from before the switch went on: end it here, the shop has its own
+		login_manager = getattr(frappe.local, "login_manager", None)
+		if login_manager:
+			login_manager.logout()
+		_redirect(shop_url("/login"))
+
+
+def on_login(login_manager):
+	"""Staff sign in on the ERP, customers on the shop.
+
+	Runs before frappe makes the session, so a refusal leaves nobody logged in.
+	The staff message deliberately does not name the ERP's address."""
+	user = login_manager.user
+	if is_shop_request():
+		if is_staff(user):
+			frappe.throw(_("Staff accounts sign in on the ERP."), frappe.AuthenticationError)
+		return
+	if shop_enabled() and is_customer_account(user):
+		frappe.throw(
+			_("Please sign in on the shop.") + f" {shop_url('/login')}", frappe.AuthenticationError
+		)

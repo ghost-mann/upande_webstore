@@ -211,3 +211,138 @@ class TestGatewayConfig(ShopTestCase):
 		self.assertEqual(sorted(found - classified), [], "new whitelisted methods must be classified")
 		self.assertEqual(sorted(classified - found), [], "classified methods that no longer exist")
 		self.assertFalse(webstore_customer & set(DESK_ONLY_METHODS))
+
+
+def run_before_request():
+	"""The hook, returning the redirect location if it raised one."""
+	from werkzeug.exceptions import HTTPException
+
+	from upande_webstore.services import shop
+
+	try:
+		shop.before_request()
+	except HTTPException as e:
+		return e.get_response().location
+	return None
+
+
+class FakeLoginManager:
+	def __init__(self, user):
+		self.user = user
+
+
+class TestErpSendsCustomersToTheShop(ShopTestCase):
+	def test_customer_path_redirects_when_on(self):
+		set_shop(enabled=1)
+		for path, query in (
+			("/store", None),
+			("/store/athena", "length=40cm"),
+			("/cart", None),
+			("/wishlist", None),
+			("/portal/orders", None),
+			("/signup", None),
+			("/wholesale/store/rose", None),
+			("/wholesale/cart", None),
+		):
+			with fake_request(path=path, query_string=query):
+				expected = SHOP + path + (f"?{query}" if query else "")
+				self.assertEqual(run_before_request(), expected, path)
+
+	def test_no_redirect_when_off(self):
+		set_shop(enabled=0)
+		with fake_request(path="/store"):
+			self.assertIsNone(run_before_request())
+
+	def test_no_redirect_for_shop_request(self):
+		set_shop(enabled=1)
+		with fake_request(path="/store", headers=gateway_headers()):
+			self.assertIsNone(run_before_request())
+
+	def test_desk_and_login_paths_never_redirect(self):
+		set_shop(enabled=1)
+		for path in ("/desk", "/app/quotation", "/login", "/update-password", "/", "/api/method/ping", "/storefront-blog"):
+			with fake_request(path=path):
+				self.assertIsNone(run_before_request(), path)
+
+	def test_logged_in_customer_on_the_erp_is_sent_to_the_shop(self):
+		set_shop(enabled=1)
+		customer, _ = make_portal_user("shop.erpvisit@example.com", "Shop Erpvisit Ltd")
+		frappe.set_user(customer)
+		with fake_request(path="/api/method/frappe.auth.get_logged_user"):
+			self.assertEqual(run_before_request(), SHOP + "/login")
+
+
+class TestShopRequestLinks(ShopTestCase):
+	def test_get_url_is_shop_address_during_shop_request(self):
+		set_shop()
+		with fake_request(path="/store", headers=gateway_headers()):
+			run_before_request()
+			self.assertEqual(frappe.utils.get_url("/update-password?key=x"), SHOP + "/update-password?key=x")
+
+	def test_shared_conf_is_never_mutated(self):
+		"""frappe.local.conf is the worker's cached site config; writing the
+		shop host into it would leak into every later ERP request."""
+		set_shop()
+		original = frappe.local.conf
+		host_before = original.get("host_name")
+		try:
+			with fake_request(path="/store", headers=gateway_headers()):
+				run_before_request()
+				self.assertIsNot(frappe.local.conf, original)
+			self.assertEqual(original.get("host_name"), host_before)
+		finally:
+			frappe.local.conf = original
+
+
+class TestLoginRules(ShopTestCase):
+	def _login(self, user, headers=None):
+		from upande_webstore.services import shop
+
+		with fake_request(path="/api/method/login", method="POST", headers=headers):
+			shop.on_login(FakeLoginManager(user))
+
+	def test_staff_login_refused_on_shop(self):
+		set_shop(enabled=1)
+		staff = make_desk_user("shop.staff2@example.com", ["Sales User"])
+		try:
+			with self.assertRaises(frappe.AuthenticationError) as ctx:
+				self._login(staff, gateway_headers())
+			self.assertIn("Staff accounts sign in on the ERP.", str(ctx.exception))
+			self.assertNotIn("erp.example.com", str(ctx.exception))
+		finally:
+			frappe.delete_doc("User", staff, force=True, ignore_permissions=True)
+
+	def test_staff_linked_to_customer_refused_on_shop(self):
+		set_shop(enabled=1)
+		staff = make_desk_user("shop.staffcust@example.com", ["Sales User", "Customer"])
+		try:
+			with self.assertRaises(frappe.AuthenticationError):
+				self._login(staff, gateway_headers())
+		finally:
+			frappe.delete_doc("User", staff, force=True, ignore_permissions=True)
+
+	def test_secret_with_switch_off_still_refuses_staff(self):
+		set_shop(enabled=0)
+		with self.assertRaises(frappe.AuthenticationError):
+			self._login("Administrator", gateway_headers())
+
+	def test_customer_login_on_shop_allowed(self):
+		set_shop(enabled=1)
+		customer, _ = make_portal_user("shop.login@example.com", "Shop Login Ltd")
+		self._login(customer, gateway_headers())
+
+	def test_customer_login_refused_on_erp_when_on(self):
+		set_shop(enabled=1)
+		customer, _ = make_portal_user("shop.login@example.com", "Shop Login Ltd")
+		with self.assertRaises(frappe.AuthenticationError) as ctx:
+			self._login(customer)
+		self.assertIn("Please sign in on the shop.", str(ctx.exception))
+
+	def test_customer_login_allowed_on_erp_when_off(self):
+		set_shop(enabled=0)
+		customer, _ = make_portal_user("shop.login@example.com", "Shop Login Ltd")
+		self._login(customer)
+
+	def test_staff_login_on_erp_allowed(self):
+		set_shop(enabled=1)
+		self._login("Administrator")
