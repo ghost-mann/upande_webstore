@@ -39,6 +39,24 @@ def _apply_store_filter(filters):
 	return filters
 
 
+def product_for_item(item_code, published_only=True):
+	"""The Webstore Product an orderable item belongs to.
+
+	A product published as a template is ordered as one of its variants - the
+	page resolves the chosen stem length to e.g. Athena-40cm - so a variant
+	belongs to its template's product. A disabled item belongs to none."""
+	item = frappe.db.get_value("Item", item_code, ["variant_of", "disabled"], as_dict=True)
+	if not item or item.disabled:
+		return None
+	filters = {"published": 1} if published_only else {}
+	for code in (item_code, item.variant_of):
+		if code:
+			product = frappe.db.get_value("Webstore Product", {"item": code, **filters})
+			if product:
+				return product
+	return None
+
+
 def is_in_current_store(product):
 	"""Is this `Webstore Product` (by name) part of the resolved store's
 	catalogue?

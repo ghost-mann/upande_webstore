@@ -309,7 +309,10 @@ def get_product_box_type(item_code):
 	100x33x20 box — and the buyer may override it per basket line. Mirrors
 	`Website Item.custom_box_type`, which is how Mona already models this.
 	"""
-	box = frappe.db.get_value("Webstore Product", {"item": item_code}, "box_type")
+	from upande_webstore.services.catalog import product_for_item
+
+	product = product_for_item(item_code, published_only=False)
+	box = frappe.db.get_value("Webstore Product", product, "box_type") if product else None
 	if box and is_usable_box(box):
 		return box
 	default = get_default_box_type()

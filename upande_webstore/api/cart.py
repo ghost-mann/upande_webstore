@@ -302,7 +302,12 @@ def add_item(item_code, qty=1):
 	qty = frappe.utils.flt(qty) or 1
 	if qty <= 0:
 		frappe.throw(_("Quantity must be positive."), frappe.ValidationError)
-	product = frappe.db.get_value("Webstore Product", {"item": item_code, "published": 1})
+	from upande_webstore.services.catalog import product_for_item
+
+	if frappe.db.get_value("Item", item_code, "has_variants"):
+		# a template has no price or stock of its own; the page asks for the length
+		frappe.throw(_("Choose an option first."), frappe.ValidationError)
+	product = product_for_item(item_code)
 	if not product:
 		frappe.throw(_("This product is not available."), frappe.ValidationError)
 	# Same message as an unpublished product on purpose: which shops carry
