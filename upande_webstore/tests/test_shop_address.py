@@ -569,3 +569,59 @@ class TestReachabilityAndInterlock(ShopTestCase):
 			generate_gateway_secret()
 		with self.assertRaises(frappe.PermissionError):
 			check_shop_address()
+
+
+class TestErpEnforcesTheShopMethodList(ShopTestCase):
+	"""Defence in depth: the gateway is not the only thing between a shop
+	visitor and every whitelisted method - the ERP refuses them too."""
+
+	def _status(self, path, cmd=None, headers=None):
+		from werkzeug.exceptions import HTTPException
+
+		from upande_webstore.services import shop
+
+		previous = frappe.local.form_dict
+		frappe.local.form_dict = frappe._dict({"cmd": cmd} if cmd else {})
+		try:
+			with fake_request(path=path, headers=headers if headers is not None else gateway_headers()):
+				try:
+					shop.before_request()
+				except HTTPException as e:
+					return e.code
+			return None
+		finally:
+			frappe.local.form_dict = previous
+
+	def test_cmd_not_on_the_list_is_refused(self):
+		set_shop()
+		self.assertEqual(self._status("/store", cmd="frappe.client.get_list"), 404)
+		self.assertEqual(
+			self._status("/api/method/upande_webstore.api.cart.get_cart", cmd="frappe.client.get_list"), 404
+		)
+
+	def test_api_method_not_on_the_list_is_refused(self):
+		set_shop()
+		self.assertEqual(self._status("/api/method/frappe.client.get_list"), 404)
+		self.assertEqual(self._status("/api/method/upande_webstore.api.boxes.list_box_types"), 404)
+
+	def test_other_api_routes_are_refused(self):
+		set_shop()
+		self.assertEqual(self._status("/api/resource/Customer"), 404)
+		self.assertEqual(self._status("/api/v2/document/Customer"), 404)
+
+	def test_listed_methods_and_the_gateway_config_pass(self):
+		set_shop()
+		self.assertIsNone(self._status("/api/method/upande_webstore.api.cart.get_cart"))
+		self.assertIsNone(self._status("/api/method/login", cmd="login"))
+		self.assertIsNone(self._status("/", cmd="frappe.core.doctype.user.user.reset_password"))
+		self.assertIsNone(self._status("/api/method/upande_webstore.api.gateway.config"))
+		self.assertIsNone(self._status("/store"))
+
+	def test_extra_methods_from_settings_pass(self):
+		set_shop(shop_extra_methods="other_app.api.public_thing")
+		self.assertIsNone(self._status("/api/method/other_app.api.public_thing"))
+
+	def test_direct_requests_are_not_affected(self):
+		set_shop()
+		self.assertIsNone(self._status("/api/method/frappe.client.get_list", headers={}))
+		self.assertIsNone(self._status("/api/resource/Customer", headers={}))

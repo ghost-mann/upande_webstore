@@ -217,6 +217,26 @@ def _swap_conf_host(host):
 	frappe.local.conf = conf
 
 
+def _refuse_unlisted_methods():
+	"""The ERP's own copy of the gateway's method allow-list, for shop requests.
+
+	Frappe runs `cmd` from the query or body on any path, ahead of the method
+	an /api/method path names, and the gateway's reading of a body can never
+	be guaranteed to match werkzeug's. So the list the gateway is given is
+	enforced here as well; outside a shop request nothing changes."""
+	from werkzeug.exceptions import NotFound
+
+	allowed = set(gateway_config()["methods"]) | set(GATEWAY_METHODS)
+	cmd = frappe.form_dict.get("cmd")
+	if cmd and cmd not in allowed:
+		raise NotFound()
+	path = frappe.request.path or ""
+	if path.startswith("/api/"):
+		match = re.match(r"^/api/method/([A-Za-z0-9_.]+)/?$", path)
+		if not match or match.group(1) not in allowed:
+			raise NotFound()
+
+
 @contextmanager
 def as_shop():
 	"""Build customer links on the shop address outside a shop request - a
@@ -239,6 +259,7 @@ def before_request():
 	if not shop_address():
 		return
 	if is_shop_request():
+		_refuse_unlisted_methods()
 		_swap_conf_host(shop_address())
 		return
 	if not shop_enabled():
