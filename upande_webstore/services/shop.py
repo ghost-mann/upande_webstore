@@ -97,3 +97,84 @@ def is_customer_account(user):
 	if not user or user in ("Guest", "Administrator"):
 		return False
 	return not is_staff(user)
+
+
+# Server methods a shop visitor may call through the gateway. Everything else
+# under /api/method is refused there. The gateway takes this list from the
+# config endpoint, so a new customer-facing method only has to be added here.
+CUSTOMER_METHODS = (
+	# Frappe's login and account pages
+	"login",
+	"logout",
+	"web_logout",
+	"frappe.core.doctype.user.user.reset_password",
+	"frappe.core.doctype.user.user.update_password",
+	"frappe.core.doctype.user.user.test_password_strength",
+	"frappe.www.login.send_login_link",
+	"upload_file",  # claim photos
+	# Storefront
+	"upande_webstore.api.account.add_address",
+	"upande_webstore.api.account.sign_up",
+	"upande_webstore.api.account.update_profile",
+	"upande_webstore.api.cart.add_item",
+	"upande_webstore.api.cart.get_box_types",
+	"upande_webstore.api.cart.get_cart",
+	"upande_webstore.api.cart.get_cart_count",
+	"upande_webstore.api.cart.remove_item",
+	"upande_webstore.api.cart.set_box_type",
+	"upande_webstore.api.cart.update_qty",
+	"upande_webstore.api.checkout.place_order",
+	"upande_webstore.api.pricing.set_price_list",
+	"upande_webstore.api.search.search_products",
+	"upande_webstore.api.specs.add_spec",
+	"upande_webstore.api.specs.get_my_specs",
+	"upande_webstore.api.variants.get_attributes",
+	"upande_webstore.api.variants.resolve_variant",
+	"upande_webstore.api.wishlist.get_wishlist",
+	"upande_webstore.api.wishlist.get_wishlisted_products",
+	"upande_webstore.api.wishlist.toggle",
+	# Portal
+	"upande_webstore.api.claims.create_claim",
+	"upande_webstore.api.claims.get_claim",
+	"upande_webstore.api.claims.get_claims",
+	"upande_webstore.api.claims.get_document_lines",
+	"upande_webstore.api.portal.accept_quotation",
+	"upande_webstore.api.portal.decline_quotation",
+	"upande_webstore.api.portal.download_invoice_pdf",
+	"upande_webstore.api.support.create_issue",
+)
+
+# Webstore methods the desk uses; never offered on the shop address.
+DESK_ONLY_METHODS = (
+	"upande_webstore.api.boxes.describe_source",
+	"upande_webstore.api.boxes.list_box_types",
+	"upande_webstore.api.boxes.list_site_box_records",
+	"upande_webstore.api.boxes.load_site_boxes",
+	"upande_webstore.api.specs.describe_source",
+	"upande_webstore.api.claims.claimable_document_query",
+	"upande_webstore.api.claims.claimable_invoice_query",
+	"upande_webstore.api.claims.fetch_invoice_lines",
+)
+
+# Called by the gateway itself, straight on the ERP address, with the secret.
+GATEWAY_METHODS = ("upande_webstore.api.gateway.config",)
+
+DEFAULT_LOGIN_ATTEMPTS = 10
+
+
+def _lines(value):
+	return [line.strip() for line in (value or "").splitlines() if line.strip()]
+
+
+def gateway_config():
+	settings = _settings()
+	extra_methods = _lines(settings.get("shop_extra_methods"))
+	return {
+		"shop_address": shop_address(),
+		"send_customers_to_shop": shop_enabled(),
+		"login_attempts_per_minute": frappe.utils.cint(settings.get("shop_login_attempts_per_minute"))
+		or DEFAULT_LOGIN_ATTEMPTS,
+		"allow_indexing": bool(settings.get("shop_allow_indexing")),
+		"extra_pages": _lines(settings.get("shop_extra_pages")),
+		"methods": list(CUSTOMER_METHODS) + [m for m in extra_methods if m not in CUSTOMER_METHODS],
+	}

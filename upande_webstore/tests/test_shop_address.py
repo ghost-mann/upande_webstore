@@ -149,3 +149,65 @@ class TestAccountClassification(ShopTestCase):
 			self.assertTrue(shop.is_staff("Administrator"))
 		finally:
 			frappe.delete_doc("User", staff, force=True, ignore_permissions=True)
+
+
+class TestGatewayConfig(ShopTestCase):
+	def test_config_refuses_without_secret(self):
+		set_shop()
+		from upande_webstore.api.gateway import config
+
+		with fake_request(path="/api/method/upande_webstore.api.gateway.config"):
+			with self.assertRaises(frappe.PageDoesNotExistError):
+				config()
+		with fake_request(headers=gateway_headers("nope")):
+			with self.assertRaises(frappe.PageDoesNotExistError):
+				config()
+
+	def test_config_returns_settings_with_secret(self):
+		set_shop(
+			enabled=1,
+			shop_login_attempts_per_minute=7,
+			shop_allow_indexing=1,
+			shop_extra_pages="/about\n\n /about/* \n",
+			shop_extra_methods="other_app.api.public_thing\n",
+		)
+		from upande_webstore.api.gateway import config
+		from upande_webstore.services.shop import CUSTOMER_METHODS
+
+		with fake_request(headers=gateway_headers()):
+			result = config()
+		self.assertEqual(result["shop_address"], SHOP)
+		self.assertTrue(result["send_customers_to_shop"])
+		self.assertEqual(result["login_attempts_per_minute"], 7)
+		self.assertTrue(result["allow_indexing"])
+		self.assertEqual(result["extra_pages"], ["/about", "/about/*"])
+		self.assertIn("other_app.api.public_thing", result["methods"])
+		self.assertTrue(set(CUSTOMER_METHODS) <= set(result["methods"]))
+
+	def test_config_default_login_limit(self):
+		set_shop(shop_login_attempts_per_minute=0)
+		from upande_webstore.api.gateway import config
+
+		with fake_request(headers=gateway_headers()):
+			self.assertEqual(config()["login_attempts_per_minute"], 10)
+
+	def test_every_whitelisted_webstore_method_is_classified(self):
+		import importlib
+		import pkgutil
+
+		import upande_webstore.api as api_pkg
+		from upande_webstore.services.shop import CUSTOMER_METHODS, DESK_ONLY_METHODS, GATEWAY_METHODS
+
+		found = set()
+		for info in pkgutil.iter_modules(api_pkg.__path__):
+			module = importlib.import_module(f"upande_webstore.api.{info.name}")
+			for name in dir(module):
+				fn = getattr(module, name)
+				if callable(fn) and fn in frappe.whitelisted and getattr(fn, "__module__", "") == module.__name__:
+					found.add(f"{module.__name__}.{name}")
+		self.assertTrue(found)
+		webstore_customer = {m for m in CUSTOMER_METHODS if m.startswith("upande_webstore.")}
+		classified = webstore_customer | set(DESK_ONLY_METHODS) | set(GATEWAY_METHODS)
+		self.assertEqual(sorted(found - classified), [], "new whitelisted methods must be classified")
+		self.assertEqual(sorted(classified - found), [], "classified methods that no longer exist")
+		self.assertFalse(webstore_customer & set(DESK_ONLY_METHODS))
