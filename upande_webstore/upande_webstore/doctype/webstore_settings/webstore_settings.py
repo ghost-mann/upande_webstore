@@ -17,6 +17,14 @@ class WebstoreSettings(Document):
 		self.validate_default_box_type()
 		self.validate_guest_price_lists()
 		self.apply_feature_dependencies()
+		self.validate_shop_address()
+
+	def validate_shop_address(self):
+		from upande_webstore.services.shop import normalise_shop_address
+
+		self.shop_address = normalise_shop_address(self.shop_address) or ""
+		if not self.shop_address:
+			self.send_customers_to_shop = 0
 
 	def on_update(self):
 		self.reconcile_role_permissions()

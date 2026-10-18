@@ -5,7 +5,7 @@
  "issingle": 1,
  "engine": "InnoDB",
  "creation": "2026-07-20 00:00:01.000000",
- "modified": "2026-09-28 00:00:01.000000",
+ "modified": "2026-10-18 00:00:01.000000",
  "owner": "Administrator",
  "field_order": [
   "general_tab",
@@ -154,6 +154,21 @@
   "enable_customer_specs",
   "spec_doctype",
   "spec_source_summary",
+  "shop_address_tab",
+  "shop_address_section",
+  "shop_address",
+  "send_customers_to_shop",
+  "gateway_secret",
+  "shop_column_break",
+  "shop_status",
+  "shop_last_check_ok",
+  "shop_last_check_result",
+  "shop_gateway_section",
+  "shop_login_attempts_per_minute",
+  "shop_allow_indexing",
+  "shop_gateway_column",
+  "shop_extra_pages",
+  "shop_extra_methods",
   "transfer_tab",
   "transfer_section",
   "theme_file"
@@ -1035,6 +1050,96 @@
    "fieldtype": "HTML",
    "label": "Specifications On This Site",
    "depends_on": "enable_customer_specs"
+  },
+  {
+   "fieldname": "shop_address_tab",
+   "fieldtype": "Tab Break",
+   "label": "Shop Address"
+  },
+  {
+   "fieldname": "shop_address_section",
+   "fieldtype": "Section Break",
+   "label": "Customer address",
+   "description": "Customers use the store, portal and login only on this address, served by the customer gateway. Staff keep using this ERP. Leave blank to keep the store on this ERP's own address."
+  },
+  {
+   "fieldname": "shop_address",
+   "fieldtype": "Data",
+   "label": "Shop Address",
+   "options": "URL",
+   "description": "e.g. https://shop.monaflowers.co.ke - https, no path."
+  },
+  {
+   "fieldname": "send_customers_to_shop",
+   "fieldtype": "Check",
+   "label": "Send Customers to the Shop Address",
+   "default": "0",
+   "depends_on": "eval:doc.shop_address",
+   "description": "When on, customers who open the store or portal on this ERP's address are sent to the shop address, and customer accounts can't sign in here. Can only be turned on within 10 minutes of a successful check."
+  },
+  {
+   "fieldname": "gateway_secret",
+   "fieldtype": "Password",
+   "label": "Gateway Secret",
+   "depends_on": "eval:doc.shop_address",
+   "description": "Shared with the gateway (wrangler secret put GATEWAY_SECRET). Use Generate Gateway Secret to make one."
+  },
+  {
+   "fieldname": "shop_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shop_status",
+   "fieldtype": "HTML",
+   "label": "Status"
+  },
+  {
+   "fieldname": "shop_last_check_ok",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Check",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shop_last_check_result",
+   "fieldtype": "Small Text",
+   "label": "Last Check Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shop_gateway_section",
+   "fieldtype": "Section Break",
+   "label": "Gateway rules",
+   "depends_on": "eval:doc.shop_address",
+   "description": "Read by the gateway about once a minute; changes apply without redeploying it."
+  },
+  {
+   "fieldname": "shop_login_attempts_per_minute",
+   "fieldtype": "Int",
+   "label": "Login Attempts per Minute (per visitor)",
+   "default": "10",
+   "description": "Login and password-reset requests one visitor may make per minute before the gateway refuses them."
+  },
+  {
+   "fieldname": "shop_allow_indexing",
+   "fieldtype": "Check",
+   "label": "Let Search Engines Index the Store",
+   "default": "0"
+  },
+  {
+   "fieldname": "shop_gateway_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shop_extra_pages",
+   "fieldtype": "Small Text",
+   "label": "Extra Allowed Pages",
+   "description": "One path per line, e.g. /about. A trailing * allows everything under it (/about/*). Can't open the desk or the data API."
+  },
+  {
+   "fieldname": "shop_extra_methods",
+   "fieldtype": "Small Text",
+   "label": "Extra Allowed Methods",
+   "description": "One whitelisted method per line, for another app's customer-facing methods."
   },
   {
    "fieldname": "transfer_tab",
