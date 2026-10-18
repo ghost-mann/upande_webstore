@@ -76,8 +76,11 @@ def ensure_user(email, full_name, phone=None, send_welcome=True):
 			}
 		)
 		user.flags.ignore_permissions = True
+		from upande_webstore.services.shop import as_shop
+
 		try:
-			user.insert()
+			with as_shop():  # the welcome email's password link
+				user.insert()
 		except frappe.OutgoingEmailError:
 			# a missing or misconfigured mail account must not block provisioning;
 			# the salesperson can hand over the password link instead

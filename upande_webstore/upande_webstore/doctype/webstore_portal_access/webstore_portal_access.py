@@ -52,9 +52,12 @@ class WebstorePortalAccess(Document):
 		require_permission("Webstore Portal Access", "write")
 		if not self.user:
 			frappe.throw(_("Grant access first."), frappe.ValidationError)
+		from upande_webstore.services.shop import as_shop
+
 		user = frappe.get_doc("User", self.user)
 		# Frappe exposes no public API that returns the link instead of mailing it
-		return {"link": user._reset_password(send_email=False)}
+		with as_shop():
+			return {"link": user._reset_password(send_email=False)}
 
 	@frappe.whitelist()
 	def revoke(self):

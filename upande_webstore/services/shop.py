@@ -15,6 +15,7 @@ See docs/superpowers/specs/2026-10-18-shop-address-design.md.
 
 import hmac
 import re
+from contextlib import contextmanager
 from urllib.parse import urlsplit
 
 import frappe
@@ -200,6 +201,22 @@ def _swap_conf_host(host):
 	conf = frappe._dict(frappe.local.conf)
 	conf.host_name = host
 	frappe.local.conf = conf
+
+
+@contextmanager
+def as_shop():
+	"""Build customer links on the shop address outside a shop request - a
+	salesperson granting access from the desk, a background job. A no-op
+	until the switch is on, so links never point at a shop that isn't live."""
+	if not shop_enabled() or is_shop_request():
+		yield
+		return
+	previous = frappe.local.conf
+	_swap_conf_host(shop_address())
+	try:
+		yield
+	finally:
+		frappe.local.conf = previous
 
 
 def before_request():

@@ -346,3 +346,72 @@ class TestLoginRules(ShopTestCase):
 	def test_staff_login_on_erp_allowed(self):
 		set_shop(enabled=1)
 		self._login("Administrator")
+
+
+class TestCustomerEmailsUseTheShop(ShopTestCase):
+	EMAIL = "shop.granted@example.com"
+	CUSTOMER = "Shop Granted Ltd"
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		from upande_webstore.tests.test_portal_access import make_customer
+
+		make_customer(cls.CUSTOMER)
+
+	def setUp(self):
+		super().setUp()
+		frappe.db.delete("Webstore Portal Access", {"email": self.EMAIL})
+		if frappe.db.exists("User", self.EMAIL):
+			frappe.delete_doc("User", self.EMAIL, force=True, ignore_permissions=True)
+
+	def _granted(self):
+		doc = frappe.get_doc({
+			"doctype": "Webstore Portal Access",
+			"customer": self.CUSTOMER,
+			"full_name": "Shop Granted",
+			"email": self.EMAIL,
+		}).insert(ignore_permissions=True)
+		doc.grant()
+		doc.reload()
+		return doc
+
+	def test_password_setup_link_uses_shop_address(self):
+		set_shop(enabled=1)
+		doc = self._granted()
+		link = doc.password_setup_link()["link"]
+		self.assertTrue(link.startswith(SHOP + "/update-password?key="), link)
+
+	def test_password_setup_link_unchanged_when_off(self):
+		set_shop(enabled=0)
+		doc = self._granted()
+		link = doc.password_setup_link()["link"]
+		self.assertFalse(link.startswith(SHOP), link)
+
+	def test_welcome_email_link_uses_shop_address(self):
+		"""The link is captured where frappe hands it to the mailer, so the test
+		does not depend on this site having a working outgoing Email Account."""
+		from unittest.mock import patch
+
+		from frappe.core.doctype.user.user import User
+
+		from upande_webstore.services.provisioning import ensure_user
+
+		set_shop(enabled=1)
+		sent = {}
+
+		def capture(self, subject, template, add_args, now=None, custom_template=None):
+			sent["link"] = add_args.get("link")
+
+		with patch.object(User, "send_login_mail", capture):
+			ensure_user(self.EMAIL, "Shop Granted", send_welcome=True)
+		self.assertTrue((sent.get("link") or "").startswith(SHOP + "/update-password?key="), sent)
+
+	def test_conf_restored_after_as_shop(self):
+		set_shop(enabled=1)
+		from upande_webstore.services.shop import as_shop
+
+		before = frappe.local.conf
+		with as_shop():
+			self.assertEqual(frappe.utils.get_url("/x"), SHOP + "/x")
+		self.assertIs(frappe.local.conf, before)
