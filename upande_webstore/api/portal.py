@@ -29,12 +29,15 @@ def _notify(quotation, status):
 	recipients = [e.strip() for e in (settings.notification_emails or "").split(",") if e.strip()]
 	if not recipients:
 		return
+	from upande_webstore.services.shop import as_erp
+
+	with as_erp():  # the sales team opens this on the desk, never the shop
+		link = get_url_to_form("Quotation", quotation.name)
 	frappe.sendmail(
 		recipients=recipients,
 		subject=_("Quotation {0} {1} by customer").format(quotation.name, status.lower()),
 		message=_("Quotation {0} was {1} by {2} on the portal.<br>{3}").format(
-			quotation.name, status.lower(), quotation.party_name,
-			get_url_to_form("Quotation", quotation.name),
+			quotation.name, status.lower(), quotation.party_name, link,
 		),
 	)
 

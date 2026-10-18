@@ -216,6 +216,8 @@ def _swap_conf_host(host):
 	request it serves, so it is replaced by a copy rather than written to -
 	writing host_name into it would send every later staff link to the shop.
 	frappe.local is discarded when the request ends, taking the copy with it."""
+	if not hasattr(frappe.local, "webstore_erp_conf"):
+		frappe.local.webstore_erp_conf = frappe.local.conf
 	conf = frappe._dict(frappe.local.conf)
 	conf.host_name = host
 	frappe.local.conf = conf
@@ -251,6 +253,22 @@ def as_shop():
 		return
 	previous = frappe.local.conf
 	_swap_conf_host(shop_address())
+	try:
+		yield
+	finally:
+		frappe.local.conf = previous
+
+
+@contextmanager
+def as_erp():
+	"""Build staff links on the ERP's own address inside a shop request: the
+	sales team's notices must open the desk, which the shop does not serve."""
+	erp_conf = getattr(frappe.local, "webstore_erp_conf", None)
+	if erp_conf is None or frappe.local.conf is erp_conf:
+		yield
+		return
+	previous = frappe.local.conf
+	frappe.local.conf = erp_conf
 	try:
 		yield
 	finally:

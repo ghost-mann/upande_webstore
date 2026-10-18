@@ -446,8 +446,12 @@ def _notify_sales_team(doc):
 	else:
 		subject = _("New webstore quotation {0} from {1}").format(doc.name, party)
 		body = _("A new quotation request was placed on the webstore.<br>Review it here: {0}")
+	from upande_webstore.services.shop import as_erp
+
+	with as_erp():  # the sales team opens this on the desk, never the shop
+		link = get_url_to_form(doc.doctype, doc.name)
 	frappe.sendmail(
 		recipients=recipients,
 		subject=subject,
-		message=body.format(get_url_to_form(doc.doctype, doc.name)),
+		message=body.format(link),
 	)

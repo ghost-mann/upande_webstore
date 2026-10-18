@@ -670,3 +670,44 @@ class TestErpEnforcesTheShopMethodList(ShopTestCase):
 		set_shop()
 		self.assertIsNone(self._status("/api/method/frappe.client.get_list", headers={}))
 		self.assertIsNone(self._status("/api/resource/Customer", headers={}))
+
+
+class TestStaffEmailsKeepErpLinks(ShopTestCase):
+	"""Checkout and accept/decline run inside shop requests, where links are
+	built on the shop address - but the sales team's notices must open the
+	desk, which the shop does not serve."""
+
+	def _sent_during_shop_request(self, send):
+		from unittest.mock import patch
+
+		frappe.db.set_single_value("Webstore Settings", "notification_emails", "sales@example.com")
+		frappe.clear_document_cache("Webstore Settings", "Webstore Settings")
+		original = frappe.local.conf
+		try:
+			with fake_request(path="/api/method/upande_webstore.api.checkout.place_order", headers=gateway_headers()):
+				run_before_request()
+				self.assertTrue(frappe.utils.get_url().startswith(SHOP))
+				with patch("frappe.sendmail") as sendmail:
+					send()
+				self.assertTrue(frappe.utils.get_url().startswith(SHOP), "shop host restored afterwards")
+		finally:
+			frappe.local.conf = original
+		self.assertTrue(sendmail.called)
+		return sendmail.call_args.kwargs["message"]
+
+	def test_new_quotation_notice_links_to_the_erp(self):
+		set_shop(enabled=1)
+		from upande_webstore.api.checkout import _notify_sales_team
+
+		doc = frappe._dict(doctype="Quotation", name="SAL-QTN-TEST-1", party_name="Shop Customer Ltd")
+		message = self._sent_during_shop_request(lambda: _notify_sales_team(doc))
+		self.assertIn("/desk/quotation/SAL-QTN-TEST-1", message)
+		self.assertNotIn("shop.example.com", message)
+
+	def test_accept_notice_links_to_the_erp(self):
+		set_shop(enabled=1)
+		from upande_webstore.api.portal import _notify
+
+		quotation = frappe._dict(doctype="Quotation", name="SAL-QTN-TEST-2", party_name="Shop Customer Ltd")
+		message = self._sent_during_shop_request(lambda: _notify(quotation, "Accepted"))
+		self.assertNotIn("shop.example.com", message)
