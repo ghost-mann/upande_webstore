@@ -259,7 +259,8 @@ before_request = [
 	"upande_webstore.services.store.resolve_webstore_prefix",
 	"upande_webstore.services.portal.redirect_me_to_portal",
 ]
-# after_request = ["upande_webstore.utils.after_request"]
+# marks responses to requests recognised as coming through the shop gateway
+after_request = ["upande_webstore.services.shop.after_request"]
 
 # staff sign in on the ERP, customers on the shop address
 on_login = ["upande_webstore.services.shop.on_login"]

@@ -434,6 +434,9 @@ class TestCustomerEmailsUseTheShop(ShopTestCase):
 		self.assertIs(frappe.local.conf, before)
 
 
+SHOP_OK_HEADERS = {"X-Webstore-Gateway-Version": "2", "X-Webstore-Shop-Request": "1"}
+
+
 class FakeResponse:
 	def __init__(self, status=200, headers=None):
 		self.status_code = status
@@ -452,7 +455,7 @@ class TestReachabilityAndInterlock(ShopTestCase):
 
 	def test_check_succeeds_with_marker_header(self):
 		set_shop()
-		result, get = self._check(FakeResponse(200, {"X-Webstore-Gateway-Version": "2"}))
+		result, get = self._check(FakeResponse(200, SHOP_OK_HEADERS))
 		self.assertTrue(result["ok"])
 		self.assertEqual(get.call_args.args[0], SHOP + "/store")
 		self.assertTrue(frappe.db.get_single_value("Webstore Settings", "shop_last_check_ok"))
@@ -468,6 +471,36 @@ class TestReachabilityAndInterlock(ShopTestCase):
 		)
 		self.assertFalse(raw)
 		self.assertFalse(frappe.get_doc("Webstore Settings").shop_last_check_ok)
+
+	def test_check_fails_when_the_erp_did_not_recognise_the_gateway(self):
+		"""The gateway answers, but with a missing or wrong secret: turning the
+		switch on now would send every customer into a redirect loop."""
+		set_shop()
+		result, _ = self._check(FakeResponse(200, {"X-Webstore-Gateway-Version": "2"}))
+		self.assertFalse(result["ok"])
+		self.assertIn("secret", result["message"].lower())
+
+	def test_after_request_marks_shop_requests_only(self):
+		from werkzeug.wrappers import Response
+
+		from upande_webstore.services import shop
+
+		set_shop()
+		with fake_request(path="/store", headers=gateway_headers()) as request:
+			response = Response()
+			shop.after_request(response=response, request=request)
+			self.assertEqual(response.headers.get("X-Webstore-Shop-Request"), "1")
+		with fake_request(path="/store") as request:
+			response = Response()
+			shop.after_request(response=response, request=request)
+			self.assertIsNone(response.headers.get("X-Webstore-Shop-Request"))
+
+	def test_new_secret_refused_while_customers_are_sent_to_the_shop(self):
+		from upande_webstore.api.gateway import generate_gateway_secret
+
+		set_shop(enabled=1)
+		with self.assertRaises(frappe.ValidationError):
+			generate_gateway_secret()
 
 	def test_check_fails_on_connection_error(self):
 		from unittest.mock import patch
@@ -497,7 +530,7 @@ class TestReachabilityAndInterlock(ShopTestCase):
 
 	def test_switch_allowed_after_recent_check(self):
 		set_shop(enabled=0)
-		self._check(FakeResponse(200, {"X-Webstore-Gateway-Version": "2"}))
+		self._check(FakeResponse(200, SHOP_OK_HEADERS))
 		doc = frappe.get_doc("Webstore Settings")
 		doc.send_customers_to_shop = 1
 		doc.save(ignore_permissions=True)

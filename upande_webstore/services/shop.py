@@ -26,6 +26,10 @@ GATEWAY_HEADER = "X-Webstore-Gateway"
 # Added by the gateway to every response; the reachability check looks for it
 # to know the shop address really is served by our gateway.
 GATEWAY_MARKER_HEADER = "X-Webstore-Gateway-Version"
+# Added by the ERP to responses for requests it recognised as coming through
+# the gateway (right secret). The check needs both: the marker alone only
+# proves the gateway answered, not that its secret works.
+SHOP_REQUEST_HEADER = "X-Webstore-Shop-Request"
 # How recent a successful check must be before customers can be sent to the shop.
 CHECK_FRESH_MINUTES = 10
 
@@ -279,6 +283,13 @@ def before_request():
 		_redirect(shop_url("/login"))
 
 
+def after_request(response, request):
+	"""Tell the gateway, and through it Check Shop Address, that this ERP
+	recognised the request as a shop request."""
+	if is_shop_request():
+		response.headers[SHOP_REQUEST_HEADER] = "1"
+
+
 def on_login(login_manager):
 	"""Staff sign in on the ERP, customers on the shop.
 
@@ -312,6 +323,11 @@ def check_shop_address():
 			ok, message = False, _("{0} answered {1}, expected 200.").format(url, response.status_code)
 		elif GATEWAY_MARKER_HEADER not in response.headers:
 			ok, message = False, _("{0} answered, but not through the customer gateway.").format(url)
+		elif response.headers.get(SHOP_REQUEST_HEADER) != "1":
+			ok, message = False, _(
+				"{0} answered through the gateway, but this ERP did not recognise it: the gateway's "
+				"GATEWAY_SECRET is missing or doesn't match the Gateway Secret here."
+			).format(url)
 		else:
 			ok = True
 			message = _("{0} answered through the customer gateway (version {1}).").format(

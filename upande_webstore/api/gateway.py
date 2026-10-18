@@ -28,6 +28,13 @@ def generate_gateway_secret():
 	"""A new secret, returned once so it can be copied into the gateway.
 	The previous one stops working immediately."""
 	frappe.only_for("System Manager")
+	if shop.shop_enabled():
+		# a new secret breaks the gateway until it is redeployed, and with
+		# customers being sent to the shop that would lock every one of them out
+		frappe.throw(
+			frappe._("Switch off Send Customers to the Shop Address before making a new secret."),
+			frappe.ValidationError,
+		)
 	secret = secrets.token_urlsafe(32)
 	set_encrypted_password("Webstore Settings", "Webstore Settings", secret, "gateway_secret")
 	# the placeholder a saved Password field holds: without it the next save of
