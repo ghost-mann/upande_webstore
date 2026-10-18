@@ -546,6 +546,20 @@ class TestReachabilityAndInterlock(ShopTestCase):
 		frappe.clear_document_cache("Webstore Settings", "Webstore Settings")
 		self.assertEqual(gateway_secret(), second)
 
+	def test_generated_secret_survives_saving_the_settings(self):
+		"""frappe deletes a stored password on save when the field holds no
+		'*****' placeholder - generating a secret and then saving the form
+		silently broke the gateway."""
+		from upande_webstore.api.gateway import generate_gateway_secret
+		from upande_webstore.services.shop import gateway_secret
+
+		set_shop(secret=None)
+		secret = generate_gateway_secret()["secret"]
+		doc = frappe.get_doc("Webstore Settings")
+		doc.save(ignore_permissions=True)
+		frappe.clear_document_cache("Webstore Settings", "Webstore Settings")
+		self.assertEqual(gateway_secret(), secret)
+
 	def test_desk_actions_need_system_manager(self):
 		from upande_webstore.api.gateway import check_shop_address, generate_gateway_secret
 

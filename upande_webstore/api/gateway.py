@@ -30,5 +30,8 @@ def generate_gateway_secret():
 	frappe.only_for("System Manager")
 	secret = secrets.token_urlsafe(32)
 	set_encrypted_password("Webstore Settings", "Webstore Settings", secret, "gateway_secret")
+	# the placeholder a saved Password field holds: without it the next save of
+	# the settings form sees an empty field and frappe deletes the secret
+	frappe.db.set_single_value("Webstore Settings", "gateway_secret", "*" * len(secret))
 	frappe.clear_document_cache("Webstore Settings", "Webstore Settings")
 	return {"secret": secret}
