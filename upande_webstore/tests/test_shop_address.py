@@ -785,3 +785,32 @@ class TestExtraAllowListsAreValidated(ShopTestCase):
 		self.assertNotIn("frappe.client.get_list", config["methods"])
 		self.assertIn("frappe.www.contact.send_message", config["methods"])
 		self.assertEqual(config["extra_pages"], ["/about"])
+
+
+class TestSwitchWarnsAboutCustomersWithDeskAccounts(ShopTestCase):
+	"""A customer login that is a System User counts as staff, so the shop
+	would refuse it. On a site where a desk-access role (e.g. Wiki User)
+	turned customers into System Users, switching on would lock them out."""
+
+	def test_turning_on_names_customer_logins_that_are_desk_accounts(self):
+		from upande_webstore.services.shop import customer_logins_with_desk_accounts
+
+		email, customer = make_portal_user("shop.deskcust@example.com", "Shop Deskcust Ltd")
+		frappe.db.set_value("User", email, "user_type", "System User")
+		try:
+			self.assertIn(email, customer_logins_with_desk_accounts())
+			set_shop(enabled=0, shop_last_check_ok=frappe.utils.now_datetime())
+			frappe.clear_messages()
+			doc = frappe.get_doc("Webstore Settings")
+			doc.send_customers_to_shop = 1
+			doc.save(ignore_permissions=True)
+			messages = " ".join(str(m) for m in frappe.get_message_log())
+			self.assertIn(email, messages)
+		finally:
+			frappe.db.set_value("User", email, "user_type", "Website User")
+
+	def test_website_user_customers_are_not_named(self):
+		from upande_webstore.services.shop import customer_logins_with_desk_accounts
+
+		email, _ = make_portal_user("shop.webcust@example.com", "Shop Webcust Ltd")
+		self.assertNotIn(email, customer_logins_with_desk_accounts())

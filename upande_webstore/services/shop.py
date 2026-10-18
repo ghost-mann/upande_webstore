@@ -393,6 +393,24 @@ def on_login(login_manager):
 		)
 
 
+def customer_logins_with_desk_accounts():
+	"""Logins linked to a Customer (through their Contact) that are System
+	Users. The shop treats them as staff and refuses them, so they have to
+	become Website Users before customers are sent to the shop."""
+	rows = frappe.db.sql(
+		"""
+		select distinct u.name
+		from `tabUser` u
+		join `tabContact` c on c.user = u.name
+		join `tabDynamic Link` dl on dl.parenttype = 'Contact' and dl.parent = c.name
+			and dl.link_doctype = 'Customer'
+		where u.enabled = 1 and u.user_type = 'System User' and u.name not in ('Administrator', 'Guest')
+		order by u.name
+		"""
+	)
+	return [row[0] for row in rows]
+
+
 def check_shop_address():
 	"""Fetch the shop's /store from this server and record whether our gateway
 	answered. A 200 alone is not enough: any page would give one, and sending

@@ -58,6 +58,27 @@ class WebstoreSettings(Document):
 				).format(CHECK_FRESH_MINUTES),
 				frappe.ValidationError,
 			)
+		if turning_on:
+			self.warn_about_customer_desk_accounts()
+
+	def warn_about_customer_desk_accounts(self):
+		"""A warning, not a refusal: a staff member may also be linked to a
+		customer on purpose (they stay on the ERP, which is right for them)."""
+		from upande_webstore.services.shop import customer_logins_with_desk_accounts
+
+		names = customer_logins_with_desk_accounts()
+		if not names:
+			return
+		shown = ", ".join(names[:20]) + (_(" and {0} more").format(len(names) - 20) if len(names) > 20 else "")
+		frappe.msgprint(
+			_(
+				"{0} login(s) linked to a customer are desk accounts (System Users), so the shop will "
+				"refuse them as staff: {1}. If they are customers, make them Website Users - remove "
+				"any role with desk access (e.g. Wiki User) - before telling them to use the shop."
+			).format(len(names), shown),
+			title=_("Customers with desk accounts"),
+			indicator="orange",
+		)
 
 	def on_update(self):
 		self.reconcile_role_permissions()
