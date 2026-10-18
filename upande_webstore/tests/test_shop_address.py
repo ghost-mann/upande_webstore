@@ -30,7 +30,7 @@ def set_shop(address=SHOP, enabled=0, secret=SECRET, **extra):
 
 
 def clear_shop():
-	set_shop(address="", enabled=0, secret=None)
+	set_shop(address="", enabled=0, secret=None, shop_extra_pages="", shop_extra_methods="")
 	from frappe.utils.password import remove_encrypted_password
 
 	remove_encrypted_password("Webstore Settings", "Webstore Settings", "gateway_secret")
@@ -186,7 +186,7 @@ class TestGatewayConfig(ShopTestCase):
 			shop_login_attempts_per_minute=7,
 			shop_allow_indexing=1,
 			shop_extra_pages="/about\n\n /about/* \n",
-			shop_extra_methods="other_app.api.public_thing\n",
+			shop_extra_methods="frappe.www.contact.send_message\n",
 		)
 		from upande_webstore.api.gateway import config
 		from upande_webstore.services.shop import CUSTOMER_METHODS
@@ -198,7 +198,7 @@ class TestGatewayConfig(ShopTestCase):
 		self.assertEqual(result["login_attempts_per_minute"], 7)
 		self.assertTrue(result["allow_indexing"])
 		self.assertEqual(result["extra_pages"], ["/about", "/about/*"])
-		self.assertIn("other_app.api.public_thing", result["methods"])
+		self.assertIn("frappe.www.contact.send_message", result["methods"])
 		self.assertTrue(set(CUSTOMER_METHODS) <= set(result["methods"]))
 
 	def test_config_default_login_limit(self):
@@ -663,8 +663,8 @@ class TestErpEnforcesTheShopMethodList(ShopTestCase):
 		self.assertIsNone(self._status("/store"))
 
 	def test_extra_methods_from_settings_pass(self):
-		set_shop(shop_extra_methods="other_app.api.public_thing")
-		self.assertIsNone(self._status("/api/method/other_app.api.public_thing"))
+		set_shop(shop_extra_methods="frappe.www.contact.send_message")
+		self.assertIsNone(self._status("/api/method/frappe.www.contact.send_message"))
 
 	def test_direct_requests_are_not_affected(self):
 		set_shop()
@@ -745,3 +745,43 @@ class TestPasswordLinksOnTheErp(ShopTestCase):
 		set_shop(enabled=1)
 		with fake_request(path="/update-password", query_string="key=not-a-real-key"):
 			self.assertIsNone(run_before_request())
+
+
+class TestExtraAllowListsAreValidated(ShopTestCase):
+	def _save(self, **values):
+		doc = frappe.get_doc("Webstore Settings")
+		doc.shop_address = SHOP
+		doc.update(values)
+		doc.save(ignore_permissions=True)
+
+	def test_extra_pages_cannot_open_built_in_blocks(self):
+		for bad in ("/*", "/", "/api/method/frappe.client.get_list", "/desk", "/app/*", "/printview", "/socket.io/*", "about"):
+			with self.assertRaises(frappe.ValidationError, msg=bad):
+				self._save(shop_extra_pages=bad)
+
+	def test_reasonable_extra_pages_are_kept(self):
+		self._save(shop_extra_pages="/about\n/about/*\n/contact-us")
+
+	def test_extra_methods_cannot_add_desk_or_generic_methods(self):
+		for bad in (
+			"frappe.client.get_list",
+			"frappe.desk.search.search_link",
+			"upande_webstore.api.boxes.list_box_types",
+			"upande_webstore.api.gateway.config",
+			"no_such_app.api.thing",
+			"upande_webstore.services.shop.shop_url",  # exists, not whitelisted
+		):
+			with self.assertRaises(frappe.ValidationError, msg=bad):
+				self._save(shop_extra_methods=bad)
+
+	def test_whitelisted_extra_method_is_kept(self):
+		self._save(shop_extra_methods="frappe.www.contact.send_message")
+
+	def test_invalid_entries_written_past_validation_are_dropped(self):
+		set_shop(shop_extra_methods="frappe.client.get_list\nfrappe.www.contact.send_message", shop_extra_pages="/*\n/about")
+		from upande_webstore.services.shop import gateway_config
+
+		config = gateway_config()
+		self.assertNotIn("frappe.client.get_list", config["methods"])
+		self.assertIn("frappe.www.contact.send_message", config["methods"])
+		self.assertEqual(config["extra_pages"], ["/about"])

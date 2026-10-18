@@ -186,16 +186,70 @@ def _lines(value):
 	return [line.strip() for line in (value or "").splitlines() if line.strip()]
 
 
+# Extra pages may never reach these, whatever the setting says; the gateway
+# holds the same list.
+RESERVED_PAGE_PREFIX = re.compile(r"^/(api|desk|app|socket\.io|printview|private|files|assets|backups)(/|$)")
+GENERIC_METHOD_PREFIXES = ("frappe.client.", "frappe.desk.", "frappe.model.", "run_doc_method", "frappe.handler.")
+
+
+def validate_extra_pages(lines):
+	for line in lines:
+		bare = line[:-2] if line.endswith("/*") else line
+		if not line.startswith("/") or bare in ("", "/") or RESERVED_PAGE_PREFIX.match(bare):
+			frappe.throw(
+				_("Extra page {0} isn't allowed: give a path such as /about or /about/*, outside the desk and the API.").format(
+					frappe.bold(line)
+				),
+				frappe.ValidationError,
+			)
+
+
+def validate_extra_methods(lines):
+	for method in lines:
+		refused = (
+			method.startswith(GENERIC_METHOD_PREFIXES)
+			or method in DESK_ONLY_METHODS
+			or method in GATEWAY_METHODS
+		)
+		fn = None
+		if not refused:
+			try:
+				fn = frappe.get_attr(method)
+			except Exception:
+				fn = None
+		if refused or fn is None or fn not in frappe.whitelisted:
+			frappe.throw(
+				_("Extra method {0} isn't allowed: it must be a whitelisted, customer-facing method.").format(
+					frappe.bold(method)
+				),
+				frappe.ValidationError,
+			)
+
+
+def _valid(lines, validate):
+	"""The entries `validate` accepts; settings saves refuse the rest, but a
+	value written past validation must not widen the shop either."""
+	kept = []
+	for line in lines:
+		try:
+			validate([line])
+		except frappe.ValidationError:
+			frappe.clear_last_message()
+			continue
+		kept.append(line)
+	return kept
+
+
 def gateway_config():
 	settings = _settings()
-	extra_methods = _lines(settings.get("shop_extra_methods"))
+	extra_methods = _valid(_lines(settings.get("shop_extra_methods")), validate_extra_methods)
 	return {
 		"shop_address": shop_address(),
 		"send_customers_to_shop": shop_enabled(),
 		"login_attempts_per_minute": frappe.utils.cint(settings.get("shop_login_attempts_per_minute"))
 		or DEFAULT_LOGIN_ATTEMPTS,
 		"allow_indexing": bool(settings.get("shop_allow_indexing")),
-		"extra_pages": _lines(settings.get("shop_extra_pages")),
+		"extra_pages": _valid(_lines(settings.get("shop_extra_pages")), validate_extra_pages),
 		"methods": list(CUSTOMER_METHODS) + [m for m in extra_methods if m not in CUSTOMER_METHODS],
 	}
 

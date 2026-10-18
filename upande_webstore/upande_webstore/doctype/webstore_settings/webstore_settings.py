@@ -20,7 +20,17 @@ class WebstoreSettings(Document):
 		self.validate_shop_address()
 
 	def validate_shop_address(self):
-		from upande_webstore.services.shop import CHECK_FRESH_MINUTES, check_is_fresh, normalise_shop_address
+		from upande_webstore.services.shop import (
+			CHECK_FRESH_MINUTES,
+			_lines,
+			check_is_fresh,
+			normalise_shop_address,
+			validate_extra_methods,
+			validate_extra_pages,
+		)
+
+		validate_extra_pages(_lines(self.shop_extra_pages))
+		validate_extra_methods(_lines(self.shop_extra_methods))
 
 		self.shop_address = normalise_shop_address(self.shop_address) or ""
 		if not self.shop_address:
