@@ -98,6 +98,23 @@ class TestShopSettings(ShopTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			doc.save(ignore_permissions=True)
 
+	def test_local_http_allowed_only_in_developer_mode(self):
+		"""A gateway running under `wrangler dev` is plain http on localhost."""
+		from upande_webstore.services.shop import normalise_shop_address
+
+		previous = frappe.conf.developer_mode
+		try:
+			frappe.conf.developer_mode = 1
+			self.assertEqual(normalise_shop_address("http://127.0.0.1:8790/"), "http://127.0.0.1:8790")
+			self.assertEqual(normalise_shop_address("http://localhost:8790"), "http://localhost:8790")
+			with self.assertRaises(frappe.ValidationError):
+				normalise_shop_address("http://shop.example.com")
+			frappe.conf.developer_mode = 0
+			with self.assertRaises(frappe.ValidationError):
+				normalise_shop_address("http://127.0.0.1:8790")
+		finally:
+			frappe.conf.developer_mode = previous
+
 	def test_shop_url_joins_path_and_query(self):
 		set_shop()
 		from upande_webstore.services import shop

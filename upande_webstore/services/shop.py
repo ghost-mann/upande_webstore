@@ -44,12 +44,18 @@ def normalise_shop_address(value):
 	if not value:
 		return None
 	parts = urlsplit(value)
-	if parts.scheme != "https" or not parts.hostname:
+	# a gateway under `wrangler dev` is plain http on this machine
+	local_dev = (
+		parts.scheme == "http"
+		and parts.hostname in ("localhost", "127.0.0.1")
+		and frappe.conf.developer_mode
+	)
+	if (parts.scheme != "https" and not local_dev) or not parts.hostname:
 		frappe.throw(_("The shop address must start with https:// and name a host."), frappe.ValidationError)
 	if parts.path not in ("", "/") or parts.query or parts.fragment:
 		frappe.throw(_("The shop address can't include a path - only https:// and the host."), frappe.ValidationError)
 	host = parts.hostname.lower()
-	return f"https://{host}:{parts.port}" if parts.port else f"https://{host}"
+	return f"{parts.scheme}://{host}:{parts.port}" if parts.port else f"{parts.scheme}://{host}"
 
 
 def shop_address():
