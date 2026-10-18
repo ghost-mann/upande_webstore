@@ -415,3 +415,126 @@ class TestCustomerEmailsUseTheShop(ShopTestCase):
 		with as_shop():
 			self.assertEqual(frappe.utils.get_url("/x"), SHOP + "/x")
 		self.assertIs(frappe.local.conf, before)
+
+
+class FakeResponse:
+	def __init__(self, status=200, headers=None):
+		self.status_code = status
+		self.headers = headers or {}
+
+
+class TestReachabilityAndInterlock(ShopTestCase):
+	def _check(self, response):
+		from unittest.mock import patch
+
+		from upande_webstore.services import shop
+
+		with patch("upande_webstore.services.shop.requests.get", return_value=response) as get:
+			result = shop.check_shop_address()
+		return result, get
+
+	def test_check_succeeds_with_marker_header(self):
+		set_shop()
+		result, get = self._check(FakeResponse(200, {"X-Webstore-Gateway-Version": "2"}))
+		self.assertTrue(result["ok"])
+		self.assertEqual(get.call_args.args[0], SHOP + "/store")
+		self.assertTrue(frappe.db.get_single_value("Webstore Settings", "shop_last_check_ok"))
+
+	def test_check_fails_without_marker_header(self):
+		set_shop()
+		result, _ = self._check(FakeResponse(200, {}))
+		self.assertFalse(result["ok"])
+		self.assertIn("gateway", result["message"].lower())
+		# raw: get_single_value casts a missing Datetime to 0001-01-01
+		raw = frappe.db.sql(
+			"select value from tabSingles where doctype=%s and field=%s", ("Webstore Settings", "shop_last_check_ok")
+		)
+		self.assertFalse(raw)
+		self.assertFalse(frappe.get_doc("Webstore Settings").shop_last_check_ok)
+
+	def test_check_fails_on_connection_error(self):
+		from unittest.mock import patch
+
+		import requests
+
+		from upande_webstore.services import shop
+
+		set_shop()
+		with patch("upande_webstore.services.shop.requests.get", side_effect=requests.ConnectionError("boom")):
+			result = shop.check_shop_address()
+		self.assertFalse(result["ok"])
+
+	def test_switch_refused_without_recent_check(self):
+		set_shop(enabled=0, shop_last_check_ok=None)
+		doc = frappe.get_doc("Webstore Settings")
+		doc.send_customers_to_shop = 1
+		with self.assertRaises(frappe.ValidationError):
+			doc.save(ignore_permissions=True)
+
+	def test_switch_refused_with_stale_check(self):
+		set_shop(enabled=0, shop_last_check_ok=frappe.utils.add_to_date(frappe.utils.now_datetime(), minutes=-11))
+		doc = frappe.get_doc("Webstore Settings")
+		doc.send_customers_to_shop = 1
+		with self.assertRaises(frappe.ValidationError):
+			doc.save(ignore_permissions=True)
+
+	def test_switch_allowed_after_recent_check(self):
+		set_shop(enabled=0)
+		self._check(FakeResponse(200, {"X-Webstore-Gateway-Version": "2"}))
+		doc = frappe.get_doc("Webstore Settings")
+		doc.send_customers_to_shop = 1
+		doc.save(ignore_permissions=True)
+		self.assertTrue(frappe.db.get_single_value("Webstore Settings", "send_customers_to_shop"))
+
+	def test_resaving_with_switch_on_needs_no_new_check(self):
+		set_shop(enabled=1, shop_last_check_ok=None)
+		doc = frappe.get_doc("Webstore Settings")
+		doc.save(ignore_permissions=True)
+
+	def test_daily_watch_emails_when_unreachable_and_leaves_switch_on(self):
+		from unittest.mock import patch
+
+		from upande_webstore.services import shop
+
+		set_shop(enabled=1)
+		with patch("upande_webstore.services.shop.requests.get", return_value=FakeResponse(502)), patch(
+			"upande_webstore.services.shop.frappe.sendmail"
+		) as sendmail:
+			shop.daily_watch()
+		self.assertTrue(sendmail.called)
+		self.assertTrue(frappe.db.get_single_value("Webstore Settings", "send_customers_to_shop"))
+
+	def test_daily_watch_quiet_when_off(self):
+		from unittest.mock import patch
+
+		from upande_webstore.services import shop
+
+		set_shop(enabled=0)
+		with patch("upande_webstore.services.shop.requests.get") as get:
+			shop.daily_watch()
+		self.assertFalse(get.called)
+
+	def test_generate_secret_is_long_and_random(self):
+		import re
+
+		from upande_webstore.api.gateway import generate_gateway_secret
+		from upande_webstore.services.shop import gateway_secret
+
+		set_shop(secret=None)
+		first = generate_gateway_secret()["secret"]
+		second = generate_gateway_secret()["secret"]
+		self.assertGreaterEqual(len(first), 32)
+		self.assertRegex(first, r"^[A-Za-z0-9_-]+$")
+		self.assertNotEqual(first, second)
+		frappe.clear_document_cache("Webstore Settings", "Webstore Settings")
+		self.assertEqual(gateway_secret(), second)
+
+	def test_desk_actions_need_system_manager(self):
+		from upande_webstore.api.gateway import check_shop_address, generate_gateway_secret
+
+		customer, _ = make_portal_user("shop.nosm@example.com", "Shop Nosm Ltd")
+		frappe.set_user(customer)
+		with self.assertRaises(frappe.PermissionError):
+			generate_gateway_secret()
+		with self.assertRaises(frappe.PermissionError):
+			check_shop_address()

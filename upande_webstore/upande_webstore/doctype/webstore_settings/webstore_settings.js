@@ -52,6 +52,53 @@ frappe.ui.form.on("Webstore Settings", {
 		});
 		frm.__ws_last_occasion = frm.doc.occasion;
 
+		frm.get_field("shop_status").$wrapper.html(shopStatus(frm.doc));
+
+		frm.add_custom_button(
+			__("Check Shop Address"),
+			() => {
+				if (frm.is_dirty()) {
+					frappe.msgprint(__("Save first, then check."));
+					return;
+				}
+				frappe
+					.call({ method: "upande_webstore.api.gateway.check_shop_address", freeze: true })
+					.then((r) => {
+						frappe.show_alert({
+							message: r.message.message,
+							indicator: r.message.ok ? "green" : "red",
+						});
+						frm.reload_doc();
+					});
+			},
+			__("Shop Address")
+		);
+
+		frm.add_custom_button(
+			__("Generate Gateway Secret"),
+			() => {
+				frappe.confirm(
+					__("The gateway stops working until you give it the new secret. Continue?"),
+					() =>
+						frappe.call("upande_webstore.api.gateway.generate_gateway_secret").then((r) => {
+							const secret = r.message.secret;
+							frappe.msgprint({
+								title: __("New gateway secret"),
+								indicator: "orange",
+								message:
+									"<p>" +
+									__("Shown once. In the gateway folder run") +
+									" <code>npx wrangler secret put GATEWAY_SECRET</code> " +
+									__("and paste:") +
+									`</p><pre style="user-select:all">${frappe.utils.escape_html(secret)}</pre>`,
+							});
+							frm.reload_doc();
+						})
+				);
+			},
+			__("Shop Address")
+		);
+
 		frm.add_custom_button(
 			__("Export Theme"),
 			() => {
@@ -198,4 +245,33 @@ function boxSummary(data) {
 			<tbody>${rows || `<tr><td colspan="3" class="text-muted">${__("None usable yet.")}</td></tr>`}</tbody>
 			${problems ? `<tbody><tr><th colspan="3">${__("Hidden from the storefront")}</th></tr>${problems}</tbody>` : ""}
 		</table>`;
+}
+
+
+function shopStatus(doc) {
+	if (!doc.shop_address) {
+		return `<p class="text-muted">${__(
+			"No shop address: the store runs on this ERP's own address, as before."
+		)}</p>`;
+	}
+	const host = frappe.utils.escape_html(doc.shop_address.replace(/^https:\/\//, ""));
+	const last = doc.shop_last_check_ok
+		? `<span class="indicator-pill green">${__("Last good check")}: ${frappe.datetime.str_to_user(doc.shop_last_check_ok)}</span>`
+		: `<span class="indicator-pill gray">${__("Not checked yet")}</span>`;
+	const result = doc.shop_last_check_result
+		? `<p class="small">${frappe.utils.escape_html(doc.shop_last_check_result)}</p>`
+		: "";
+	const mode = doc.send_customers_to_shop
+		? `<span class="indicator-pill blue">${__("Customers are sent to the shop")}</span>`
+		: `<span class="indicator-pill orange">${__("Customers still use this ERP's address")}</span>`;
+	return `<div class="ws-shop-status">
+		<p>${mode} ${last}</p>${result}
+		<p class="small"><b>${__("DNS")}:</b> ${__(
+			"{0} must be a Custom Domain on the gateway Worker. With the domain's DNS on Cloudflare: Workers & Pages → the gateway → Settings → Domains & Routes → Add → Custom domain → {0}. Cloudflare adds the DNS record itself.",
+			[`<code>${host}</code>`]
+		)}</p>
+		<p class="small">${__(
+			"Then: Generate Gateway Secret, give it to the gateway, Check Shop Address, and only then tick Send Customers to the Shop Address."
+		)}</p>
+	</div>`;
 }

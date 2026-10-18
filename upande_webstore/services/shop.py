@@ -19,9 +19,15 @@ from contextlib import contextmanager
 from urllib.parse import urlsplit
 
 import frappe
+import requests
 from frappe import _
 
 GATEWAY_HEADER = "X-Webstore-Gateway"
+# Added by the gateway to every response; the reachability check looks for it
+# to know the shop address really is served by our gateway.
+GATEWAY_MARKER_HEADER = "X-Webstore-Gateway-Version"
+# How recent a successful check must be before customers can be sent to the shop.
+CHECK_FRESH_MINUTES = 10
 
 
 def _settings():
@@ -156,6 +162,8 @@ DESK_ONLY_METHODS = (
 	"upande_webstore.api.claims.claimable_document_query",
 	"upande_webstore.api.claims.claimable_invoice_query",
 	"upande_webstore.api.claims.fetch_invoice_lines",
+	"upande_webstore.api.gateway.check_shop_address",
+	"upande_webstore.api.gateway.generate_gateway_secret",
 )
 
 # Called by the gateway itself, straight on the ERP address, with the secret.
@@ -258,3 +266,71 @@ def on_login(login_manager):
 		frappe.throw(
 			_("Please sign in on the shop.") + f" {shop_url('/login')}", frappe.AuthenticationError
 		)
+
+
+def check_shop_address():
+	"""Fetch the shop's /store from this server and record whether our gateway
+	answered. A 200 alone is not enough: any page would give one, and sending
+	customers to an address something else serves would lose them."""
+	address = shop_address()
+	if not address:
+		return {"ok": False, "message": _("Set the shop address first.")}
+	url = shop_url("/store")
+	try:
+		response = requests.get(url, timeout=10, allow_redirects=False)
+	except requests.RequestException as e:
+		ok, message = False, _("{0} did not answer: {1}").format(url, e.__class__.__name__)
+	else:
+		if response.status_code != 200:
+			ok, message = False, _("{0} answered {1}, expected 200.").format(url, response.status_code)
+		elif GATEWAY_MARKER_HEADER not in response.headers:
+			ok, message = False, _("{0} answered, but not through the customer gateway.").format(url)
+		else:
+			ok = True
+			message = _("{0} answered through the customer gateway (version {1}).").format(
+				url, response.headers.get(GATEWAY_MARKER_HEADER)
+			)
+	frappe.db.set_single_value("Webstore Settings", "shop_last_check_result", message)
+	if ok:
+		frappe.db.set_single_value("Webstore Settings", "shop_last_check_ok", frappe.utils.now_datetime())
+	else:
+		# not set_single_value(None): a Datetime Single reads that back as 0001-01-01
+		frappe.db.delete("Singles", {"doctype": "Webstore Settings", "field": "shop_last_check_ok"})
+	frappe.clear_document_cache("Webstore Settings", "Webstore Settings")
+	return {"ok": ok, "message": message}
+
+
+def check_is_fresh(last_ok):
+	if not last_ok:
+		return False
+	age = frappe.utils.now_datetime() - frappe.utils.get_datetime(last_ok)
+	return age.total_seconds() <= CHECK_FRESH_MINUTES * 60
+
+
+def daily_watch():
+	"""Warn System Managers if the shop stops answering while customers are
+	being sent to it. Never switches it off: that would quietly put customers
+	back on the ERP's address, the very thing the switch exists to stop."""
+	if not shop_enabled():
+		return
+	result = check_shop_address()
+	if result["ok"]:
+		return
+	recipients = frappe.get_all(
+		"Has Role",
+		filters={"role": "System Manager", "parenttype": "User", "parent": ["not in", ["Administrator", "Guest"]]},
+		pluck="parent",
+		distinct=True,
+	)
+	recipients = [u for u in recipients if frappe.db.get_value("User", u, "enabled")]
+	if not recipients:
+		return
+	frappe.sendmail(
+		recipients=recipients,
+		subject=_("Shop address is not answering"),
+		message=_(
+			"<p>Customers are being sent to the shop address, but the daily check failed:</p>"
+			"<p>{0}</p><p>Check the gateway and DNS, or switch off <b>Send Customers to the Shop Address</b> "
+			"in Webstore Settings.</p>"
+		).format(frappe.utils.escape_html(result["message"])),
+	)

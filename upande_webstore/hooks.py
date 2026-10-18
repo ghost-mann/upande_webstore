@@ -264,6 +264,11 @@ before_request = [
 # staff sign in on the ERP, customers on the shop address
 on_login = ["upande_webstore.services.shop.on_login"]
 
+scheduler_events = {
+	# warns System Managers if the shop address stops answering
+	"daily": ["upande_webstore.services.shop.daily_watch"],
+}
+
 # Job Events
 # ----------
 # before_job = ["upande_webstore.utils.before_job"]

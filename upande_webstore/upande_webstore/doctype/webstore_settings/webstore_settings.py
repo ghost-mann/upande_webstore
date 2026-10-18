@@ -20,11 +20,26 @@ class WebstoreSettings(Document):
 		self.validate_shop_address()
 
 	def validate_shop_address(self):
-		from upande_webstore.services.shop import normalise_shop_address
+		from upande_webstore.services.shop import CHECK_FRESH_MINUTES, check_is_fresh, normalise_shop_address
 
 		self.shop_address = normalise_shop_address(self.shop_address) or ""
 		if not self.shop_address:
 			self.send_customers_to_shop = 0
+			return
+		if self.has_value_changed("shop_address"):
+			# a check of the old address says nothing about the new one
+			self.shop_last_check_ok = None
+		turning_on = self.send_customers_to_shop and not (
+			self.get_doc_before_save() and self.get_doc_before_save().send_customers_to_shop
+		)
+		if turning_on and not check_is_fresh(self.shop_last_check_ok):
+			frappe.throw(
+				_(
+					"Check the shop address first: customers can only be sent there within "
+					"{0} minutes of a successful check."
+				).format(CHECK_FRESH_MINUTES),
+				frappe.ValidationError,
+			)
 
 	def on_update(self):
 		self.reconcile_role_permissions()
