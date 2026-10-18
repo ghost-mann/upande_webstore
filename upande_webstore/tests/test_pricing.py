@@ -38,13 +38,8 @@ def _enforce_item_read_permission():
 	doc's own flag -- can never be, without contradicting the very fix this
 	is meant to prove.
 
-	Because `frappe.get_cached_doc` returns the same Python object for the
-	same request throughout, a caller that pre-fetches the doc and sets its
-	own `flags.ignore_permissions` before calling get_item_details is seen
-	by this wrapper too -- exactly the mechanism the real fix relies on.
-	A fix that only sets the *global* `frappe.flags.ignore_permissions` (the
-	mistake being fixed) sets nothing this wrapper, or document.py:407's
-	real check, ever looks at, and so still fails here.
+	get_item_price now runs the lookup as Administrator, so the real check
+	passes for the lookup alone and nothing is granted to the visitor.
 	"""
 	import erpnext.stock.get_item_details as get_item_details_module
 
@@ -146,10 +141,8 @@ class TestGuestAndCustomerPricingSurvivesItemPermissionEnforcement(IntegrationTe
 		self.assertGreater(product["price"]["rate"], 0)
 
 	def test_item_permission_bypass_does_not_leak_past_the_call(self):
-		"""The flagged doc stays in the request-local document cache; anything
-		else in the same request touching it must see its own flag restored,
-		not silently inherit this bypass.
-		"""
+		"""The Item stays in the request-local document cache; nothing else in
+		the same request may inherit a permission bypass on it."""
 		from upande_webstore.services.pricing import get_item_price
 
 		with _enforce_item_read_permission():
@@ -157,3 +150,79 @@ class TestGuestAndCustomerPricingSurvivesItemPermissionEnforcement(IntegrationTe
 			get_item_price("WS-PRICEPERM-ITEM")
 			item = frappe.get_cached_doc("Item", "WS-PRICEPERM-ITEM")
 			self.assertFalse(item.flags.ignore_permissions)
+
+
+@contextlib.contextmanager
+def _enforce_pricing_context():
+	"""Reproduce, on this 16.27 bench, the checks ERPNext 16.51 added at the
+	top of get_item_details (live Mona Flowers runs 16.51.1).
+
+	Upstream, `get_item_details` first calls
+	`erpnext.accounts.doctype.pricing_rule.pricing_rule.validate_pricing_context`,
+	which authorises the transaction being priced and its party:
+	`frappe.has_permission(ctx.doctype, throw=True)` -- the Quotation this
+	app names -- and `frappe.has_permission("Customer", "select", doc=...,
+	throw=True)` for the customer. Guest and the Customer role hold neither,
+	so on live every length a visitor picks fails with "No permission for
+	Quotation". This wrapper runs the same two checks, with the same real
+	permission engine, before handing off to the real get_item_details.
+	"""
+	import erpnext.stock.get_item_details as get_item_details_module
+
+	real_get_item_details = get_item_details_module.get_item_details
+
+	def gated_get_item_details(ctx, *args, **kwargs):
+		frappe.has_permission(ctx.get("doctype"), throw=True)
+		if ctx.get("customer"):
+			frappe.has_permission("Customer", "select", doc=ctx.get("customer"), throw=True)
+		return real_get_item_details(ctx, *args, **kwargs)
+
+	get_item_details_module.get_item_details = gated_get_item_details
+	try:
+		yield
+	finally:
+		get_item_details_module.get_item_details = real_get_item_details
+
+
+class TestPricingSurvivesPricingContextValidation(IntegrationTestCase):
+	"""Guests and portal customers price items without holding Quotation or
+	Customer permissions; ERPNext 16.51 demands both of whoever calls
+	get_item_details."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		setup_webstore_settings()
+		make_test_product("WS-PRICECTX-ITEM", web_title="Pricectx Item")
+		make_item_price("WS-PRICECTX-ITEM", "Standard Selling", 42)
+		make_price_list("Webstore Ctx B2B")
+		make_item_price("WS-PRICECTX-ITEM", "Webstore Ctx B2B", 37)
+		make_portal_user("pricectx.buyer@example.com", "Pricectx Buyer Ltd", price_list="Webstore Ctx B2B")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_guest_gets_a_price(self):
+		from upande_webstore.services.pricing import get_item_price
+
+		with _enforce_pricing_context():
+			frappe.set_user("Guest")
+			price = get_item_price("WS-PRICECTX-ITEM")
+		self.assertEqual(price["rate"], 42)
+
+	def test_portal_customer_gets_their_own_price(self):
+		from upande_webstore.services.pricing import get_item_price
+
+		with _enforce_pricing_context():
+			frappe.set_user("pricectx.buyer@example.com")
+			price = get_item_price("WS-PRICECTX-ITEM")
+		self.assertEqual(price["rate"], 37)
+		self.assertTrue(price["is_customer_price"])
+
+	def test_the_caller_is_still_the_session_user_afterwards(self):
+		from upande_webstore.services.pricing import get_item_price
+
+		with _enforce_pricing_context():
+			frappe.set_user("pricectx.buyer@example.com")
+			get_item_price("WS-PRICECTX-ITEM")
+			self.assertEqual(frappe.session.user, "pricectx.buyer@example.com")

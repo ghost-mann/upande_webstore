@@ -1,5 +1,6 @@
 import frappe
 
+from upande_webstore.services.elevation import as_administrator
 from upande_webstore.services.settings import get_settings
 
 # Name matches what it holds: the resolved Price List, not the currency the
@@ -227,38 +228,18 @@ def get_item_price(item_code, qty=1, user=None, length=None):
 		"ignore_pricing_rule": 0,
 		"transaction_date": frappe.utils.nowdate(),
 	})
-	# ERPNext's get_item_details unconditionally loads the Item document, and
-	# on newer frappe that load is permission-checked -- Item is not readable
-	# by Guest, nor by the Customer role, and the storefront must not require
-	# exposing it (Item carries cost/valuation data). get_item_details takes
-	# no ignore_permissions argument (checked: erpnext.stock.get_item_details
-	# offers no such parameter), so there is no supported bypass to pass it.
-	#
-	# What actually gates the read is Document.check_permission, which
-	# returns True immediately when the DOCUMENT's own flags.ignore_permissions
-	# is set (frappe/model/document.py, Document.has_permission) -- it never
-	# looks at the global frappe.flags.ignore_permissions. Setting only the
-	# global flag (a previous attempt at this fix) is therefore a no-op here:
-	# ERPNext builds its own Item instance internally, whose flags are unset,
-	# so its check_permission sees nothing and still 403s.
-	#
-	# The lever that works: frappe.get_cached_doc returns the very same
-	# Python object from the request-local document cache on every call for
-	# a given item within this request. Fetching it here first and flipping
-	# *its* flag means ERPNext's own internal get_cached_doc("Item", ...)
-	# receives that already-flagged instance, and its permission check passes
-	# -- Pricing Rule evaluation and everything else inside get_item_details
-	# runs exactly as it would for a permitted user. Restored in a finally:
-	# the flagged instance stays in the cache for the rest of the request,
-	# and anything later that legitimately expects a real permission check on
-	# this Item must not silently inherit this bypass.
-	item = frappe.get_cached_doc("Item", item_code)
-	previous_ignore_permissions = item.flags.ignore_permissions
-	item.flags.ignore_permissions = True
-	try:
+	# get_item_details authorises its caller, and a storefront visitor holds
+	# none of what it asks for: it loads the Item (not readable by Guest or
+	# the Customer role -- Item carries cost/valuation data), and from
+	# ERPNext 16.51 it first runs `validate_pricing_context`
+	# (erpnext/accounts/doctype/pricing_rule/pricing_rule.py), which demands
+	# permission on the transaction doctype (Quotation) and `select` on the
+	# Customer. Granting those roles would expose the desk's data, so the
+	# lookup runs as Administrator instead. Everything visitor-specific --
+	# customer, price list, currency -- was resolved above, as the visitor,
+	# and only the price comes back out.
+	with as_administrator():
 		details = get_item_details(args)
-	finally:
-		item.flags.ignore_permissions = previous_ignore_permissions
 	rate = details.get("rate") or details.get("price_list_rate") or 0.0
 	by_length = _length_price(item_code, price_list, length)
 	if by_length is not None:
