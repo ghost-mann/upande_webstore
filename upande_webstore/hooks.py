@@ -28,7 +28,8 @@ add_to_apps_screen = [
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/upande_webstore/css/upande_webstore.css"
-# app_include_js = "/assets/upande_webstore/js/upande_webstore.js"
+# Animated logos play only on hover -- see the file.
+app_include_js = "/assets/upande_webstore/js/hover_logos.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/upande_webstore/css/upande_webstore.css"
