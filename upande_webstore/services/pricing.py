@@ -69,7 +69,12 @@ def _cookie_price_list():
 	request = getattr(frappe.local, "request", None)
 	if not request:
 		return None
-	return request.cookies.get(GUEST_PRICE_LIST_COOKIE) or None
+	# frappe's CookieManager quote()s what it sets ("Standard USD" goes out as
+	# "Standard%20USD") and the browser sends it back still quoted, so a price
+	# list with a space in its name only matches once decoded.
+	from urllib.parse import unquote
+
+	return unquote(request.cookies.get(GUEST_PRICE_LIST_COOKIE) or "") or None
 
 
 def _remember_price_list(price_list):

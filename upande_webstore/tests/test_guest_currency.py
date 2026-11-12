@@ -102,6 +102,19 @@ class TestGuestCurrencyResolution(IntegrationTestCase):
 		_with_cookie("Webstore GBP")
 		self.assertEqual(get_price_list(user="Guest"), "Webstore GBP")
 
+	def test_url_encoded_cookie_is_honoured(self):
+		"""frappe's CookieManager quote()s the value it sets, so a browser sends
+		"Webstore%20GBP" back for a price list whose name has a space - which,
+		read raw, matched nothing and silently snapped every switch back to
+		the default row."""
+		from upande_webstore.services.pricing import get_price_list
+
+		_append_row(self.settings, "Webstore EUR", is_default=1)
+		_append_row(self.settings, "Webstore GBP")
+		self.settings.save(ignore_permissions=True)
+		_with_cookie("Webstore%20GBP")
+		self.assertEqual(get_price_list(user="Guest"), "Webstore GBP")
+
 	def test_customer_default_beats_cookie(self):
 		"""A logged-in visitor's negotiated price list always wins, whatever
 		cookie a stale browser tab still carries."""
