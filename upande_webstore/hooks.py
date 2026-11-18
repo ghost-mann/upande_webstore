@@ -174,6 +174,14 @@ doc_events = {
 	# explicitly. Fires for desk conversions too, not just the portal.
 	"Sales Order": {
 		"before_insert": "upande_webstore.services.conversion.carry_webstore_fields",
+		# stock allocation follows each webstore order as it stands; on_change
+		# also fires on db_set, which is how ERPNext sets status
+		"on_change": "upande_webstore.services.allocation.on_change",
+		"on_trash": "upande_webstore.services.allocation.on_trash",
+	},
+	"Quotation": {
+		"on_change": "upande_webstore.services.allocation.on_change",
+		"on_trash": "upande_webstore.services.allocation.on_trash",
 	},
 	# A desk-bearing role granted to a portal customer flips frappe's own
 	# user_type to System User silently (User.has_desk_access) - this refuses
@@ -268,7 +276,11 @@ on_login = ["upande_webstore.services.shop.on_login"]
 
 scheduler_events = {
 	# warns System Managers if the shop address stops answering
-	"daily": ["upande_webstore.services.shop.daily_watch"],
+	"daily": [
+		"upande_webstore.services.shop.daily_watch",
+		# ERPNext expires quotations with a bare SQL update that fires no hook
+		"upande_webstore.services.allocation.daily",
+	],
 }
 
 # Job Events

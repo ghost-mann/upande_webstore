@@ -176,7 +176,7 @@
    "fieldname": "stock_display",
    "fieldtype": "Select",
    "label": "Stock Display",
-   "options": "In/Out Badge\nExact Quantity"
+   "options": "In/Out Badge\nExact Quantity\nLow Stock Warning"
   },
   {
    "description": "Blank inherits Webstore Settings.",
@@ -850,7 +850,7 @@
    "options": "\nEnabled\nDisabled"
   }
  ],
- "modified": "2026-09-13 00:00:01.000000",
+ "modified": "2026-11-18 00:00:02.000000",
  "module": "Upande Webstore",
  "name": "Webstore",
  "owner": "Administrator",

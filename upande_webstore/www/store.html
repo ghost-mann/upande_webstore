@@ -35,7 +35,7 @@
 				{% endif %}
 				{% if p.stock %}
 				<span class="ws-stock {{ 'in' if p.stock.in_stock else 'out' }}"><span class="ws-led"></span>
-					{% if p.stock.in_stock %}{{ _("In stock") }}{% if p.stock.show_qty %} · {{ p.stock.qty | int }}{% endif %}{% else %}{{ _("Out of stock") }}{% endif %}
+					{% if p.stock.in_stock %}{% if p.stock.low %}{{ _("Only {0} left").format(p.stock.qty | int) }}{% else %}{{ _("In stock") }}{% if p.stock.show_qty %} · {{ p.stock.qty | int }}{% endif %}{% endif %}{% else %}{{ _("Out of stock") }}{% endif %}
 				</span>
 				{% endif %}
 			</div>

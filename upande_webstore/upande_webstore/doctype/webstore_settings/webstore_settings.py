@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
 
 from upande_webstore.theme import fonts
 
@@ -18,6 +19,7 @@ class WebstoreSettings(Document):
 		self.validate_guest_price_lists()
 		self.apply_feature_dependencies()
 		self.validate_shop_address()
+		self.validate_stock_allocations()
 
 	def validate_shop_address(self):
 		from upande_webstore.services.shop import (
@@ -80,7 +82,37 @@ class WebstoreSettings(Document):
 			indicator="orange",
 		)
 
+	def validate_stock_allocations(self):
+		"""Each row names one variant, found from its variety and length.
+
+		Taken is copied fresh from the allocation log on every save: a form
+		opened before an order came in must not write its stale Taken back."""
+		from upande_webstore.services import allocation
+
+		seen = {}
+		for row in self.get("stock_allocations") or []:
+			row.length = (row.length or "").strip()
+			row.item_code = _variant_for_length(row.variety, row.length)
+			if row.item_code in seen:
+				frappe.throw(
+					_("Row {0}: {1} {2} is already allocated in row {3}.").format(
+						row.idx, row.variety, row.length, seen[row.item_code]
+					),
+					frappe.ValidationError,
+				)
+			seen[row.item_code] = row.idx
+			if flt(row.allocated) < 0:
+				frappe.throw(_("Row {0}: Allocated can't be negative.").format(row.idx), frappe.ValidationError)
+			row.taken = allocation.taken(row.item_code)
+			row.remaining = flt(row.allocated) - row.taken
+
 	def on_update(self):
+		before = self.get_doc_before_save()
+		if self.enable_stock_allocation and not (before and before.enable_stock_allocation):
+			# orders already open when the switch goes on count from day one
+			from upande_webstore.services import allocation
+
+			allocation.recount()
 		self.reconcile_role_permissions()
 
 	def reconcile_role_permissions(self):
@@ -239,3 +271,42 @@ class WebstoreSettings(Document):
 		for role in ("sans", "display", "mono"):
 			if self.get(f"font_{role}") == "Custom" and not self.get(f"font_{role}_name"):
 				frappe.throw(_("Set a family name for the custom {0} font.").format(role))
+
+
+def _variant_for_length(variety, length):
+	"""The variant of `variety` carrying `length` as an attribute value."""
+	if not frappe.db.get_value("Item", variety, "has_variants"):
+		frappe.throw(
+			_("{0} is not a variety with lengths (an item template).").format(variety),
+			frappe.ValidationError,
+		)
+	variants = frappe.get_all("Item", filters={"variant_of": variety}, pluck="name")
+	matches = sorted(
+		set(
+			frappe.get_all(
+				"Item Variant Attribute",
+				filters={"parent": ["in", variants or [""]], "parenttype": "Item", "attribute_value": length},
+				pluck="parent",
+			)
+		)
+	)
+	if len(matches) == 1:
+		return matches[0]
+	if len(matches) > 1:
+		frappe.throw(
+			_("{0} {1} matches more than one item: {2}.").format(variety, length, ", ".join(matches)),
+			frappe.ValidationError,
+		)
+	lengths = sorted(
+		set(
+			frappe.get_all(
+				"Item Variant Attribute",
+				filters={"parent": ["in", variants or [""]], "parenttype": "Item"},
+				pluck="attribute_value",
+			)
+		)
+	)
+	frappe.throw(
+		_("{0} has no {1} length. Its lengths are: {2}.").format(variety, length, ", ".join(lengths) or _("none")),
+		frappe.ValidationError,
+	)

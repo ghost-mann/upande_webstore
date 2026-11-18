@@ -7,6 +7,17 @@ def get_stock_qty(item_code):
 	# Item is not readable by Guest on newer frappe; the storefront must not
 	# require exposing it, so read only the field this needs.
 	item = frappe.db.get_value("Item", item_code, ["has_variants"], as_dict=True)
+	from upande_webstore.services import allocation
+
+	if allocation.enabled():
+		# allocations are per length; a template (or a spec line, which carries
+		# the template) has none of its own, so it is not sold on its own
+		if item.has_variants:
+			return 0.0
+		left = allocation.remaining(item_code)
+		if left is None:
+			return 0.0  # the table is the full list of what sells
+		return max(0.0, min(left, _bin_qty(item_code)))
 	if item.has_variants:
 		variants = frappe.get_all("Item", filters={"variant_of": item_code}, pluck="name")
 		return max((_bin_qty(v) for v in variants), default=0.0)
@@ -53,12 +64,19 @@ def get_stock_info(item_code):
 	# require exposing it, so read only the field this needs.
 	item = frappe.db.get_value("Item", item_code, ["is_stock_item"], as_dict=True)
 	settings = get_settings()
-	show_qty = settings.stock_display == "Exact Quantity"
 	if not item.is_stock_item:
-		return {"in_stock": True, "qty": None, "show_qty": False}
+		return {"in_stock": True, "qty": None, "show_qty": False, "low": False}
 	qty = get_stock_qty(item_code)
+	# Low Stock Warning shows a number only when it is small: buyers see
+	# scarcity without ever seeing how much the coldstore holds
+	low = (
+		settings.stock_display == "Low Stock Warning"
+		and 0 < qty <= (settings.get("low_stock_threshold") or 0)
+	)
+	show_qty = settings.stock_display == "Exact Quantity" or low
 	return {
 		"in_stock": qty > 0,
 		"qty": qty if show_qty else None,
 		"show_qty": show_qty,
+		"low": bool(low),
 	}

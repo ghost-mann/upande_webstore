@@ -7,6 +7,7 @@ from upande_webstore.services import dropoff
 from upande_webstore.services.elevation import as_administrator
 from upande_webstore.services.pricing import get_customer, get_item_price, get_price_list
 from upande_webstore.services.settings import checkout_mode_permits, get_settings
+from upande_webstore.services import allocation
 from upande_webstore.services.stock import get_source_warehouse, get_stock_qty
 from upande_webstore.theme.features import enabled, guard
 
@@ -53,6 +54,7 @@ def place_order(
 		frappe.throw(_("Your cart is empty."), frappe.ValidationError)
 
 	_assert_available(cart)
+	allocation.lock_and_check((row.item_code, row.qty) for row in cart.items)
 	_assert_packable(cart)
 	_assert_repeats_allowed(cart)
 	_assert_shipping_date(shipping_date)

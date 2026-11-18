@@ -1,0 +1,23 @@
+{
+ "doctype": "DocType",
+ "name": "Webstore Stock Allocation",
+ "module": "Upande Webstore",
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "creation": "2026-11-18 00:00:01.000000",
+ "modified": "2026-11-18 00:00:01.000000",
+ "owner": "Administrator",
+ "field_order": ["variety", "length", "item_code", "allocated", "taken", "remaining"],
+ "fields": [
+  {"fieldname": "variety", "fieldtype": "Link", "label": "Variety", "options": "Item", "reqd": 1, "in_list_view": 1, "columns": 3, "description": "The variety (item template)."},
+  {"fieldname": "length", "fieldtype": "Data", "label": "Length", "reqd": 1, "in_list_view": 1, "columns": 2, "description": "One of the variety's lengths, e.g. 60cm."},
+  {"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item", "read_only": 1, "description": "The variant this row allocates, found from variety and length on save."},
+  {"fieldname": "allocated", "fieldtype": "Float", "label": "Allocated", "reqd": 1, "in_list_view": 1, "columns": 2, "precision": "0", "description": "Stems the webstore may sell of this length."},
+  {"fieldname": "taken", "fieldtype": "Float", "label": "Taken", "read_only": 1, "in_list_view": 1, "columns": 1, "precision": "0", "no_copy": 1, "description": "Held by open webstore quotations and orders."},
+  {"fieldname": "remaining", "fieldtype": "Float", "label": "Remaining", "read_only": 1, "in_list_view": 1, "columns": 2, "precision": "0", "no_copy": 1}
+ ],
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

@@ -21,6 +21,11 @@ def setup_webstore_settings():
 	# Blank is "Buyer chooses"; reset explicitly or a module that narrows
 	# checkout to one mode leaks into whichever module runs next.
 	settings.checkout_mode = ""
+	# Stock allocation zeroes every unlisted length; leaking it on would make
+	# whichever module runs next see nothing in stock.
+	settings.enable_stock_allocation = 0
+	settings.low_stock_threshold = 0
+	settings.set("stock_allocations", [])
 	for field in (
 		"brand_logo",
 		"hero_image",

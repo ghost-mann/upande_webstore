@@ -86,7 +86,7 @@ checkout (`api/checkout.py`). With the switch on:
 
 - variant with an allocation row → `min(remaining, warehouse qty)`, floored at 0
 - variant without a row → 0 (not for sale; table is the full list of what sells)
-- template → max over its variants (unchanged rule)
+- template → 0 (allocations are per length; listings never ask for a template's stock)
 
 Because cart and checkout already refuse qty > available, the limit is
 enforced with no new checks there.
@@ -95,49 +95,50 @@ enforced with no new checks there.
 
 New doctype **Webstore Allocation Entry** (log, not in a workspace):
 `reference_doctype`, `reference_name`, `item_code`, `qty`. One Entry per
-(document, item). Taken on a row = sum of Entry qty for its item_code.
+(document, item). **Taken on a row = sum of Entry qty for its item_code** —
+the Entries are the source of truth. The `taken` column on the settings row is
+a display copy, refreshed after every sync and on every settings save (a desk
+save of the Single must never write a stale Taken back; availability reads the
+Entries, never the cached Single).
 
-**Which documents count** ("webstore documents"):
-- Quotations and Sales Orders with `custom_webstore` set.
-- A Sales Order made from a webstore quotation also counts:
-  `services/conversion.carry_webstore_fields` additionally carries
-  `custom_webstore` across (today it is dropped by the mapper).
+**Which documents count** ("webstore documents"): Quotations and Sales Orders
+with `order_type = "Shopping Cart"` (checkout sets it on both; ERPNext's
+quotation → sales order mapper carries it across). `custom_webstore` is not
+used — single-store sites leave it blank.
 
 **What a document holds** (its "wanted" qty per item_code, summed over lines):
-- Quotation: its lines while docstatus ≤ 1 and status not in
-  Ordered / Lost / Expired / Cancelled; otherwise nothing (once Ordered, its
-  Sales Order holds the stems instead). Partially Ordered keeps holding its
-  full lines (conservative; may over-count briefly).
-- Sales Order: its lines while not cancelled and status not Closed;
-  otherwise nothing.
+- Sales Order: its lines while docstatus < 2 and status not Closed; else nothing.
+- Quotation: its lines **minus** what non-cancelled Sales Orders made from it
+  (`Sales Order Item.prevdoc_docname`) already hold, floored at 0 — so a draft
+  or partial Sales Order never double-counts. Nothing once cancelled, Lost or
+  Expired.
 - Deleted document: nothing.
 
-**Sync(doc)** — runs on checkout and on every on_update / on_submit /
-on_cancel / on_trash / on_update_after_submit of a webstore document, and
-for quotations whose status changes (Lost via declare_enquiry_lost,
-Expired via ERPNext's daily job — a daily task here syncs newly expired
-quotations). It diffs wanted vs the document's existing Entries, and for each
-changed item_code locks the allocation row (`SELECT … FOR UPDATE`), applies
-the difference to Taken and upserts/deletes the Entry. Only items that have
-an allocation row are tracked.
+**Sync(doc)** diffs wanted vs the document's Entries and upserts/deletes them,
+for item_codes that have an allocation row. Triggered by doc_events
+`on_change` (fires after every save/submit/cancel and on `db_set`, which is
+how Lost and Ordered are set) and `on_trash`, on Quotation and Sales Order.
+A Sales Order sync also re-syncs its source quotations. ERPNext's Expired is
+a raw SQL update, so a **daily task** re-syncs every document that still holds
+Entries. All of this is a no-op while the switch is off.
 
-- **Checkout (customer):** before creating the document, for each line lock
-  the row and refuse checkout with "Only N left of Athena 60cm" if
-  remaining < qty; then insert the document and Sync it — same transaction,
-  so the lock holds until commit.
-- **Desk (staff):** Sync never refuses. Staff may raise quantities or add
-  lines past the allocation; Remaining goes negative and the storefront shows
-  that length as out of stock until topped up.
+- **Checkout (customer):** before creating the document, lock each line's
+  allocation row (`SELECT … FOR UPDATE`) and refuse with "Only N left of
+  <item name>" if remaining < qty; then insert the document (its on_change
+  syncs it) — same transaction, so the lock holds until commit.
+- **Desk (staff):** Sync never refuses. Staff may raise quantities or add lines
+  past the allocation; Remaining goes negative and the storefront shows that
+  length as out of stock until topped up.
 - Delivery does not touch allocation; stock leaving the warehouse already
   reduces the physical figure.
 
-**Recount** (button, also run automatically when the switch is turned on):
-rebuild every Entry by running Sync over all open webstore documents — so
-orders already open when the switch goes on are counted from day one — then
-recompute Taken per row.
+**Recount** (button; also run when the switch is turned on): sync every open
+webstore document, delete Entries of documents that no longer hold anything,
+refresh the display column. Orders already open when the switch goes on are
+counted from day one.
 
-**Reset taken:** deletes all Entries and zeroes Taken (new allocation period;
-already-open orders stop counting). Confirm dialog says so.
+**Reset taken:** deletes all Entries (new allocation period; already-open
+orders stop counting until the next Recount). Confirm dialog says so.
 
 ### Display
 
@@ -156,10 +157,9 @@ carry qty above the threshold in this mode.
 
 ## Builder's calls (not discussed with the user)
 
-- Customer-specification lines (`enable_customer_specs`) use the row of the
-  spec's `price_length` variant; while allocation is on, a spec with no single
-  length cannot be ordered ("this specification can't be ordered online").
-  Mona has specs off.
+- Customer-specification lines (`enable_customer_specs`) carry the template
+  item, not a length, so while allocation is on they are not sellable
+  (template has no allocation row → 0). Mona has specs off.
 - Exact Quantity mode with the switch on shows min(remaining, warehouse) —
   never more than the allocation.
 - Switch, threshold and table are site-wide (see Non-goals).

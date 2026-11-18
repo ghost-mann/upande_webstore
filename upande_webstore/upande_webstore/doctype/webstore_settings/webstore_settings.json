@@ -5,7 +5,7 @@
  "issingle": 1,
  "engine": "InnoDB",
  "creation": "2026-07-20 00:00:01.000000",
- "modified": "2026-10-18 00:00:01.000000",
+ "modified": "2026-11-18 00:00:02.000000",
  "owner": "Administrator",
  "field_order": [
   "general_tab",
@@ -154,6 +154,12 @@
   "enable_customer_specs",
   "spec_doctype",
   "spec_source_summary",
+  "stock_allocation_section",
+  "enable_stock_allocation",
+  "low_stock_threshold",
+  "stock_allocation_cb",
+  "stock_allocation_help",
+  "stock_allocations",
   "shop_address_tab",
   "shop_address_section",
   "shop_address",
@@ -223,7 +229,7 @@
    "fieldname": "stock_display",
    "fieldtype": "Select",
    "label": "Stock Display",
-   "options": "In/Out Badge\nExact Quantity",
+   "options": "In/Out Badge\nExact Quantity\nLow Stock Warning",
    "default": "In/Out Badge"
   },
   {
@@ -1050,6 +1056,43 @@
    "fieldtype": "HTML",
    "label": "Specifications On This Site",
    "depends_on": "enable_customer_specs"
+  },
+  {
+   "fieldname": "stock_allocation_section",
+   "fieldtype": "Section Break",
+   "label": "Stock Allocation",
+   "description": "Decide how many stems of each variety and length the webstore may sell. Webstore quotations and orders use the allocation up; cancelling, losing or expiring them gives it back."
+  },
+  {
+   "fieldname": "enable_stock_allocation",
+   "fieldtype": "Check",
+   "label": "Sell From Allocations",
+   "default": "0",
+   "description": "When on, a length sells only up to what remains of its allocation (and never more than is in the webstore warehouses). Lengths with no row below are not sold."
+  },
+  {
+   "fieldname": "low_stock_threshold",
+   "fieldtype": "Int",
+   "label": "Low Stock Threshold",
+   "default": "0",
+   "description": "With Stock Display set to Low Stock Warning, the store shows \"Only N left\" at or below this many stems, and \"In stock\" above it."
+  },
+  {
+   "fieldname": "stock_allocation_cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stock_allocation_help",
+   "fieldtype": "HTML",
+   "label": "Allocation Help",
+   "options": "<p class=\"text-muted small\">Taken counts stems held by open webstore quotations and orders, including staff edits on the desk. Staff may go past an allocation; the length then shows out of stock until it is topped up. Use <b>Recount</b> to rebuild Taken, or <b>Reset Taken</b> to start a new allocation period.</p>"
+  },
+  {
+   "fieldname": "stock_allocations",
+   "fieldtype": "Table",
+   "label": "Allocations",
+   "options": "Webstore Stock Allocation",
+   "depends_on": "enable_stock_allocation"
   },
   {
    "fieldname": "shop_address_tab",

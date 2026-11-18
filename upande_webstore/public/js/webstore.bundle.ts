@@ -15,7 +15,7 @@ declare global {
 }
 
 interface PriceInfo { rate: number; currency: string; price_list: string; is_customer_price: boolean }
-interface StockInfo { in_stock: boolean; qty: number | null; show_qty: boolean }
+interface StockInfo { in_stock: boolean; qty: number | null; show_qty: boolean; low?: boolean }
 interface VariantResult { item_code: string | null; price?: PriceInfo; stock?: StockInfo }
 interface CartLine { item_code: string; item_name: string; web_title: string; route: string | null; qty: number; rate: number; amount: number; specification?: string | null }
 interface Cart { name: string | null; items: CartLine[]; total: number; currency: string | null; count: number }
@@ -222,7 +222,9 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 			}
 			priceEl.textContent = money(result.price.rate, result.price.currency);
 			stockEl.textContent = result.stock.in_stock
-				? result.stock.qty != null ? `In stock: ${result.stock.qty}` : "In stock"
+				? result.stock.low && result.stock.qty != null
+					? `Only ${Math.floor(result.stock.qty)} left`
+					: result.stock.qty != null ? `In stock: ${result.stock.qty}` : "In stock"
 				: "Out of stock";
 			addBtn.disabled = !result.stock.in_stock;
 			addBtn.setAttribute("data-variant-item", result.item_code);

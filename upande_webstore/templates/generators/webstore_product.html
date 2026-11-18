@@ -51,7 +51,7 @@
 				{% if price.is_customer_price %}<span class="badge badge-accent">{{ _("Your price") }}</span>{% endif %}
 			</p>
 			{% if stock.in_stock %}
-			<p><span class="ws-stock in"><span class="ws-led"></span>{{ _("In stock") }}{% if stock.show_qty %} · {{ stock.qty | int }} {{ _("available") }}{% endif %}</span></p>
+			<p><span class="ws-stock in"><span class="ws-led"></span>{% if stock.low %}{{ _("Only {0} left").format(stock.qty | int) }}{% else %}{{ _("In stock") }}{% if stock.show_qty %} · {{ stock.qty | int }} {{ _("available") }}{% endif %}{% endif %}</span></p>
 			{% if webstore_features.cart %}
 			<div class="form-inline mb-3">
 				<input type="number" min="1" value="1" class="form-control mr-2" id="webstore-qty" style="width:90px" aria-label="{{ _('Quantity') }}">

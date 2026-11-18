@@ -39,6 +39,27 @@ frappe.ui.form.on("Webstore Settings", {
 			});
 		});
 
+		const allocGrid = frm.fields_dict.stock_allocations.grid;
+		if (!allocGrid.__ws_alloc_buttons) {
+			allocGrid.__ws_alloc_buttons = true;
+			allocGrid.add_custom_button(__("Recount"), () => {
+				if (frm.is_dirty()) {
+					frappe.msgprint(__("Save first, then recount."));
+					return;
+				}
+				frappe.call({ method: "upande_webstore.services.allocation.recount_allocations", freeze: true }).then(() => {
+					frm.reload_doc();
+					frappe.show_alert({ message: __("Taken rebuilt from open webstore quotations and orders."), indicator: "green" });
+				});
+			});
+			allocGrid.add_custom_button(__("Reset Taken"), () => {
+				frappe.confirm(
+					__("Start a new allocation period? Every length goes back to its full allocation, and quotations and orders already open stop counting until the next Recount."),
+					() => frappe.call({ method: "upande_webstore.services.allocation.reset_allocations", freeze: true }).then(() => frm.reload_doc())
+				);
+			});
+		}
+
 		frappe.call("upande_webstore.theme.occasion.list_occasions").then((r) => {
 			const options = r.message || [];
 			// set_data, not set_df_property: an Autocomplete reads df.options only
