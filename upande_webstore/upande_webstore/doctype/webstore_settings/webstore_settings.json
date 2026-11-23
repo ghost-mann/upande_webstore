@@ -5,7 +5,7 @@
  "issingle": 1,
  "engine": "InnoDB",
  "creation": "2026-07-20 00:00:01.000000",
- "modified": "2026-11-18 00:00:02.000000",
+ "modified": "2026-11-23 21:00:00.000000",
  "owner": "Administrator",
  "field_order": [
   "general_tab",
@@ -159,6 +159,7 @@
   "low_stock_threshold",
   "stock_allocation_cb",
   "stock_allocation_help",
+  "stock_allocations_section",
   "stock_allocations",
   "shop_address_tab",
   "shop_address_section",
@@ -1086,6 +1087,11 @@
    "fieldtype": "HTML",
    "label": "Allocation Help",
    "options": "<p class=\"text-muted small\">Taken counts stems held by open webstore quotations and orders, including staff edits on the desk. Staff may go past an allocation; the length then shows out of stock until it is topped up. Use <b>Recount</b> to rebuild Taken, or <b>Reset Taken</b> to start a new allocation period.</p>"
+  },
+  {
+   "fieldname": "stock_allocations_section",
+   "fieldtype": "Section Break",
+   "depends_on": "enable_stock_allocation"
   },
   {
    "fieldname": "stock_allocations",
