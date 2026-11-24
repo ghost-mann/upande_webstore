@@ -78,4 +78,7 @@ class WebstoreProduct(WebsiteGenerator):
 			context.price_range = None
 			context.price = get_item_price(self.item)
 			context.stock = get_stock_info(self.item)
+			from upande_webstore.services.bunches import stems_per_bunch
+
+			context.bunch = stems_per_bunch(self.item)
 		return context

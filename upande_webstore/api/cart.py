@@ -221,6 +221,12 @@ def _box_view(cart):
 	return packing_summary(cart)
 
 
+def _stems_per_bunch(item_code):
+	from upande_webstore.services.bunches import stems_per_bunch
+
+	return stems_per_bunch(item_code)
+
+
 def serialize_cart(cart):
 	from upande_webstore.services import packing
 
@@ -253,6 +259,7 @@ def serialize_cart(cart):
 				"web_title": product_map.get(row.item_code, {}).get("web_title") or row.item_name,
 				"route": product_map.get(row.item_code, {}).get("route"),
 				"qty": row.qty,
+				"bunch": 1 if row.get("specification") else _stems_per_bunch(row.item_code),
 				"rate": row.rate,
 				"amount": row.amount,
 				"specification": row.get("specification") or None,
@@ -290,16 +297,21 @@ def get_cart():
 @frappe.whitelist()
 @guard("cart")
 def get_cart_count():
+	"""Lines in the basket, as the basket page counts its items: the header badge, where a stem total ran to
+	four digits."""
 	_require_login()
 	cart = _get_open_cart()
-	return int(sum(row.qty for row in cart.items)) if cart else 0
+	return len(cart.items) if cart else 0
 
 
 @frappe.whitelist()
 @guard("cart")
-def add_item(item_code, qty=1):
+def add_item(item_code, qty=None):
 	_require_login()
-	qty = frappe.utils.flt(qty) or 1
+	from upande_webstore.services.bunches import assert_whole_bunches, stems_per_bunch
+
+	# no quantity (the wishlist's button): one bunch
+	qty = frappe.utils.flt(qty) or stems_per_bunch(item_code)
 	if qty <= 0:
 		frappe.throw(_("Quantity must be positive."), frappe.ValidationError)
 	from upande_webstore.services.catalog import product_for_item
@@ -317,6 +329,9 @@ def add_item(item_code, qty=1):
 
 	if not is_in_current_store(product):
 		frappe.throw(_("This product is not available."), frappe.ValidationError)
+	if not get_item_price(item_code, qty=qty)["rate"]:
+		frappe.throw(_("This product has no price yet. Please contact us."), frappe.ValidationError)
+	assert_whole_bunches(item_code, qty)
 	cart = _get_open_cart(create=True)
 	existing = _find_row(cart, item_code)
 	new_qty = (existing.qty if existing else 0) + qty
@@ -344,6 +359,11 @@ def update_qty(item_code, qty, specification=None):
 	row = _find_row(cart, item_code, specification)
 	if not row:
 		frappe.throw(_("Item not in cart."), frappe.ValidationError)
+	# a spec line packs to its spec's own rate
+	if not row.get("specification"):
+		from upande_webstore.services.bunches import assert_whole_bunches
+
+		assert_whole_bunches(item_code, qty, row.item_name)
 	_validate_stock(item_code, qty)
 	row.qty = qty
 	_reprice(cart)

@@ -5,7 +5,7 @@
  "issingle": 1,
  "engine": "InnoDB",
  "creation": "2026-07-20 00:00:01.000000",
- "modified": "2026-11-23 21:00:00.000000",
+ "modified": "2026-11-24 16:00:00.000000",
  "owner": "Administrator",
  "field_order": [
   "general_tab",
@@ -126,6 +126,7 @@
   "enable_signup",
   "enable_search_palette",
   "enable_cart_drawer",
+  "enable_bunch_size",
   "storefront_features_cb",
   "enable_hero",
   "enable_hero_stats",
@@ -878,6 +879,13 @@
    "depends_on": "enable_cart"
   },
   {
+   "fieldname": "enable_bunch_size",
+   "fieldtype": "Check",
+   "label": "Bunch Size on Cards",
+   "default": "0",
+   "description": "Shows each variety's bunch next to its name on the store cards, e.g. Amina · Bunch (15)."
+  },
+  {
    "fieldname": "storefront_features_cb",
    "fieldtype": "Column Break"
   },
@@ -1046,7 +1054,8 @@
   },
   {
    "fieldname": "spec_doctype",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
+   "options": "DocType",
    "label": "Specification DocType",
    "default": "Specifications",
    "depends_on": "enable_customer_specs",

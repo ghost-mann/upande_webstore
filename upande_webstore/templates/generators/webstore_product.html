@@ -54,7 +54,7 @@
 			<p><span class="ws-stock in"><span class="ws-led"></span>{% if stock.low %}{{ _("Only {0} left").format(stock.qty | int) }}{% else %}{{ _("In stock") }}{% if stock.show_qty %} · {{ stock.qty | int }} {{ _("available") }}{% endif %}{% endif %}</span></p>
 			{% if webstore_features.cart %}
 			<div class="form-inline mb-3">
-				<input type="number" min="1" value="1" class="form-control mr-2" id="webstore-qty" style="width:90px" aria-label="{{ _('Quantity') }}">
+				<input type="number" min="{{ bunch or 1 }}" step="{{ bunch or 1 }}" value="{{ bunch or 1 }}" class="form-control mr-2" id="webstore-qty" style="width:90px" aria-label="{{ _('Quantity') }}">
 				<button class="btn btn-primary" data-webstore-add-to-cart="{{ item }}">{{ _("Add to cart") }}</button>
 			</div>
 			{% endif %}

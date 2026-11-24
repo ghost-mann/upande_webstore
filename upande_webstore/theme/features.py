@@ -15,7 +15,7 @@ def _f(key, label, group):
 
 
 FEATURES = (
-	# storefront — 10
+	# storefront — 11
 	_f("cart", "Cart & Checkout", "storefront"),
 	_f("direct_order", "Direct Ordering", "storefront"),
 	_f("wishlist", "Wishlist", "storefront"),
@@ -26,6 +26,7 @@ FEATURES = (
 	_f("hero_stats", "Hero Stats", "storefront"),
 	_f("category_cards", "Category Cards", "storefront"),
 	_f("footer", "Footer", "storefront"),
+	_f("bunch_size", "Bunch Size on Cards", "storefront"),
 	# portal — 10
 	_f("portal", "Portal", "portal"),
 	_f("dashboard", "Dashboard", "portal"),

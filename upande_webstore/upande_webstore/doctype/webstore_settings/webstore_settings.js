@@ -1,4 +1,8 @@
 frappe.ui.form.on("Webstore Settings", {
+	setup(frm) {
+		// a specification is a document of its own: never a child table or a Single
+		frm.set_query("spec_doctype", () => ({ filters: { istable: 0, issingle: 0 } }));
+	},
 	refresh(frm) {
 		frappe.call("upande_webstore.api.boxes.list_box_types").then((r) => {
 			const options = r.message || [];
