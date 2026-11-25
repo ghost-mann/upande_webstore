@@ -4,7 +4,10 @@
  "content": "[{\"id\":\"ws-cb-navigation\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Webstore Navigation\",\"col\":12}}]",
  "creation": "2026-08-28 09:00:00.000000",
  "custom_blocks": [
-  {"custom_block_name": "Webstore Navigation", "label": "Webstore Navigation"}
+  {
+   "custom_block_name": "Webstore Navigation",
+   "label": "Webstore Navigation"
+  }
  ],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -25,15 +28,55 @@
  "public": 1,
  "quick_lists": [],
  "restrict_to_domain": "",
- "roles": [],
+ "roles": [
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 1.0,
  "shortcuts": [
-  {"icon": "package", "label": "Webstore Product", "link_to": "Webstore Product", "type": "DocType"},
-  {"icon": "shopping-cart", "label": "Webstore Cart", "link_to": "Webstore Cart", "type": "DocType"},
-  {"icon": "file-text", "label": "Quotation", "link_to": "Quotation", "type": "DocType"},
-  {"icon": "clipboard-list", "label": "Sales Order", "link_to": "Sales Order", "type": "DocType"},
-  {"icon": "store", "label": "Open Storefront", "type": "URL", "url": "/store"},
-  {"icon": "layout-dashboard", "label": "Open Customer Portal", "type": "URL", "url": "/portal"}
+  {
+   "icon": "package",
+   "label": "Webstore Product",
+   "link_to": "Webstore Product",
+   "type": "DocType"
+  },
+  {
+   "icon": "shopping-cart",
+   "label": "Webstore Cart",
+   "link_to": "Webstore Cart",
+   "type": "DocType"
+  },
+  {
+   "icon": "file-text",
+   "label": "Quotation",
+   "link_to": "Quotation",
+   "type": "DocType"
+  },
+  {
+   "icon": "clipboard-list",
+   "label": "Sales Order",
+   "link_to": "Sales Order",
+   "type": "DocType"
+  },
+  {
+   "icon": "store",
+   "label": "Open Storefront",
+   "type": "URL",
+   "url": "/store"
+  },
+  {
+   "icon": "layout-dashboard",
+   "label": "Open Customer Portal",
+   "type": "URL",
+   "url": "/portal"
+  }
  ],
  "title": "Upande Webstore",
  "type": "Workspace"
