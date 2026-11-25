@@ -28,6 +28,9 @@ def get_context(context):
 	# Presentation only — place_order re-checks this server-side, since the
 	# button a farm has hidden is not a security boundary on its own.
 	context.checkout_mode = get_checkout_mode()
+	from upande_webstore.api.checkout import _earliest_delivery_date
+
+	context.earliest_shipping_date = str(_earliest_delivery_date())
 	cart = _get_open_cart()
 	if cart:
 		_reprice(cart)

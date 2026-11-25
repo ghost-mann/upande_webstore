@@ -15,19 +15,19 @@ class TestFeatureRegistry(IntegrationTestCase):
 	def setUp(self):
 		setup_webstore_settings()
 
-	def test_all_twenty_two_registered(self):
+	def test_all_registered(self):
 		from upande_webstore.theme.features import FEATURES
 
-		self.assertEqual(len(FEATURES), 22)
+		self.assertEqual(len(FEATURES), 23)
 		keys = [feature.key for feature in FEATURES]
 		self.assertEqual(len(keys), len(set(keys)), "duplicate feature keys")
 		for expected in ("cart", "wishlist", "signup", "portal", "quotations", "claims"):
 			self.assertIn(expected, keys)
 
-	def test_groups_split_ten_ten_and_two_modules(self):
+	def test_groups_split_storefront_portal_modules(self):
 		from upande_webstore.theme.features import FEATURES
 
-		self.assertEqual(len([f for f in FEATURES if f.group == "storefront"]), 10)
+		self.assertEqual(len([f for f in FEATURES if f.group == "storefront"]), 11)
 		self.assertEqual(len([f for f in FEATURES if f.group == "portal"]), 10)
 		self.assertEqual(
 			[f.key for f in FEATURES if f.group == "modules"], ["box_packing", "customer_specs"]

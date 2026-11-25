@@ -112,6 +112,7 @@
   "enable_signup",
   "enable_search_palette",
   "enable_cart_drawer",
+  "enable_bunch_size",
   "storefront_features_cb",
   "enable_hero",
   "enable_hero_stats",
@@ -775,6 +776,13 @@
    "options": "\nEnabled\nDisabled"
   },
   {
+   "description": "Blank inherits Webstore Settings; Disabled turns this off for this store even when the site-wide setting is on.",
+   "fieldname": "enable_bunch_size",
+   "fieldtype": "Select",
+   "label": "Bunch Size on Cards",
+   "options": "\nEnabled\nDisabled"
+  },
+  {
    "fieldname": "storefront_features_cb",
    "fieldtype": "Column Break"
   },
@@ -850,7 +858,7 @@
    "options": "\nEnabled\nDisabled"
   }
  ],
- "modified": "2026-11-18 00:00:02.000000",
+ "modified": "2026-11-24 16:00:00.000000",
  "module": "Upande Webstore",
  "name": "Webstore",
  "owner": "Administrator",

@@ -47,19 +47,36 @@ def normalise_shop_address(value):
 	value = (value or "").strip()
 	if not value:
 		return None
+	if "://" not in value:
+		# typed without a scheme (kaitet:8000, shop.example.com): https, or http for a dev bench's own host
+		host = urlsplit("//" + value).hostname
+		value = ("http://" if _local_host(host) and frappe.conf.developer_mode else "https://") + value
 	parts = urlsplit(value)
-	# a gateway under `wrangler dev` is plain http on this machine
-	local_dev = (
-		parts.scheme == "http"
-		and parts.hostname in ("localhost", "127.0.0.1")
-		and frappe.conf.developer_mode
-	)
+	# a gateway under `wrangler dev`, or a dev bench (http://kaitet:8000), is plain http on this machine
+	local_dev = parts.scheme == "http" and _local_host(parts.hostname) and frappe.conf.developer_mode
 	if (parts.scheme != "https" and not local_dev) or not parts.hostname:
 		frappe.throw(_("The shop address must start with https:// and name a host."), frappe.ValidationError)
 	if parts.path not in ("", "/") or parts.query or parts.fragment:
 		frappe.throw(_("The shop address can't include a path - only https:// and the host."), frappe.ValidationError)
 	host = parts.hostname.lower()
 	return f"{parts.scheme}://{host}:{parts.port}" if parts.port else f"{parts.scheme}://{host}"
+
+
+def _local_host(host):
+	"""A host only this machine or its LAN reaches: localhost, a bare bench site name (kaitet), *.local, or a
+	private IP."""
+	import ipaddress
+
+	host = (host or "").lower()
+	if not host:
+		return False
+	if host == "localhost" or "." not in host or host.endswith((".local", ".localhost")):
+		return True
+	try:
+		ip = ipaddress.ip_address(host)
+	except ValueError:
+		return False
+	return ip.is_private or ip.is_loopback
 
 
 def shop_address():

@@ -54,6 +54,7 @@ def place_order(
 		frappe.throw(_("Your cart is empty."), frappe.ValidationError)
 
 	_assert_available(cart)
+	_assert_whole_bunches(cart)
 	allocation.lock_and_check((row.item_code, row.qty) for row in cart.items)
 	_assert_packable(cart)
 	_assert_repeats_allowed(cart)
@@ -77,6 +78,7 @@ def place_order(
 		)["rate"]
 		for row in cart.items
 	}
+	_assert_priced(cart)
 
 	# All inputs above are resolved from the session user; the document itself
 	# is system-constructed, so create it under elevated context (ERPNext's
@@ -116,6 +118,26 @@ def _assert_available(cart):
 	if unavailable:
 		frappe.throw(
 			_("These items are no longer available in the requested quantity: {0}. Please adjust your cart.").format(", ".join(unavailable)),
+			frappe.ValidationError,
+		)
+
+
+def _assert_whole_bunches(cart):
+	"""Every line a whole number of its variety's bunches (a spec line packs to its spec's own rate)."""
+	from upande_webstore.services.bunches import assert_whole_bunches
+
+	for row in cart.items:
+		if not row.get("specification"):
+			assert_whole_bunches(row.item_code, row.qty, row.item_name)
+
+
+def _assert_priced(cart):
+	"""Every line carries a price: a line at 0 would go to the team as free stems."""
+	rates = cart.flags.webstore_rates
+	unpriced = [row.item_name or row.item_code for row in cart.items if not flt(rates.get(row.name))]
+	if unpriced:
+		frappe.throw(
+			_("These items have no price yet: {0}. Please remove them or contact us.").format(", ".join(unpriced)),
 			frappe.ValidationError,
 		)
 

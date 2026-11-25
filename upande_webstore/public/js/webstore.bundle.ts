@@ -179,7 +179,7 @@ interface SearchHit { web_title: string; route: string; item: string; image: str
 	async function addToCart(itemCode: string, qty?: number): Promise<void> {
 		if (isGuest()) return toLogin();
 		try {
-			await call("upande_webstore.api.cart.add_item", { item_code: itemCode, qty: qty || 1 });
+			await call("upande_webstore.api.cart.add_item", qty ? { item_code: itemCode, qty } : { item_code: itemCode });
 			toast("Added to basket");
 			refreshCartBadge();
 			if (drawer()?.open) openCart();

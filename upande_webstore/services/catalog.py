@@ -1,5 +1,7 @@
 import frappe
 
+from upande_webstore.services.bunches import stems_per_bunch
+
 from upande_webstore.services.pricing import get_item_price, get_variant_price_range
 from upande_webstore.services.stock import get_stock_info
 
@@ -131,6 +133,7 @@ def get_products(search=None, category=None, featured_only=False, start=0, page_
 			get_variant_price_range(product["item"]) if has_variants else None
 		)
 		product["stock"] = None if has_variants else get_stock_info(product["item"])
+		product["bunch"] = 1 if has_variants else stems_per_bunch(product["item"])
 	return {"products": products, "total": total}
 
 
